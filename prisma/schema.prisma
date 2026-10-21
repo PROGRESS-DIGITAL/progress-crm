@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum StageKind {
+  OPEN
+  WON
+  LOST
+}
+
+enum Service {
+  WEBSITE
+  SEO
+  CONTEXT_ADS
+  BRANDING
+  SMM
+  OTHER
+}
+
+model Stage {
+  id       String    @id @default(cuid())
+  name     String
+  order    Int
+  kind     StageKind @default(OPEN)
+  deals    Deal[]
+
+  @@unique([order])
+}
+
+model Deal {
+  id                String    @id @default(cuid())
+  title             String
+  clientName        String
+  contactName       String?
+  phone             String?
+  email             String?
+  amount            Int       @default(0) // рубли
+  service           Service   @default(WEBSITE)
+  owner             String?
+  expectedCloseDate DateTime?
+  lostReason        String?
+  notes             String?
+  // Порядок карточки внутри колонки: меньше — выше
+  position          Float     @default(0)
+  stage             Stage     @relation(fields: [stageId], references: [id])
+  stageId           String
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  @@index([stageId, position])
+}

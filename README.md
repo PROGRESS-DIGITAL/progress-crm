@@ -1,0 +1,37 @@
+# PROGRESS CRM
+
+Собственная CRM агентства PROGRESS Digital. Итерация 1: воронка сделок.
+
+## Что умеет
+
+- Канбан-воронка сделок: 7 этапов от «Новая» до «Выиграна» / «Проиграна»
+- Перетаскивание сделки между этапами мышью
+- Создание, редактирование и удаление сделки: клиент, контакт, сумма, услуга, ответственный, дата закрытия, причина отказа, заметки
+- Суммы по каждому этапу и итог «в работе / выиграно» в шапке
+
+## Стек
+
+Next.js 16 (App Router, server actions), React 19, TypeScript, Tailwind CSS 4, PostgreSQL 16, Prisma 6, dnd-kit.
+
+## Запуск локально
+
+```bash
+docker compose up -d          # PostgreSQL на localhost:5432
+cp .env.example .env
+npm install
+npx prisma migrate deploy     # создать таблицы
+npx prisma db seed            # этапы воронки + 4 демо-сделки (SEED_DEMO=0 — без демо)
+npm run dev                   # http://localhost:3000
+```
+
+## Структура
+
+- `prisma/schema.prisma` — модели `Stage` и `Deal`
+- `app/deals/page.tsx` — страница воронки
+- `app/deals/board.tsx` — канбан с перетаскиванием
+- `app/deals/actions.ts` — серверные действия: создать, изменить, переместить, удалить
+- `app/deals/deal-form.tsx` — форма сделки
+
+## Что дальше
+
+Вход для команды и роли, лиды с формами Тильды, клиенты, деплой в Yandex Cloud.
