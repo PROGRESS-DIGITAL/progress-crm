@@ -4,6 +4,8 @@ services:
     volumes:
       - ../..:/workspaces:cached
     command: sleep infinity
+    depends_on:
+      - db
     # Общая сеть с базой: PostgreSQL доступен на localhost:5432
     network_mode: service:db
 

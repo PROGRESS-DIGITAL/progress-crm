@@ -13,8 +13,8 @@
   "portsAttributes": {
     "3000": { "label": "CRM", "onAutoForward": "openBrowser" }
   },
-  "postCreateCommand": "npm ci && npx prisma generate && npx prisma migrate deploy && npx prisma db seed",
-  "postAttachCommand": { "crm": "npm run dev" },
+  "postCreateCommand": "npm ci",
+  "postAttachCommand": { "crm": "bash .devcontainer/start.sh" },
   "customizations": {
     "codespaces": { "openFiles": ["README.md"] }
   }
