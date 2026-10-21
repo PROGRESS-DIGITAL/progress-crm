@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { TIME_ZONE } from "@/lib/format";
 import { getCompanyOptions, getStageOptions } from "@/lib/queries";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { deleteDeal, updateDeal } from "../actions";
@@ -26,7 +27,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             <Link href={`/clients/${deal.company.id}`} className="text-blue-600 hover:underline">
               {deal.company.name}
             </Link>{" "}
-            · создана {deal.createdAt.toLocaleDateString("ru-RU")}
+            · создана {deal.createdAt.toLocaleDateString("ru-RU", { timeZone: TIME_ZONE })}
           </p>
         </div>
         <ConfirmDeleteButton
