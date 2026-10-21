@@ -52,6 +52,8 @@ const convertSchema = z
     companyId: optionalText,
     companyName: optionalText,
     title: z.string().trim().min(1, "Укажите название сделки"),
+    productId: optionalText,
+    quantity: z.coerce.number().int().min(1, "Количество от 1").default(1),
     amount: z.coerce.number().int("Сумма в целых рублях").min(0, "Сумма не может быть отрицательной"),
     service: z.nativeEnum(Service),
     owner: optionalText,
@@ -64,7 +66,7 @@ const convertSchema = z
 export async function convertLead(id: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = convertSchema.safeParse(
     Object.fromEntries(
-      ["companyId", "companyName", "title", "amount", "service", "owner"].map((k) => [k, formData.get(k) ?? null]),
+      ["companyId", "companyName", "title", "productId", "quantity", "amount", "service", "owner"].map((k) => [k, formData.get(k) ?? null]),
     ),
   );
   if (!parsed.success) return invalid(toErrors(parsed.error), formData);
@@ -110,6 +112,8 @@ export async function convertLead(id: string, _prev: FormState, formData: FormDa
     const deal = await tx.deal.create({
       data: {
         title: d.title,
+        productId: d.productId,
+        quantity: d.quantity,
         amount: d.amount,
         service: d.service,
         owner: d.owner ?? lead.owner,

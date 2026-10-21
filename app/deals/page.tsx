@@ -9,7 +9,7 @@ export default async function DealsPage() {
   const stages = await db.stage.findMany({
     orderBy: { order: "asc" },
     include: {
-      deals: { orderBy: { position: "asc" }, include: { company: { select: { name: true } } } },
+      deals: { orderBy: { position: "asc" }, include: { company: { select: { name: true } }, product: { select: { name: true } } } },
     },
   });
 
@@ -45,6 +45,7 @@ export default async function DealsPage() {
             clientName: d.company.name,
             amount: d.amount,
             service: d.service,
+            productName: d.product?.name ?? null,
             owner: d.owner,
             position: d.position,
           })),

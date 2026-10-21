@@ -1,4 +1,4 @@
-import { getCompanyOptions, getStageOptions } from "@/lib/queries";
+import { getCompanyOptions, getProductOptions, getStageOptions } from "@/lib/queries";
 import { createDeal } from "../actions";
 import { DealForm } from "../deal-form";
 
@@ -10,7 +10,11 @@ export default async function NewDealPage({
   searchParams: Promise<{ companyId?: string }>;
 }) {
   const { companyId } = await searchParams;
-  const [stages, companies] = await Promise.all([getStageOptions(), getCompanyOptions()]);
+  const [stages, companies, products] = await Promise.all([
+    getStageOptions(),
+    getCompanyOptions(),
+    getProductOptions(),
+  ]);
 
   return (
     <div className="mx-auto max-w-3xl px-6 py-8">
@@ -20,6 +24,7 @@ export default async function NewDealPage({
           action={createDeal}
           stages={stages}
           companies={companies}
+          products={products}
           initial={{ companyId: companies.some((c) => c.id === companyId) ? companyId : "" }}
           submitLabel="Создать сделку"
         />

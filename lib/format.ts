@@ -46,3 +46,19 @@ export function formatDateTime(d: Date) {
     minute: "2-digit",
   });
 }
+
+export const CATEGORY_ORDER = ["Сайты", "Брендинг", "Издания"];
+
+export function sortByCategory<T extends { category: string; sortOrder: number }>(items: T[]) {
+  const rank = (c: string) => {
+    const i = CATEGORY_ORDER.indexOf(c);
+    return i === -1 ? CATEGORY_ORDER.length : i;
+  };
+  return [...items].sort(
+    (a, b) => rank(a.category) - rank(b.category) || a.category.localeCompare(b.category) || a.sortOrder - b.sortOrder,
+  );
+}
+
+export function formatPrice(p: { price: number; priceFrom: boolean; unit: string | null }) {
+  return `${p.priceFrom ? "от " : ""}${formatRub(p.price)}${p.unit ? `/${p.unit}` : ""}`;
+}

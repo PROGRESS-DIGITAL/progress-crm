@@ -64,6 +64,26 @@ model Lead {
   @@index([status, createdAt])
 }
 
+// Услуга из прайса агентства (progrs.ru/price)
+model Product {
+  id          String   @id @default(cuid())
+  category    String
+  name        String
+  description String?
+  price       Int // рубли
+  // «от 150 000»: цена минимальная, итог зависит от проекта
+  priceFrom   Boolean  @default(false)
+  // Единица для почасовых и постраничных услуг: «час», «страница»
+  unit        String?
+  service     Service  @default(OTHER)
+  sortOrder   Int      @default(0)
+  deals       Deal[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category, sortOrder])
+}
+
 model Stage {
   id       String    @id @default(cuid())
   name     String
@@ -115,6 +135,10 @@ model Deal {
   // Контакт удаляется — сделка остаётся без контакта
   contact           Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
   contactId         String?
+  // Услуга из прайса; сумма сделки копирует цену и дальше правится независимо
+  product           Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  productId         String?
+  quantity          Int       @default(1)
   amount            Int       @default(0) // рубли
   service           Service   @default(WEBSITE)
   owner             String?

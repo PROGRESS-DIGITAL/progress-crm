@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { LEAD_STATUS_BADGE, LEAD_STATUS_LABELS, formatDateTime } from "@/lib/format";
+import { getProductOptions } from "@/lib/queries";
 import { convertLead, rejectLead, setLeadStatus } from "../actions";
 import { ConvertForm, RejectForm } from "./lead-actions";
 
@@ -9,9 +10,10 @@ export const dynamic = "force-dynamic";
 
 export default async function LeadPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [lead, companies] = await Promise.all([
+  const [lead, companies, products] = await Promise.all([
     db.lead.findUnique({ where: { id }, include: { deal: { select: { id: true, title: true } } } }),
     db.company.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    getProductOptions(),
   ]);
   if (!lead) notFound();
 
@@ -100,6 +102,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
             <ConvertForm
               action={convertLead.bind(null, lead.id)}
               companies={companies}
+              products={products}
               initial={{
                 companyId: known?.id ?? "",
                 companyName: lead.companyName ?? lead.name ?? "",

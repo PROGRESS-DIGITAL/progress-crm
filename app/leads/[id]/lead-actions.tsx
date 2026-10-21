@@ -2,19 +2,22 @@
 
 import { useActionState, useState } from "react";
 import type { Service } from "@prisma/client";
-import { SERVICE_LABELS } from "@/lib/format";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { Field, inputClass, primaryButton } from "@/components/field";
+import { ProductPicker } from "@/components/product-picker";
+import type { ProductOption } from "@/lib/queries";
 
 type Action = (prev: FormState, formData: FormData) => Promise<FormState>;
 
 export function ConvertForm({
   action,
   companies,
+  products,
   initial,
 }: {
   action: Action;
   companies: { id: string; name: string }[];
+  products: ProductOption[];
   initial: { companyId: string; companyName: string; title: string; owner: string; service: Service };
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -52,18 +55,17 @@ export function ConvertForm({
       <Field label="Название сделки" error={err.title} wide>
         <input name="title" defaultValue={v("title")} required className={inputClass} />
       </Field>
-      <Field label="Сумма, ₽" error={err.amount}>
-        <input name="amount" type="number" min={0} step={1} defaultValue={v("amount") || "0"} className={inputClass} />
-      </Field>
-      <Field label="Услуга" error={err.service}>
-        <select key={v("service")} name="service" defaultValue={v("service")} className={inputClass}>
-          {Object.entries(SERVICE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <ProductPicker
+        key={JSON.stringify(state?.values ?? null)}
+        products={products}
+        errors={err}
+        initial={{
+          productId: v("productId"),
+          quantity: Number(v("quantity")) || 1,
+          service: (v("service") || "WEBSITE") as Service,
+          amount: Number(v("amount")) || 0,
+        }}
+      />
       <Field label="Ответственный" error={err.owner}>
         <input name="owner" defaultValue={v("owner")} className={inputClass} />
       </Field>
