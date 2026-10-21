@@ -1,16 +1,19 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
+import { getCompanyOptions, getStageOptions } from "@/lib/queries";
+import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { deleteDeal, updateDeal } from "../actions";
 import { DealForm } from "../deal-form";
-import { DeleteDealButton } from "./delete-button";
 
 export const dynamic = "force-dynamic";
 
 export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [deal, stages] = await Promise.all([
-    db.deal.findUnique({ where: { id } }),
-    db.stage.findMany({ orderBy: { order: "asc" }, select: { id: true, name: true } }),
+  const [deal, stages, companies] = await Promise.all([
+    db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true } } } }),
+    getStageOptions(),
+    getCompanyOptions(),
   ]);
   if (!deal) notFound();
 
@@ -20,15 +23,22 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{deal.title}</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Создана {deal.createdAt.toLocaleDateString("ru-RU")}
+            <Link href={`/clients/${deal.company.id}`} className="text-blue-600 hover:underline">
+              {deal.company.name}
+            </Link>{" "}
+            · создана {deal.createdAt.toLocaleDateString("ru-RU")}
           </p>
         </div>
-        <DeleteDealButton action={deleteDeal.bind(null, deal.id)} />
+        <ConfirmDeleteButton
+          action={deleteDeal.bind(null, deal.id)}
+          message="Удалить сделку? Это действие нельзя отменить."
+        />
       </div>
       <div className="rounded-xl border border-slate-200 bg-white p-6">
         <DealForm
           action={updateDeal.bind(null, deal.id)}
           stages={stages}
+          companies={companies}
           submitLabel="Сохранить"
           initial={{
             ...deal,

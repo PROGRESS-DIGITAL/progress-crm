@@ -32,13 +32,47 @@ model Stage {
   @@unique([order])
 }
 
+model Company {
+  id        String    @id @default(cuid())
+  name      String
+  inn       String?
+  website   String?
+  phone     String?
+  email     String?
+  address   String?
+  notes     String?
+  contacts  Contact[]
+  deals     Deal[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([name])
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  fullName  String
+  position  String?
+  phone     String?
+  email     String?
+  notes     String?
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId String
+  deals     Deal[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([companyId])
+}
+
 model Deal {
   id                String    @id @default(cuid())
   title             String
-  clientName        String
-  contactName       String?
-  phone             String?
-  email             String?
+  company           Company   @relation(fields: [companyId], references: [id])
+  companyId         String
+  // Контакт удаляется — сделка остаётся без контакта
+  contact           Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contactId         String?
   amount            Int       @default(0) // рубли
   service           Service   @default(WEBSITE)
   owner             String?
@@ -53,4 +87,5 @@ model Deal {
   updatedAt         DateTime  @updatedAt
 
   @@index([stageId, position])
+  @@index([companyId])
 }

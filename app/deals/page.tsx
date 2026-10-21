@@ -8,7 +8,9 @@ export const dynamic = "force-dynamic";
 export default async function DealsPage() {
   const stages = await db.stage.findMany({
     orderBy: { order: "asc" },
-    include: { deals: { orderBy: { position: "asc" } } },
+    include: {
+      deals: { orderBy: { position: "asc" }, include: { company: { select: { name: true } } } },
+    },
   });
 
   const open = stages.filter((s) => s.kind === "OPEN").flatMap((s) => s.deals);
@@ -40,7 +42,7 @@ export default async function DealsPage() {
           deals: s.deals.map((d) => ({
             id: d.id,
             title: d.title,
-            clientName: d.clientName,
+            clientName: d.company.name,
             amount: d.amount,
             service: d.service,
             owner: d.owner,

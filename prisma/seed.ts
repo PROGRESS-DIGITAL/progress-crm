@@ -37,8 +37,11 @@ async function main() {
   }
   if (process.env.SEED_DEMO !== "0") {
     for (const [i, d] of demoDeals.entries()) {
-      const { stage, ...rest } = d;
-      await prisma.deal.create({ data: { ...rest, stageId: created[stage].id, position: i } });
+      const { stage, clientName, ...rest } = d;
+      const company = await prisma.company.create({ data: { name: clientName } });
+      await prisma.deal.create({
+        data: { ...rest, companyId: company.id, stageId: created[stage].id, position: i },
+      });
     }
   }
   console.log(`Создано этапов: ${created.length}`);

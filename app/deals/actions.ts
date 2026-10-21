@@ -5,19 +5,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { Service } from "@prisma/client";
 import { db } from "@/lib/db";
-
-const optionalText = z
-  .string()
-  .trim()
-  .transform((v) => (v === "" ? null : v))
-  .nullable();
+import { invalid, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 
 const dealSchema = z.object({
   title: z.string().trim().min(1, "Укажите название сделки"),
-  clientName: z.string().trim().min(1, "Укажите клиента"),
-  contactName: optionalText,
-  phone: optionalText,
-  email: optionalText.refine((v) => v === null || z.string().email().safeParse(v).success, "Некорректный email"),
+  companyId: z.string().min(1, "Выберите клиента"),
+  contactId: optionalText,
   amount: z.coerce.number().int("Сумма в целых рублях").min(0, "Сумма не может быть отрицательной"),
   service: z.nativeEnum(Service),
   owner: optionalText,
@@ -27,68 +20,63 @@ const dealSchema = z.object({
   stageId: z.string().min(1),
 });
 
-export type DealFormState = { errors?: Record<string, string> } | undefined;
+type Validated =
+  | { errors: Record<string, string> }
+  | { data: Omit<z.infer<typeof dealSchema>, "expectedCloseDate"> & { expectedCloseDate: Date | null } };
 
-function parseDeal(formData: FormData) {
-  const raw = Object.fromEntries(
-    Object.keys(dealSchema.shape).map((k) => [k, formData.get(k) ?? null]),
-  );
-  return dealSchema.safeParse(raw);
-}
-
-function toErrors(error: z.ZodError) {
-  const errors: Record<string, string> = {};
-  for (const issue of error.issues) {
-    const key = String(issue.path[0]);
-    errors[key] ??= issue.message;
+async function validate(formData: FormData): Promise<Validated> {
+  const parsed = parseForm(dealSchema, formData);
+  if (!parsed.success) return { errors: toErrors(parsed.error) }
+  const d = parsed.data;
+  // Контакт должен принадлежать выбранной компании
+  if (d.contactId) {
+    const contact = await db.contact.findUnique({ where: { id: d.contactId }, select: { companyId: true } });
+    if (contact?.companyId !== d.companyId) {
+      return { errors: { contactId: "Контакт не относится к выбранному клиенту" } }
+    }
   }
-  return errors;
-}
-
-function toData(d: z.infer<typeof dealSchema>) {
   return {
-    ...d,
-    expectedCloseDate: d.expectedCloseDate ? new Date(d.expectedCloseDate) : null,
-  };
+    data: { ...d, expectedCloseDate: d.expectedCloseDate ? new Date(d.expectedCloseDate) : null },
+  }
 }
 
-export async function createDeal(_prev: DealFormState, formData: FormData): Promise<DealFormState> {
-  const parsed = parseDeal(formData);
-  if (!parsed.success) return { errors: toErrors(parsed.error) };
+function revalidateDeal(companyId: string) {
+  revalidatePath("/deals");
+  revalidatePath(`/clients/${companyId}`);
+  revalidatePath("/clients");
+}
+
+export async function createDeal(_prev: FormState, formData: FormData): Promise<FormState> {
+  const result = await validate(formData);
+  if ("errors" in result) return invalid(result.errors, formData);
 
   // Новая сделка встаёт наверх своей колонки
   const top = await db.deal.findFirst({
-    where: { stageId: parsed.data.stageId },
+    where: { stageId: result.data.stageId },
     orderBy: { position: "asc" },
     select: { position: true },
   });
-  await db.deal.create({
-    data: { ...toData(parsed.data), position: (top?.position ?? 1) - 1 },
-  });
-  revalidatePath("/deals");
+  await db.deal.create({ data: { ...result.data, position: (top?.position ?? 1) - 1 } });
+  revalidateDeal(result.data.companyId);
   redirect("/deals");
 }
 
-export async function updateDeal(
-  id: string,
-  _prev: DealFormState,
-  formData: FormData,
-): Promise<DealFormState> {
-  const parsed = parseDeal(formData);
-  if (!parsed.success) return { errors: toErrors(parsed.error) };
+export async function updateDeal(id: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const result = await validate(formData);
+  if ("errors" in result) return invalid(result.errors, formData);
 
-  await db.deal.update({ where: { id }, data: toData(parsed.data) });
-  revalidatePath("/deals");
+  const before = await db.deal.update({ where: { id }, data: result.data, select: { companyId: true } });
+  revalidateDeal(before.companyId);
   redirect("/deals");
 }
 
 export async function deleteDeal(id: string) {
-  await db.deal.delete({ where: { id } });
-  revalidatePath("/deals");
+  const deal = await db.deal.delete({ where: { id } });
+  revalidateDeal(deal.companyId);
   redirect("/deals");
 }
 
 export async function moveDeal(id: string, stageId: string, position: number) {
-  await db.deal.update({ where: { id }, data: { stageId, position } });
-  revalidatePath("/deals");
+  const deal = await db.deal.update({ where: { id }, data: { stageId, position } });
+  revalidateDeal(deal.companyId);
 }
