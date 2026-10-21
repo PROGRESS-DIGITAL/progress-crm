@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { Suspense } from "react";
+import { NewLeadsBadge } from "@/components/new-leads-badge";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -17,6 +19,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               PROGRESS <span className="text-blue-600">CRM</span>
             </Link>
             <nav className="flex gap-4 text-sm text-slate-600">
+              <Link href="/leads" className="hover:text-slate-900">
+                Лиды
+                <Suspense fallback={null}>
+                  <NewLeadsBadge />
+                </Suspense>
+              </Link>
               <Link href="/deals" className="hover:text-slate-900">
                 Сделки
               </Link>
