@@ -4,3 +4,4 @@ node_modules
 .git
 deploy/.env
 *.tsbuildinfo
+deploy/backups
