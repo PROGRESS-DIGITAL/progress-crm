@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { TIME_ZONE } from "@/lib/format";
-import { getCompanyOptions, getStageOptions } from "@/lib/queries";
+import { getCompanyOptions, getProductOptions, getStageOptions } from "@/lib/queries";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { deleteDeal, updateDeal } from "../actions";
 import { DealForm } from "../deal-form";
@@ -11,10 +11,11 @@ export const dynamic = "force-dynamic";
 
 export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [deal, stages, companies] = await Promise.all([
+  const [deal, stages, companies, products] = await Promise.all([
     db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true } } } }),
     getStageOptions(),
     getCompanyOptions(),
+    getProductOptions(),
   ]);
   if (!deal) notFound();
 
@@ -40,6 +41,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
           action={updateDeal.bind(null, deal.id)}
           stages={stages}
           companies={companies}
+          products={products}
           submitLabel="Сохранить"
           initial={{
             ...deal,

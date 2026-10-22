@@ -11,6 +11,8 @@ const dealSchema = z.object({
   title: z.string().trim().min(1, "Укажите название сделки"),
   companyId: z.string().min(1, "Выберите клиента"),
   contactId: optionalText,
+  productId: optionalText,
+  quantity: z.coerce.number().int().min(1, "Количество от 1").default(1),
   amount: z.coerce.number().int("Сумма в целых рублях").min(0, "Сумма не может быть отрицательной"),
   service: z.nativeEnum(Service),
   owner: optionalText,
@@ -34,6 +36,9 @@ async function validate(formData: FormData): Promise<Validated> {
     if (contact?.companyId !== d.companyId) {
       return { errors: { contactId: "Контакт не относится к выбранному клиенту" } }
     }
+  }
+  if (d.productId && !(await db.product.findUnique({ where: { id: d.productId }, select: { id: true } }))) {
+    return { errors: { productId: "Услуга не найдена в прайсе" } };
   }
   return {
     data: { ...d, expectedCloseDate: d.expectedCloseDate ? new Date(d.expectedCloseDate) : null },

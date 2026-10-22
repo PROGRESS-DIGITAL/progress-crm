@@ -3,14 +3,17 @@
 import { useActionState, useEffect, useState } from "react";
 import Link from "next/link";
 import type { Service } from "@prisma/client";
-import { SERVICE_LABELS } from "@/lib/format";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { Field, inputClass, primaryButton } from "@/components/field";
+import { ProductPicker } from "@/components/product-picker";
+import type { ProductOption } from "@/lib/queries";
 
 export type DealValues = {
   title: string;
   companyId: string;
   contactId: string | null;
+  productId: string | null;
+  quantity: number;
   amount: number;
   service: Service;
   owner: string | null;
@@ -30,11 +33,12 @@ type Props = {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   stages: { id: string; name: string }[];
   companies: CompanyOption[];
+  products: ProductOption[];
   initial?: Partial<DealValues>;
   submitLabel: string;
 };
 
-export function DealForm({ action, stages, companies, initial, submitLabel }: Props) {
+export function DealForm({ action, stages, companies, products, initial, submitLabel }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [companyId, setCompanyId] = useState(initial?.companyId ?? "");
   const err = state?.errors ?? {};
@@ -88,18 +92,18 @@ export function DealForm({ action, stages, companies, initial, submitLabel }: Pr
           ))}
         </select>
       </Field>
-      <Field label="Сумма, ₽" error={err.amount}>
-        <input name="amount" type="number" min={0} step={1} defaultValue={v("amount") || "0"} className={inputClass} />
-      </Field>
-      <Field label="Услуга" error={err.service}>
-        <select key={v("service")} name="service" defaultValue={v("service")} className={inputClass}>
-          {Object.entries(SERVICE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </Field>
+      <ProductPicker
+        // После ошибки пересоздаём, чтобы подхватить введённые значения
+        key={JSON.stringify(state?.values ?? null)}
+        products={products}
+        errors={err}
+        initial={{
+          productId: v("productId"),
+          quantity: Number(v("quantity")) || 1,
+          service: (v("service") || "WEBSITE") as Service,
+          amount: Number(v("amount")) || 0,
+        }}
+      />
       <Field label="Этап" error={err.stageId}>
         <select key={v("stageId")} name="stageId" defaultValue={v("stageId")} className={inputClass}>
           {stages.map((s) => (

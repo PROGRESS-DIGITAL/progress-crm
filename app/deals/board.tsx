@@ -21,6 +21,7 @@ type DealCard = {
   clientName: string;
   amount: number;
   service: Service;
+  productName: string | null;
   owner: string | null;
   position: number;
 };
@@ -127,8 +128,8 @@ function DealItem({ deal }: { deal: DealCard }) {
       </Link>
       <p className="mt-0.5 text-xs text-slate-600">{deal.clientName}</p>
       <div className="mt-2 flex items-center justify-between">
-        <span className="rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">
-          {SERVICE_LABELS[deal.service]}
+        <span className="mr-2 truncate rounded bg-slate-100 px-1.5 py-0.5 text-[11px] text-slate-600">
+          {deal.productName ?? SERVICE_LABELS[deal.service]}
         </span>
         <span className="text-sm font-semibold tabular-nums">{formatRub(deal.amount)}</span>
       </div>
