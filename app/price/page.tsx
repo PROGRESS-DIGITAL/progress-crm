@@ -36,7 +36,7 @@ export default async function PricePage() {
                     <span className="hidden text-xs text-slate-400 sm:block">
                       {p._count.deals > 0 ? `сделок: ${p._count.deals}` : ""}
                     </span>
-                    <PriceEditor id={p.id} price={p.price} priceFrom={p.priceFrom} unit={p.unit} />
+                    <PriceEditor id={p.id} price={p.price} unit={p.unit} />
                     <ConfirmDeleteButton
                       action={deleteProduct.bind(null, p.id)}
                       message={`Удалить «${p.name}» из прайса? Сделки с этой услугой сохранятся.`}

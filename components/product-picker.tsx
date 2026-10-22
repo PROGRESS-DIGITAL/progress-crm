@@ -101,7 +101,7 @@ export function ProductPicker({
           ))}
         </select>
       </Field>
-      <Field label={product?.priceFrom ? "Сумма, ₽ (в прайсе цена «от»)" : "Сумма, ₽"} error={errors.amount}>
+      <Field label="Сумма, ₽" error={errors.amount}>
         <EditableAmount name="amount" value={amount} onChange={setAmount} />
       </Field>
     </>

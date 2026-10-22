@@ -8,12 +8,10 @@ import { updateProductPrice } from "./actions";
 export function PriceEditor({
   id,
   price,
-  priceFrom,
   unit,
 }: {
   id: string;
   price: number;
-  priceFrom: boolean;
   unit: string | null;
 }) {
   const [value, setValue] = useState(price);
@@ -75,7 +73,6 @@ export function PriceEditor({
         }}
         className={`rounded-lg border border-transparent px-2 py-1 text-sm font-semibold whitespace-nowrap tabular-nums hover:border-dashed hover:border-blue-400 hover:bg-blue-50 ${pending ? "opacity-60" : ""}`}
       >
-        {priceFrom && <span className="font-normal text-slate-500">от </span>}
         {formatRub(value)}
         {unit && <span className="font-normal text-slate-500">/{unit}</span>}
       </button>

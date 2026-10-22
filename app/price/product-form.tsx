@@ -37,19 +37,17 @@ export function ProductForm({ categories }: { categories: string[] }) {
       <Field label="Единица (час, страница)" error={err.unit}>
         <input name="unit" defaultValue={v("unit")} className={inputClass} />
       </Field>
-      <Field label="Направление" error={err.service}>
-        <select key={v("service")} name="service" defaultValue={v("service") || "WEBSITE"} className={inputClass}>
-          {Object.entries(SERVICE_LABELS).map(([value, label]) => (
-            <option key={value} value={value}>
-              {label}
-            </option>
-          ))}
-        </select>
-      </Field>
-      <label className="flex items-center gap-2 self-end pb-2 text-sm text-slate-700">
-        <input key={v("priceFrom")} type="checkbox" name="priceFrom" defaultChecked={v("priceFrom") === "on"} />
-        Цена «от»
-      </label>
+      <div className="sm:col-span-2">
+        <Field label="Направление" error={err.service}>
+          <select key={v("service")} name="service" defaultValue={v("service") || "WEBSITE"} className={inputClass}>
+            {Object.entries(SERVICE_LABELS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
       <div className="sm:col-span-4">
         <Field label="Описание" error={err.description}>
           <input name="description" defaultValue={v("description")} className={inputClass} />

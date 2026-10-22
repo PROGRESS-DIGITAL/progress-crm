@@ -59,6 +59,6 @@ export function sortByCategory<T extends { category: string; sortOrder: number }
   );
 }
 
-export function formatPrice(p: { price: number; priceFrom: boolean; unit: string | null }) {
-  return `${p.priceFrom ? "от " : ""}${formatRub(p.price)}${p.unit ? `/${p.unit}` : ""}`;
+export function formatPrice(p: { price: number; unit: string | null }) {
+  return `${formatRub(p.price)}${p.unit ? `/${p.unit}` : ""}`;
 }

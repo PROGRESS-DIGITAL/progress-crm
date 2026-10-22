@@ -26,7 +26,6 @@ const productSchema = z.object({
   name: z.string().trim().min(1, "Укажите название"),
   description: optionalText,
   price,
-  priceFrom: z.preprocess((v) => v === "on", z.boolean()),
   unit: optionalText,
   service: z.nativeEnum(Service),
 });
