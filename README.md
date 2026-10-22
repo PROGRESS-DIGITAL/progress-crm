@@ -23,10 +23,21 @@
 
 Next.js 16 (App Router, server actions), React 19, TypeScript, Tailwind CSS 4, PostgreSQL 16, Prisma 6, dnd-kit.
 
-## Запуск локально
+## Запуск на своём компьютере
+
+Нужен только [Docker Desktop](https://www.docker.com/products/docker-desktop/). В папке с кодом:
 
 ```bash
-docker compose up -d          # PostgreSQL на localhost:5432
+docker compose up -d --build  # база + CRM, первый раз несколько минут
+```
+
+CRM откроется на http://localhost:3000 с демо-сделками и прайсом. Данные хранятся в Docker и
+переживают перезапуск. Обновить до свежего кода: скачать его заново и повторить команду.
+
+## Разработка
+
+```bash
+docker compose up -d db       # PostgreSQL на localhost:5432
 cp .env.example .env
 npm install
 npx prisma migrate deploy     # создать таблицы
