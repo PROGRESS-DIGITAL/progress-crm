@@ -19,6 +19,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               PROGRESS <span className="text-blue-600">CRM</span>
             </Link>
             <nav className="flex gap-4 text-sm text-slate-600">
+              <Link href="/dashboard" className="hover:text-slate-900">
+                Дашборд
+              </Link>
               <Link href="/leads" className="hover:text-slate-900">
                 Лиды
                 <Suspense fallback={null}>
