@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { isTildaTest, parseTildaLead } from "../lib/tilda";
+import { DEFAULT_FIELD_MAP, isTildaTest, normalizeFieldMap, parseTildaLead } from "../lib/tilda";
 
 test("распознаёт тестовый запрос Тильды", () => {
   assert.equal(isTildaTest({ test: "test" }), true);
@@ -49,4 +49,18 @@ test("незнакомые поля попадают в сообщение, кл
   const lead = parseTildaLead({ Name: "Олег", Budget: "100 000", api_key: "secret" });
   assert.equal(lead.message, "Budget: 100 000");
   assert.equal("api_key" in lead.raw, false);
+});
+
+test("берёт поля по своим названиям из настроек", () => {
+  const map = { ...DEFAULT_FIELD_MAP, phone: ["nomer"], name: ["client"] };
+  const lead = parseTildaLead({ client: "Мария", nomer: "123", Phone: "999" }, map);
+  assert.equal(lead.name, "Мария");
+  assert.equal(lead.phone, "123");
+  assert.equal(lead.message, "Phone: 999");
+});
+
+test("дополняет сохранённые настройки значениями по умолчанию", () => {
+  const map = normalizeFieldMap({ phone: [" Nomer "], unknown: ["x"] });
+  assert.deepEqual(map.phone, ["nomer"]);
+  assert.deepEqual(map.name, DEFAULT_FIELD_MAP.name);
 });

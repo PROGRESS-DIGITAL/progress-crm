@@ -34,6 +34,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
               <Link href="/price" className="hover:text-slate-900">
                 Прайс
               </Link>
+              <Link href="/integrations" className="hover:text-slate-900">
+                Интеграции
+              </Link>
             </nav>
           </div>
         </header>

@@ -1,7 +1,21 @@
 import type { Prisma } from "@prisma/client";
 
-// Поля формы Тильды называются так, как их назвали в редакторе, поэтому ищем по нескольким вариантам
-const FIELD_ALIASES = {
+// Поля лида, которые заполняются из формы Тильды. Поля формы называются так, как их назвали
+// в редакторе, поэтому для каждого поля CRM хранится список подходящих названий
+export const TILDA_FIELDS = {
+  name: "Имя",
+  phone: "Телефон",
+  email: "Email",
+  companyName: "Компания",
+  message: "Сообщение",
+  formName: "Название формы",
+  pageUrl: "Страница",
+} as const;
+
+export type TildaField = keyof typeof TILDA_FIELDS;
+export type TildaFieldMap = Record<TildaField, string[]>;
+
+export const DEFAULT_FIELD_MAP: TildaFieldMap = {
   name: ["name", "имя", "fio", "фио", "your_name"],
   phone: ["phone", "телефон", "tel", "phone_number"],
   email: ["email", "e-mail", "почта", "mail"],
@@ -9,7 +23,18 @@ const FIELD_ALIASES = {
   message: ["comments", "comment", "message", "сообщение", "комментарий", "textarea", "вопрос", "question"],
   formName: ["formname", "form_name"],
   pageUrl: ["referer", "referrer", "pageurl", "page_url", "page"],
-} as const;
+};
+
+// Сохранённые настройки дополняем значениями по умолчанию: в базе могло не оказаться нового поля
+export function normalizeFieldMap(value: unknown): TildaFieldMap {
+  const saved = (value && typeof value === "object" ? value : {}) as Partial<Record<string, unknown>>;
+  const map = { ...DEFAULT_FIELD_MAP };
+  for (const field of Object.keys(TILDA_FIELDS) as TildaField[]) {
+    const v = saved[field];
+    if (Array.isArray(v)) map[field] = v.map((x) => String(x).trim().toLowerCase()).filter(Boolean);
+  }
+  return map;
+}
 
 const UTM_KEYS = {
   utmSource: "utm_source",
@@ -20,7 +45,13 @@ const UTM_KEYS = {
 } as const;
 
 // Служебные поля Тильды, которые не попадают в текст заявки
-const SERVICE_FIELDS = new Set(["tranid", "formid", "cookies", "api_key", "apikey", "key", "test"]);
+export const SERVICE_FIELDS = new Set(["tranid", "formid", "cookies", "api_key", "apikey", "key", "test"]);
+const SECRET_FIELDS = ["api_key", "apikey", "key"];
+
+// Поля без секретов: их можно сохранить в заявке и показать в журнале
+export function withoutSecrets(fields: Record<string, string>) {
+  return Object.fromEntries(Object.entries(fields).filter(([k]) => !SECRET_FIELDS.includes(k.toLowerCase())));
+}
 
 export type TildaLead = Pick<
   Prisma.LeadCreateInput,
@@ -64,27 +95,25 @@ function utmFromCookies(cookies: string | undefined): Record<string, string> {
   return out;
 }
 
-export function parseTildaLead(fields: Record<string, string>): TildaLead {
+export function parseTildaLead(fields: Record<string, string>, fieldMap: TildaFieldMap = DEFAULT_FIELD_MAP): TildaLead {
   const lower = new Map(Object.entries(fields).map(([k, v]) => [k.toLowerCase(), String(v)]));
   const cookieUtm = utmFromCookies(lower.get("cookies"));
 
   const lead: TildaLead = {
-    name: pick(lower, FIELD_ALIASES.name),
-    phone: pick(lower, FIELD_ALIASES.phone),
-    email: pick(lower, FIELD_ALIASES.email),
-    companyName: pick(lower, FIELD_ALIASES.companyName),
-    message: pick(lower, FIELD_ALIASES.message),
-    formName: pick(lower, FIELD_ALIASES.formName) ?? lower.get("formid") ?? null,
-    pageUrl: pick(lower, FIELD_ALIASES.pageUrl),
+    name: pick(lower, fieldMap.name),
+    phone: pick(lower, fieldMap.phone),
+    email: pick(lower, fieldMap.email),
+    companyName: pick(lower, fieldMap.companyName),
+    message: pick(lower, fieldMap.message),
+    formName: pick(lower, fieldMap.formName) ?? lower.get("formid") ?? null,
+    pageUrl: pick(lower, fieldMap.pageUrl),
     utmSource: null,
     utmMedium: null,
     utmCampaign: null,
     utmContent: null,
     utmTerm: null,
     externalId: lower.get("tranid")?.trim() || null,
-    raw: Object.fromEntries(
-      Object.entries(fields).filter(([k]) => !["api_key", "apikey", "key"].includes(k.toLowerCase())),
-    ),
+    raw: withoutSecrets(fields),
   };
   for (const [field, key] of Object.entries(UTM_KEYS) as [keyof typeof UTM_KEYS, string][]) {
     lead[field] = lower.get(key)?.trim() || cookieUtm[key] || null;
@@ -92,7 +121,7 @@ export function parseTildaLead(fields: Record<string, string>): TildaLead {
 
   // Поля, которых нет среди известных, дописываем в сообщение, чтобы менеджер их увидел
   const known = new Set<string>([
-    ...Object.values(FIELD_ALIASES).flat(),
+    ...Object.values(fieldMap).flat(),
     ...Object.values(UTM_KEYS),
     ...SERVICE_FIELDS,
   ]);
