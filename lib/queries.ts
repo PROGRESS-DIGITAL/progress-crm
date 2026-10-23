@@ -18,7 +18,7 @@ export function getCompanyOptions() {
 
 export async function getProductOptions() {
   const products = await db.product.findMany({
-    select: { id: true, category: true, name: true, price: true, priceFrom: true, unit: true, service: true, sortOrder: true },
+    select: { id: true, category: true, name: true, price: true, unit: true, service: true, sortOrder: true },
   });
   return sortByCategory(products);
 }

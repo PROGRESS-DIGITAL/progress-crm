@@ -72,7 +72,6 @@ model Product {
   description String?
   price       Int // рубли
   // «от 150 000»: цена минимальная, итог зависит от проекта
-  priceFrom   Boolean  @default(false)
   // Единица для почасовых и постраничных услуг: «час», «страница»
   unit        String?
   service     Service  @default(OTHER)

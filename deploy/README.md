@@ -1,34 +1,32 @@
 # Развёртывание на сервере
 
-Нужен сервер с Ubuntu 22.04+ (2 ГБ памяти достаточно) и домен, A-запись которого указывает на сервер.
+Нужен VPS с Ubuntu 22.04+ или Debian 12 и 2 ГБ памяти. Подключитесь к нему по SSH и выполните одну команду:
 
 ```bash
-# 1. Docker
-curl -fsSL https://get.docker.com | sh
-
-# 2. Код
-git clone https://github.com/PROGRESS-DIGITAL/progress-crm.git
-cd progress-crm/deploy
-
-# 3. Настройки
-cp .env.example .env
-nano .env            # домен, пароли, ключ Тильды
-
-# 4. Запуск
-docker compose up -d --build
+curl -fsSL https://raw.githubusercontent.com/PROGRESS-DIGITAL/progress-crm/main/deploy/install.sh | sudo bash
 ```
 
-Через минуту CRM откроется по `https://<домен>`: Caddy сам выпустит сертификат Let's Encrypt.
-Браузер спросит общий логин и пароль из `.env`.
+Скрипт ставит Docker, добавляет файл подкачки для сборки, скачивает код, генерирует пароли
+в `/opt/progress-crm/deploy/.env` и запускает базу, CRM, Caddy с HTTPS и ежедневные копии базы.
+В конце он печатает адрес, логин, пароль и ссылку для webhook Тильды.
 
-Обновление до свежей версии:
+Без своего домена CRM открывается по адресу `https://<IP-сервера>.sslip.io`. Чтобы сразу
+поставить свой, создайте A-запись на IP сервера и запустите скрипт с `DOMAIN=crm.progrs.ru`
+(`curl … | sudo DOMAIN=crm.progrs.ru bash`). Демо-сделки добавляются при первом запуске;
+`SEED_DEMO=0` запускает CRM с пустой воронкой.
+
+Сервер каждые 10 минут проверяет ветку main и сам пересобирает CRM после слияния
+(`deploy/update.sh`, лог в `/var/log/progress-crm-update.log`).
+
+Обновить вручную, не дожидаясь проверки:
 
 ```bash
-cd progress-crm && git pull && cd deploy && docker compose up -d --build
+sudo bash /opt/progress-crm/deploy/update.sh
 ```
 
 Копии базы складываются каждый день в `deploy/backups`. Восстановление:
 
 ```bash
+cd /opt/progress-crm/deploy
 gunzip -c backups/crm-2026-10-21.sql.gz | docker compose exec -T db psql -U crm progress_crm
 ```

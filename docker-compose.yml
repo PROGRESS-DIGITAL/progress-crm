@@ -1,6 +1,8 @@
+# Запуск CRM на своём компьютере: docker compose up -d --build → http://localhost:3000
 services:
   db:
     image: postgres:16
+    restart: unless-stopped
     environment:
       POSTGRES_USER: crm
       POSTGRES_PASSWORD: crm
@@ -9,6 +11,23 @@ services:
       - "5432:5432"
     volumes:
       - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm -d progress_crm"]
+      interval: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://crm:crm@db:5432/progress_crm
+      TILDA_WEBHOOK_KEY: local-key
+      SEED_DEMO: "1"
 
 volumes:
   db-data:
