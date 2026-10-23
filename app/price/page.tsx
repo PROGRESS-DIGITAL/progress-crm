@@ -3,6 +3,7 @@ import { sortByCategory } from "@/lib/format";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { deleteProduct } from "./actions";
 import { PriceEditor } from "./price-editor";
+import { TextEditor } from "./text-editor";
 import { ProductForm } from "./product-form";
 
 export const dynamic = "force-dynamic";
@@ -17,7 +18,7 @@ export default async function PricePage() {
     <div className="mx-auto max-w-5xl px-6 py-6">
       <h1 className="text-2xl font-semibold tracking-tight">Прайс</h1>
       <p className="mt-1 mb-6 text-sm text-slate-600">
-        Услуги для выбора в сделке. Нажмите на цену, чтобы изменить её; уже созданные сделки при этом не меняются.
+        Услуги для выбора в сделке. Название, описание и цену можно изменить кликом; сумма в уже созданных сделках при этом не меняется.
       </p>
 
       <div className="flex flex-col gap-6">
@@ -30,8 +31,14 @@ export default async function PricePage() {
                 .map((p) => (
                   <li key={p.id} data-testid={`product-${p.name}`} className="flex items-center gap-4 px-4 py-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium">{p.name}</p>
-                      {p.description && <p className="text-xs text-slate-500">{p.description}</p>}
+                      <TextEditor id={p.id} field="name" value={p.name} className="text-sm font-medium" placeholder="Название" />
+                      <TextEditor
+                        id={p.id}
+                        field="description"
+                        value={p.description}
+                        className="text-xs text-slate-500"
+                        placeholder="Добавить описание"
+                      />
                     </div>
                     <span className="hidden text-xs text-slate-400 sm:block">
                       {p._count.deals > 0 ? `сделок: ${p._count.deals}` : ""}

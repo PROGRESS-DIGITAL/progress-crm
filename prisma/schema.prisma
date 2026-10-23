@@ -84,11 +84,11 @@ model Product {
 }
 
 model Stage {
-  id       String    @id @default(cuid())
-  name     String
-  order    Int
-  kind     StageKind @default(OPEN)
-  deals    Deal[]
+  id    String    @id @default(cuid())
+  name  String
+  order Int
+  kind  StageKind @default(OPEN)
+  deals Deal[]
 
   @@unique([order])
 }
@@ -97,6 +97,10 @@ model Company {
   id        String    @id @default(cuid())
   name      String
   inn       String?
+  kpp       String?
+  ogrn      String?
+  // Руководитель по данным ЕГРЮЛ: ФИО и должность
+  director  String?
   website   String?
   phone     String?
   email     String?
@@ -154,4 +158,33 @@ model Deal {
 
   @@index([stageId, position])
   @@index([companyId])
+}
+
+// Настройки приёма заявок с Тильды: одна строка с id = 1
+model TildaSettings {
+  id         Int      @id @default(1)
+  enabled    Boolean  @default(true)
+  webhookKey String
+  // Какие поля формы Тильды попадают в какие поля лида
+  fieldMap   Json
+  updatedAt  DateTime @updatedAt
+}
+
+// Журнал входящих запросов webhook: помогает настроить поля и понять, почему заявка не дошла
+model WebhookLog {
+  id        String   @id @default(cuid())
+  source    String
+  status    String
+  fields    Json
+  leadId    String?
+  createdAt DateTime @default(now())
+
+  @@index([source, createdAt])
+}
+
+// Простые настройки приложения: ключи внешних сервисов и т. п.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

@@ -21,6 +21,27 @@ export async function updateProductPrice(id: string, value: number): Promise<{ e
   return {};
 }
 
+const textFields = {
+  name: z.string().trim().min(1, "Название не может быть пустым").max(200, "Слишком длинное название"),
+  description: z
+    .string()
+    .trim()
+    .max(1000, "Слишком длинное описание")
+    .transform((v) => (v === "" ? null : v)),
+};
+
+export async function updateProductText(
+  id: string,
+  field: keyof typeof textFields,
+  value: string,
+): Promise<{ error?: string }> {
+  const parsed = textFields[field].safeParse(value);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  await db.product.update({ where: { id }, data: { [field]: parsed.data } });
+  revalidatePrice();
+  return {};
+}
+
 const productSchema = z.object({
   category: z.string().trim().min(1, "Укажите раздел"),
   name: z.string().trim().min(1, "Укажите название"),
