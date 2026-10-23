@@ -6,9 +6,11 @@ const stages: { name: string; kind: StageKind }[] = [
   { name: "Новая", kind: "OPEN" },
   { name: "Квалификация", kind: "OPEN" },
   { name: "КП отправлено", kind: "OPEN" },
-  { name: "Переговоры", kind: "OPEN" },
-  { name: "Договор", kind: "OPEN" },
-  { name: "Выиграна", kind: "WON" },
+  { name: "Подготовка документов", kind: "OPEN" },
+  { name: "Счет на оплату", kind: "OPEN" },
+  { name: "В работе", kind: "OPEN" },
+  { name: "Релиз и финальный счет", kind: "OPEN" },
+  { name: "Оплачен", kind: "WON" },
   { name: "Проиграна", kind: "LOST" },
 ];
 
