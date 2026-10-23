@@ -4,17 +4,30 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
+import { findPartyByInn, getDadataKey, type PartyInfo } from "@/lib/dadata";
 import { invalid, optionalEmail, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Укажите название компании"),
   inn: optionalText.refine((v) => v === null || /^\d{10}(\d{2})?$/.test(v), "ИНН — 10 или 12 цифр"),
+  kpp: optionalText.refine((v) => v === null || /^\d{9}$/.test(v), "КПП — 9 цифр"),
+  ogrn: optionalText.refine((v) => v === null || /^\d{13}(\d{2})?$/.test(v), "ОГРН — 13 или 15 цифр"),
+  director: optionalText,
   website: optionalText,
   phone: optionalText,
   email: optionalEmail,
   address: optionalText,
   notes: optionalText,
 });
+
+// Реквизиты по ИНН из DaData; сохраняет их уже сама форма, после проверки менеджером
+export async function lookupInn(inn: string): Promise<{ party?: PartyInfo; error?: string }> {
+  const clean = inn.replace(/\s/g, "");
+  if (!/^\d{10}(\d{2})?$/.test(clean)) return { error: "ИНН — 10 или 12 цифр" };
+  const key = await getDadataKey();
+  if (!key) return { error: "no-key" };
+  return findPartyByInn(clean, key);
+}
 
 const contactSchema = z.object({
   fullName: z.string().trim().min(1, "Укажите имя"),

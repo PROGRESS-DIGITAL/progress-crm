@@ -1,13 +1,15 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { getDadataKey } from "@/lib/dadata";
 import { getTildaSettings } from "@/lib/tilda-settings";
 
 export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage() {
-  const [tilda, lastTilda] = await Promise.all([
+  const [tilda, lastTilda, dadataKey] = await Promise.all([
     getTildaSettings(),
     db.webhookLog.findFirst({ where: { source: "tilda", status: "ok" }, orderBy: { createdAt: "desc" } }),
+    getDadataKey(),
   ]);
   const since = new Date(Date.now() - 30 * 86_400_000);
   const tildaLeads = await db.lead.count({ where: { source: "TILDA", createdAt: { gte: since } } });
@@ -34,6 +36,20 @@ export default async function IntegrationsPage() {
           <p className="mt-3 text-xs text-slate-500">
             {lastTilda ? `Заявок за 30 дней: ${tildaLeads}` : "Заявок ещё не было"}
           </p>
+        </Link>
+        <Link
+          href="/integrations/dadata"
+          className="rounded-xl border border-slate-200 bg-white p-5 hover:border-blue-300 hover:shadow-sm"
+        >
+          <div className="flex items-center justify-between">
+            <h2 className="font-semibold">DaData</h2>
+            <span
+              className={`rounded-full px-2 py-0.5 text-xs ${dadataKey ? "bg-emerald-50 text-emerald-700" : "bg-slate-100 text-slate-600"}`}
+            >
+              {dadataKey ? "Подключено" : "Не подключено"}
+            </span>
+          </div>
+          <p className="mt-2 text-sm text-slate-600">Реквизиты клиента по ИНН: название, КПП, ОГРН, адрес, руководитель.</p>
         </Link>
       </div>
     </div>

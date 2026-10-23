@@ -84,11 +84,11 @@ model Product {
 }
 
 model Stage {
-  id       String    @id @default(cuid())
-  name     String
-  order    Int
-  kind     StageKind @default(OPEN)
-  deals    Deal[]
+  id    String    @id @default(cuid())
+  name  String
+  order Int
+  kind  StageKind @default(OPEN)
+  deals Deal[]
 
   @@unique([order])
 }
@@ -97,6 +97,10 @@ model Company {
   id        String    @id @default(cuid())
   name      String
   inn       String?
+  kpp       String?
+  ogrn      String?
+  // Руководитель по данным ЕГРЮЛ: ФИО и должность
+  director  String?
   website   String?
   phone     String?
   email     String?
@@ -176,4 +180,11 @@ model WebhookLog {
   createdAt DateTime @default(now())
 
   @@index([source, createdAt])
+}
+
+// Простые настройки приложения: ключи внешних сервисов и т. п.
+model AppSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
 }

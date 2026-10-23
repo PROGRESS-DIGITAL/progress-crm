@@ -1,12 +1,17 @@
 "use client";
 
-import { useActionState } from "react";
+import Link from "next/link";
+import { useActionState, useRef, useState, useTransition } from "react";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { Field, inputClass, primaryButton } from "@/components/field";
+import { lookupInn } from "./actions";
 
 export type CompanyValues = {
   name: string;
   inn: string | null;
+  kpp: string | null;
+  ogrn: string | null;
+  director: string | null;
   website: string | null;
   phone: string | null;
   email: string | null;
@@ -26,14 +31,80 @@ export function CompanyForm({
   const [state, formAction, pending] = useActionState(action, undefined);
   const err = state?.errors ?? {};
   const v = (name: string) => fieldValue(state, initial, name);
+  const formRef = useRef<HTMLFormElement>(null);
+  const [lookup, setLookup] = useState<{ ok?: string; error?: string } | null>(null);
+  const [looking, startLookup] = useTransition();
+
+  // Реквизиты перезаписываются данными ЕГРЮЛ, а название, телефон и email — только если они пустые
+  function fillByInn() {
+    const form = formRef.current;
+    if (!form) return;
+    const input = (name: string) => form.elements.namedItem(name) as HTMLInputElement | null;
+    startLookup(async () => {
+      const result = await lookupInn(input("inn")?.value ?? "");
+      if (!result.party) {
+        setLookup({ error: result.error });
+        return;
+      }
+      const p = result.party;
+      const set = (name: string, value: string | null, onlyIfEmpty = false) => {
+        const el = input(name);
+        if (el && value && (!onlyIfEmpty || !el.value.trim())) el.value = value;
+      };
+      set("inn", p.inn);
+      set("kpp", p.kpp);
+      set("ogrn", p.ogrn);
+      set("address", p.address);
+      set("director", p.director);
+      set("name", p.name, true);
+      set("phone", p.phone, true);
+      set("email", p.email, true);
+      setLookup({
+        ok: `Найдено: ${p.name}.${p.inactive ? " Внимание: компания не действует." : ""} Проверьте поля и сохраните.`,
+      });
+    });
+  }
 
   return (
-    <form action={formAction} className="grid gap-4 sm:grid-cols-2">
+    <form ref={formRef} action={formAction} className="grid gap-4 sm:grid-cols-2">
       <Field label="Название компании" error={err.name} wide>
         <input name="name" defaultValue={v("name")} required className={inputClass} />
       </Field>
-      <Field label="ИНН" error={err.inn}>
-        <input name="inn" inputMode="numeric" defaultValue={v("inn")} className={inputClass} />
+      <div className="sm:col-span-2">
+        <Field label="ИНН" error={err.inn}>
+          <div className="flex gap-2">
+            <input name="inn" inputMode="numeric" defaultValue={v("inn")} className={inputClass} />
+            <button
+              type="button"
+              onClick={fillByInn}
+              disabled={looking}
+              className="shrink-0 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm hover:bg-slate-50 disabled:opacity-60"
+            >
+              {looking ? "Ищу…" : "Заполнить по ИНН"}
+            </button>
+          </div>
+        </Field>
+        {lookup?.ok && <p className="mt-1 text-xs text-emerald-700">{lookup.ok}</p>}
+        {lookup?.error === "no-key" ? (
+          <p className="mt-1 text-xs text-amber-800">
+            Чтобы заполнять по ИНН, добавьте ключ DaData в{" "}
+            <Link href="/integrations/dadata" className="underline">
+              «Интеграциях»
+            </Link>
+            .
+          </p>
+        ) : (
+          lookup?.error && <p className="mt-1 text-xs text-rose-600">{lookup.error}</p>
+        )}
+      </div>
+      <Field label="КПП" error={err.kpp}>
+        <input name="kpp" inputMode="numeric" defaultValue={v("kpp")} className={inputClass} />
+      </Field>
+      <Field label="ОГРН" error={err.ogrn}>
+        <input name="ogrn" inputMode="numeric" defaultValue={v("ogrn")} className={inputClass} />
+      </Field>
+      <Field label="Руководитель" error={err.director} wide>
+        <input name="director" defaultValue={v("director")} className={inputClass} />
       </Field>
       <Field label="Сайт" error={err.website}>
         <input name="website" defaultValue={v("website")} className={inputClass} />
