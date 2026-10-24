@@ -2,10 +2,13 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatRub } from "@/lib/format";
 import { Board } from "./board";
+import { getAvatars } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
 export default async function DealsPage() {
+  const avatars = await getAvatars();
+  const clientNames = (await db.company.findMany({ select: { name: true }, orderBy: { name: "asc" } })).map((c) => c.name);
   const stages = await db.stage.findMany({
     orderBy: { order: "asc" },
     include: {
@@ -36,6 +39,8 @@ export default async function DealsPage() {
         </Link>
       </div>
       <Board
+        clientNames={clientNames}
+        avatars={avatars}
         stages={stages.map((s) => ({
           id: s.id,
           name: s.name,
@@ -48,6 +53,8 @@ export default async function DealsPage() {
             service: d.service,
             productName: d.product?.name ?? null,
             owner: d.owner,
+            startDate: d.startDate.toISOString(),
+            expectedCloseDate: d.expectedCloseDate?.toISOString() ?? null,
             position: d.position,
           })),
         }))}
