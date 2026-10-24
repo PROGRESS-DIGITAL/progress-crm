@@ -6,6 +6,7 @@ import { z } from "zod";
 import { Service } from "@prisma/client";
 import { db } from "@/lib/db";
 import { invalid, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
+import { isSalesStep } from "@/lib/sales-map";
 
 const dealSchema = z.object({
   title: z.string().trim().min(1, "Укажите название сделки"),
@@ -15,6 +16,7 @@ const dealSchema = z.object({
   quantity: z.coerce.number().int().min(1, "Количество от 1").default(1),
   amount: z.coerce.number().int("Сумма в целых рублях").min(0, "Сумма не может быть отрицательной"),
   service: z.nativeEnum(Service),
+  salesStep: optionalText.refine((v) => v === null || isSalesStep(v), "Нет такого шага планограммы"),
   owner: optionalText,
   expectedCloseDate: optionalText,
   lostReason: optionalText,
@@ -49,6 +51,7 @@ function revalidateDeal(companyId: string) {
   revalidatePath("/deals");
   revalidatePath(`/clients/${companyId}`);
   revalidatePath("/clients");
+  revalidatePath("/sales-map");
 }
 
 export async function createDeal(_prev: FormState, formData: FormData): Promise<FormState> {

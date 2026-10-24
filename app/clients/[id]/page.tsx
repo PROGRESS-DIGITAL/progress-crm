@@ -6,6 +6,8 @@ import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { createContact, deleteCompany, deleteContact, updateCompany } from "../actions";
 import { CompanyForm } from "../company-form";
 import { ContactForm } from "../contact-form";
+import { SalesPlan } from "../sales-plan";
+import { getClientPlan, getStepProducts } from "@/lib/sales-map-data";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,7 @@ export default async function ClientPage({
     },
   });
   if (!company) notFound();
+  const [plan, stepProducts] = await Promise.all([getClientPlan(company.id, company.situation), getStepProducts()]);
 
   return (
     <div className="mx-auto max-w-5xl px-6 py-8">
@@ -91,6 +94,8 @@ export default async function ClientPage({
           <ContactForm action={createContact.bind(null, company.id)} submitLabel="Добавить" />
         </section>
       </div>
+
+      <SalesPlan companyId={company.id} plan={plan} manual={company.situation} products={stepProducts} />
 
       <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
         <div className="mb-4 flex items-center justify-between">

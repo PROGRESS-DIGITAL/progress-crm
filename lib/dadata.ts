@@ -16,6 +16,7 @@ export type PartyInfo = {
   email: string | null;
   // Компания ликвидирована или в процессе: менеджеру стоит об этом знать
   inactive: boolean;
+  individual: boolean;
 };
 
 type Suggestion = {
@@ -25,9 +26,10 @@ type Suggestion = {
     kpp?: string | null;
     ogrn?: string | null;
     type?: string;
-    name?: { short_with_opf?: string | null; full_with_opf?: string | null } | null;
+    name?: { short_with_opf?: string | null; full_with_opf?: string | null; full?: string | null } | null;
+    fio?: { surname?: string | null; name?: string | null; patronymic?: string | null } | null;
     management?: { name?: string | null; post?: string | null } | null;
-    address?: { value?: string | null } | null;
+    address?: { value?: string | null; unrestricted_value?: string | null } | null;
     state?: { status?: string | null } | null;
     phones?: { value?: string }[] | null;
     emails?: { value?: string }[] | null;
@@ -38,17 +40,23 @@ export function partyFromSuggestion(s: Suggestion): PartyInfo | null {
   const d = s.data;
   if (!d?.inn) return null;
   const post = d.management?.post?.trim().toLowerCase();
-  const director = d.management?.name ? (post ? `${d.management.name} (${post})` : d.management.name) : null;
+  let director = d.management?.name ? (post ? `${d.management.name} (${post})` : d.management.name) : null;
+  // У ИП нет отдельного руководителя: это сам предприниматель
+  if (!director && d.type === "INDIVIDUAL") {
+    const fio = [d.fio?.surname, d.fio?.name, d.fio?.patronymic].filter(Boolean).join(" ") || d.name?.full;
+    if (fio) director = `${fio} (индивидуальный предприниматель)`;
+  }
   return {
     name: d.name?.short_with_opf || s.value || d.name?.full_with_opf || d.inn,
     inn: d.inn,
     kpp: d.kpp || null,
     ogrn: d.ogrn || null,
-    address: d.address?.value || null,
+    address: d.address?.value || d.address?.unrestricted_value || null,
     director,
     phone: d.phones?.[0]?.value || null,
     email: d.emails?.[0]?.value || null,
     inactive: !!d.state?.status && d.state.status !== "ACTIVE",
+    individual: d.type === "INDIVIDUAL",
   };
 }
 

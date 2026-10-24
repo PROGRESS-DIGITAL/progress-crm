@@ -6,6 +6,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { findPartyByInn, getDadataKey, type PartyInfo } from "@/lib/dadata";
 import { invalid, optionalEmail, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
+import { isSituation } from "@/lib/sales-map";
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Укажите название компании"),
@@ -18,6 +19,7 @@ const companySchema = z.object({
   email: optionalEmail,
   address: optionalText,
   notes: optionalText,
+  situation: optionalText.refine((v) => v === null || isSituation(v), "Нет такой ситуации"),
 });
 
 // Реквизиты по ИНН из DaData; сохраняет их уже сама форма, после проверки менеджером
@@ -54,6 +56,7 @@ export async function updateCompany(id: string, _prev: FormState, formData: Form
   revalidatePath("/clients");
   revalidatePath(`/clients/${id}`);
   revalidatePath("/deals");
+  revalidatePath("/sales-map");
   return { saved: true };
 }
 

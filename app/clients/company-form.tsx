@@ -5,6 +5,7 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { lookupInn } from "./actions";
+import { SALES_COLUMNS } from "@/lib/sales-map";
 
 export type CompanyValues = {
   name: string;
@@ -17,6 +18,7 @@ export type CompanyValues = {
   email: string | null;
   address: string | null;
   notes: string | null;
+  situation: string | null;
 };
 
 export function CompanyForm({
@@ -51,6 +53,14 @@ export function CompanyForm({
         const el = input(name);
         if (el && value && (!onlyIfEmpty || !el.value.trim())) el.value = value;
       };
+      // Менеджер должен видеть, чего DaData не прислала, а не гадать, почему поле пустое
+      const missing = [
+        !p.individual && !p.kpp && "КПП",
+        !p.address && "адрес",
+        !p.director && "руководитель",
+        !p.phone && "телефон",
+        !p.email && "email",
+      ].filter(Boolean);
       set("inn", p.inn);
       set("kpp", p.kpp);
       set("ogrn", p.ogrn);
@@ -60,7 +70,15 @@ export function CompanyForm({
       set("phone", p.phone, true);
       set("email", p.email, true);
       setLookup({
-        ok: `Найдено: ${p.name}.${p.inactive ? " Внимание: компания не действует." : ""} Проверьте поля и сохраните.`,
+        ok: [
+          `Найдено: ${p.name}.`,
+          p.inactive && "Внимание: компания не действует.",
+          p.individual && "У ИП нет КПП.",
+          missing.length > 0 && `DaData не прислала: ${missing.join(", ")}.`,
+          "Проверьте поля и сохраните.",
+        ]
+          .filter(Boolean)
+          .join(" "),
       });
     });
   }
@@ -117,6 +135,16 @@ export function CompanyForm({
       </Field>
       <Field label="Адрес" error={err.address} wide>
         <input name="address" defaultValue={v("address")} className={inputClass} />
+      </Field>
+      <Field label="Что есть у клиента (планограмма)" error={err.situation} wide>
+        <select key={v("situation")} name="situation" defaultValue={v("situation")} className={inputClass}>
+          <option value="">Определить по оплаченным сделкам</option>
+          {SALES_COLUMNS.map((c) => (
+            <option key={c.situation} value={c.situation}>
+              {c.title}
+            </option>
+          ))}
+        </select>
       </Field>
       <Field label="Заметки" error={err.notes} wide>
         <textarea name="notes" rows={3} defaultValue={v("notes")} className={inputClass} />

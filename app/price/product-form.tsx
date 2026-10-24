@@ -5,6 +5,7 @@ import { SERVICE_LABELS } from "@/lib/format";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { createProduct } from "./actions";
+import { SALES_STEPS } from "@/lib/sales-map";
 
 export function ProductForm({ categories }: { categories: string[] }) {
   const [state, formAction, pending] = useActionState(createProduct, undefined);
@@ -48,7 +49,19 @@ export function ProductForm({ categories }: { categories: string[] }) {
           </select>
         </Field>
       </div>
-      <div className="sm:col-span-4">
+      <div className="sm:col-span-2">
+        <Field label="Шаг планограммы" error={err.salesStep}>
+          <select key={v("salesStep")} name="salesStep" defaultValue={v("salesStep")} className={inputClass}>
+            <option value="">Не относится</option>
+            {Object.entries(SALES_STEPS).map(([value, label]) => (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </Field>
+      </div>
+      <div className="sm:col-span-2">
         <Field label="Описание" error={err.description}>
           <input name="description" defaultValue={v("description")} className={inputClass} />
         </Field>

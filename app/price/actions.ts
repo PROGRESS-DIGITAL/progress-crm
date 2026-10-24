@@ -5,6 +5,9 @@ import { z } from "zod";
 import { Service } from "@prisma/client";
 import { db } from "@/lib/db";
 import { invalid, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
+import { isSalesStep } from "@/lib/sales-map";
+
+const salesStep = optionalText.refine((v) => v === null || isSalesStep(v), "Нет такого шага планограммы");
 
 const price = z.coerce.number().int("Цена в целых рублях").min(0, "Цена не может быть отрицательной");
 
@@ -30,6 +33,15 @@ const textFields = {
     .transform((v) => (v === "" ? null : v)),
 };
 
+export async function updateProductStep(id: string, value: string): Promise<{ error?: string }> {
+  const parsed = salesStep.safeParse(value);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  await db.product.update({ where: { id }, data: { salesStep: parsed.data } });
+  revalidatePrice();
+  revalidatePath("/sales-map");
+  return {};
+}
+
 export async function updateProductText(
   id: string,
   field: keyof typeof textFields,
@@ -49,6 +61,7 @@ const productSchema = z.object({
   price,
   unit: optionalText,
   service: z.nativeEnum(Service),
+  salesStep,
 });
 
 export async function createProduct(_prev: FormState, formData: FormData): Promise<FormState> {
