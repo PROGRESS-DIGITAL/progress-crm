@@ -6,6 +6,7 @@ import { z } from "zod";
 import { LeadStatus, Service } from "@prisma/client";
 import { db } from "@/lib/db";
 import { invalid, optionalEmail, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
+import { isSalesStep } from "@/lib/sales-map";
 
 const leadSchema = z
   .object({
@@ -56,6 +57,7 @@ const convertSchema = z
     quantity: z.coerce.number().int().min(1, "Количество от 1").default(1),
     amount: z.coerce.number().int("Сумма в целых рублях").min(0, "Сумма не может быть отрицательной"),
     service: z.nativeEnum(Service),
+    salesStep: optionalText.refine((v) => v === null || isSalesStep(v), "Нет такого шага планограммы"),
     owner: optionalText,
   })
   .refine((d) => d.companyId || d.companyName, {
@@ -66,7 +68,7 @@ const convertSchema = z
 export async function convertLead(id: string, _prev: FormState, formData: FormData): Promise<FormState> {
   const parsed = convertSchema.safeParse(
     Object.fromEntries(
-      ["companyId", "companyName", "title", "productId", "quantity", "amount", "service", "owner"].map((k) => [k, formData.get(k) ?? null]),
+      ["companyId", "companyName", "title", "productId", "quantity", "amount", "service", "salesStep", "owner"].map((k) => [k, formData.get(k) ?? null]),
     ),
   );
   if (!parsed.success) return invalid(toErrors(parsed.error), formData);
@@ -116,6 +118,7 @@ export async function convertLead(id: string, _prev: FormState, formData: FormDa
         quantity: d.quantity,
         amount: d.amount,
         service: d.service,
+        salesStep: d.salesStep,
         owner: d.owner ?? lead.owner,
         notes: lead.message,
         companyId,

@@ -16,6 +16,7 @@ export type DealValues = {
   quantity: number;
   amount: number;
   service: Service;
+  salesStep: string | null;
   owner: string | null;
   expectedCloseDate: string | null; // YYYY-MM-DD
   lostReason: string | null;
@@ -102,6 +103,7 @@ export function DealForm({ action, stages, companies, products, initial, submitL
           quantity: Number(v("quantity")) || 1,
           service: (v("service") || "WEBSITE") as Service,
           amount: Number(v("amount")) || 0,
+          salesStep: v("salesStep"),
         }}
       />
       <Field label="Этап" error={err.stageId}>

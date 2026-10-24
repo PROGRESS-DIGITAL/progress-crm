@@ -6,12 +6,14 @@ import { SERVICE_LABELS, formatPrice } from "@/lib/format";
 import type { ProductOption } from "@/lib/queries";
 import { EditableAmount } from "@/components/editable-amount";
 import { Field, inputClass } from "@/components/field";
+import { SALES_STEPS } from "@/lib/sales-map";
 
 export type ProductPickerValues = {
   productId: string;
   quantity: number;
   service: Service;
   amount: number;
+  salesStep: string;
 };
 
 // Услуга из прайса подставляет направление и сумму (цена × количество); сумму можно поправить кликом
@@ -28,6 +30,7 @@ export function ProductPicker({
   const [quantity, setQuantity] = useState(initial.quantity);
   const [service, setService] = useState<Service>(initial.service);
   const [amount, setAmount] = useState(initial.amount);
+  const [salesStep, setSalesStep] = useState(initial.salesStep);
   const product = products.find((p) => p.id === productId);
   const categories = [...new Set(products.map((p) => p.category))];
 
@@ -35,6 +38,7 @@ export function ProductPicker({
     const p = products.find((x) => x.id === id);
     if (p) {
       setService(p.service);
+      if (p.salesStep) setSalesStep(p.salesStep);
       setAmount(p.price * qty);
     }
   }
@@ -103,6 +107,22 @@ export function ProductPicker({
       </Field>
       <Field label="Сумма, ₽" error={errors.amount}>
         <EditableAmount name="amount" value={amount} onChange={setAmount} />
+      </Field>
+      <Field label="Шаг планограммы" error={errors.salesStep}>
+        <select
+          key={`${productId}-${salesStep}`}
+          name="salesStep"
+          defaultValue={salesStep}
+          onChange={(e) => setSalesStep(e.target.value)}
+          className={inputClass}
+        >
+          <option value="">Не относится</option>
+          {Object.entries(SALES_STEPS).map(([value, label]) => (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          ))}
+        </select>
       </Field>
     </>
   );

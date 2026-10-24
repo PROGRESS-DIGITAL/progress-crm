@@ -64,6 +64,7 @@ export function ConvertForm({
           quantity: Number(v("quantity")) || 1,
           service: (v("service") || "WEBSITE") as Service,
           amount: Number(v("amount")) || 0,
+          salesStep: v("salesStep"),
         }}
       />
       <Field label="Ответственный" error={err.owner}>
