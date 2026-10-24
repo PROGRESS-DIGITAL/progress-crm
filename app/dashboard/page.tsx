@@ -7,6 +7,29 @@ export const dynamic = "force-dynamic";
 
 const TOP = 10;
 
+// Цвет полоски по месту в рейтинге: первые четыре места свои, остальные — серые
+const RANK_BAR = [
+  "bg-blue-600 group-hover:bg-blue-700",
+  "bg-emerald-500 group-hover:bg-emerald-600",
+  "bg-sky-400 group-hover:bg-sky-500",
+  "bg-orange-400 group-hover:bg-orange-500",
+];
+const REST_BAR = "bg-slate-300 group-hover:bg-slate-400";
+
+function Crown({ className = "" }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-label="Самый большой клиент"
+      role="img"
+      className={`h-4 w-4 shrink-0 text-amber-500 ${className}`}
+    >
+      <title>Самый большой клиент</title>
+      <path fill="currentColor" d="M3 7.5 7.5 11 12 4l4.5 7L21 7.5 19.2 18H4.8L3 7.5Zm2 12h14v1.5H5V19.5Z" />
+    </svg>
+  );
+}
+
 function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-4">
@@ -58,14 +81,18 @@ export default async function DashboardPage() {
           </p>
         ) : (
           <ul className="mt-5 flex flex-col gap-2" aria-label="Клиенты по LTV">
-            {top.map((r) => (
+            {top.map((r, i) => (
               <li key={r.id} className="group relative grid grid-cols-[minmax(0,12rem)_1fr] items-center gap-3">
-                <Link href={`/clients/${r.id}`} className="truncate text-sm text-slate-700 hover:text-blue-700">
-                  {r.name}
+                <Link
+                  href={`/clients/${r.id}`}
+                  className={`flex items-center gap-1.5 text-sm hover:text-blue-700 ${i === 0 ? "font-semibold text-slate-900" : "text-slate-700"}`}
+                >
+                  {i === 0 && <Crown />}
+                  <span className="truncate">{r.name}</span>
                 </Link>
                 <div className="flex items-center gap-2">
                   <div
-                    className="h-5 rounded-r-[4px] bg-blue-600 transition-colors group-hover:bg-blue-700"
+                    className={`h-5 rounded-r-[4px] transition-colors ${RANK_BAR[i] ?? REST_BAR}`}
                     style={{ width: `${Math.max((r.ltv / max) * 100, 1)}%`, maxWidth: "calc(100% - 7rem)" }}
                   />
                   <span className="shrink-0 text-sm text-slate-700 tabular-nums">{formatRub(r.ltv)}</span>
@@ -103,10 +130,14 @@ export default async function DashboardPage() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {rows.map((r) => (
+            {rows.map((r, i) => (
               <tr key={r.id} className="hover:bg-slate-50">
                 <td className="px-4 py-3">
-                  <Link href={`/clients/${r.id}`} className="text-slate-900 hover:text-blue-700">
+                  <Link
+                    href={`/clients/${r.id}`}
+                    className="inline-flex items-center gap-1.5 text-slate-900 hover:text-blue-700"
+                  >
+                    {i === 0 && r.ltv > 0 && <Crown />}
                     {r.name}
                   </Link>
                 </td>
