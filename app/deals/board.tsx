@@ -24,10 +24,17 @@ type DealCard = {
   productName: string | null;
   owner: string | null;
   startDate: string;
+  expectedCloseDate: string | null;
   position: number;
 };
 
 const shortDate = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: "Europe/Moscow" });
+const moscowDay = (d: Date) => d.toLocaleDateString("en-CA", { timeZone: "Europe/Moscow" });
+
+// Просрочена: открытая сделка, у которой ожидаемая дата закрытия уже прошла (сравниваем дни по Москве)
+function isOverdue(deal: DealCard, kind: StageKind) {
+  return kind === "OPEN" && !!deal.expectedCloseDate && moscowDay(new Date(deal.expectedCloseDate)) < moscowDay(new Date());
+}
 
 type Column = { id: string; name: string; kind: StageKind; deals: DealCard[] };
 
@@ -113,14 +120,14 @@ function StageColumn({ column }: { column: Column }) {
       <div className="flex min-h-24 flex-1 flex-col gap-2 px-2 pb-3">
         <QuickDeal stageId={column.id} />
         {column.deals.map((d) => (
-          <DealItem key={d.id} deal={d} />
+          <DealItem key={d.id} deal={d} overdue={isOverdue(d, column.kind)} />
         ))}
       </div>
     </section>
   );
 }
 
-function DealItem({ deal }: { deal: DealCard }) {
+function DealItem({ deal, overdue }: { deal: DealCard; overdue: boolean }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: deal.id });
   const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined;
 
@@ -130,7 +137,7 @@ function DealItem({ deal }: { deal: DealCard }) {
       style={style}
       {...listeners}
       {...attributes}
-      className={`cursor-grab rounded-lg border border-slate-200 bg-white p-3 shadow-sm ${isDragging ? "z-10 opacity-80 shadow-lg" : ""}`}
+      className={`cursor-grab rounded-lg border bg-white p-3 shadow-sm ${overdue ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200"} ${isDragging ? "z-10 opacity-80 shadow-lg" : ""}`}
     >
       <Link href={`/deals/${deal.id}`} className="block text-sm font-medium hover:text-blue-700">
         {deal.title}
@@ -142,6 +149,11 @@ function DealItem({ deal }: { deal: DealCard }) {
         </span>
         <span className="text-sm font-semibold tabular-nums">{formatRub(deal.amount)}</span>
       </div>
+      {overdue && (
+        <p className="mt-1.5 text-[11px] font-medium text-rose-600">
+          Просрочено: закрыть до {shortDate.format(new Date(deal.expectedCloseDate!))}
+        </p>
+      )}
       <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500">
         <span className="truncate">{deal.owner && `Отв.: ${deal.owner}`}</span>
         <time dateTime={deal.startDate} title="Дата начала" className="shrink-0">

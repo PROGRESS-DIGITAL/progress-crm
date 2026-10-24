@@ -51,6 +51,7 @@ export default async function DealsPage() {
             productName: d.product?.name ?? null,
             owner: d.owner,
             startDate: d.startDate.toISOString(),
+            expectedCloseDate: d.expectedCloseDate?.toISOString() ?? null,
             position: d.position,
           })),
         }))}
