@@ -21,11 +21,12 @@ const demoDeals: {
   service: Service;
   stage: number;
   owner: string;
+  salesStep: string;
 }[] = [
-  { title: "Сайт для стоматологии", clientName: "Дент-Мастер", amount: 180000, service: "WEBSITE", stage: 0, owner: "Илья" },
-  { title: "SEO на 6 месяцев", clientName: "СтройГрад", amount: 360000, service: "SEO", stage: 1, owner: "Илья" },
-  { title: "Яндекс Директ, запуск", clientName: "Кофейня «Зерно»", amount: 45000, service: "CONTEXT_ADS", stage: 2, owner: "Илья" },
-  { title: "Логотип и фирменный стиль", clientName: "Эко-Ферма", amount: 120000, service: "BRANDING", stage: 3, owner: "Илья" },
+  { title: "Сайт для стоматологии", clientName: "Дент-Мастер", amount: 180000, service: "WEBSITE", stage: 0, owner: "Илья", salesStep: "businessSite" },
+  { title: "SEO на 6 месяцев", clientName: "СтройГрад", amount: 360000, service: "SEO", stage: 1, owner: "Илья", salesStep: "seo" },
+  { title: "Яндекс Директ, запуск", clientName: "Кофейня «Зерно»", amount: 45000, service: "CONTEXT_ADS", stage: 2, owner: "Илья", salesStep: "context" },
+  { title: "Логотип и фирменный стиль", clientName: "Эко-Ферма", amount: 120000, service: "BRANDING", stage: 3, owner: "Илья", salesStep: "logo" },
 ];
 
 async function main() {
