@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { getOwner } from "@/lib/profile";
 import { Avatar } from "@/components/avatar";
 
+// connection(): шапка читает базу на каждый запрос, а не один раз при сборке
 export async function HeaderProfile() {
+  await connection();
   const owner = await getOwner();
   return (
     <Link
