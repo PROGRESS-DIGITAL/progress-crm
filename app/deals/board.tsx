@@ -76,7 +76,7 @@ export function Board({ stages }: { stages: Column[] }) {
 
   return (
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
-      <div className="flex gap-4 overflow-x-auto pb-4">
+      <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
         {columns.map((c) => (
           <StageColumn key={c.id} column={c} />
         ))}

@@ -18,7 +18,8 @@ export default async function DealsPage() {
   const sum = (ds: { amount: number }[]) => ds.reduce((acc, d) => acc + d.amount, 0);
 
   return (
-    <div className="px-6 py-6">
+    // Высота экрана без шапки (h-14 и рамка 1px): колонки воронки тянутся до низа
+    <div className="flex min-h-[calc(100dvh-3.5rem-1px)] flex-col px-6 py-6">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Сделки</h1>
