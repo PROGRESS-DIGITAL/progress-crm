@@ -195,3 +195,17 @@ model AppSetting {
   value     String
   updatedAt DateTime @updatedAt
 }
+
+// Сотрудник CRM. Пока вход общий, владелец — один: его карточка в «Личных данных»
+model Employee {
+  id        String   @id @default(cuid())
+  name      String
+  position  String?
+  phone     String?
+  email     String?
+  // Аватар как data URL: сжимается в браузере до 256 px, чтобы не держать файлы на диске
+  avatar    String?
+  isOwner   Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

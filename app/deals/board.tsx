@@ -14,6 +14,7 @@ import {
 import type { Service, StageKind } from "@prisma/client";
 import { SERVICE_LABELS, formatRub } from "@/lib/format";
 import { moveDeal, quickCreateDeal } from "./actions";
+import { Avatar } from "@/components/avatar";
 
 type DealCard = {
   id: string;
@@ -44,7 +45,15 @@ const KIND_ACCENT: Record<StageKind, string> = {
   LOST: "border-t-rose-400",
 };
 
-export function Board({ stages, clientNames }: { stages: Column[]; clientNames: string[] }) {
+export function Board({
+  stages,
+  clientNames,
+  avatars,
+}: {
+  stages: Column[];
+  clientNames: string[];
+  avatars: Record<string, string>;
+}) {
   const [columns, setColumns] = useState(stages);
   // Свежие данные с сервера (после revalidate) заменяют локальное состояние
   useEffect(() => setColumns(stages), [stages]);
@@ -88,7 +97,7 @@ export function Board({ stages, clientNames }: { stages: Column[]; clientNames: 
     <DndContext sensors={sensors} onDragEnd={onDragEnd}>
       <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
         {columns.map((c) => (
-          <StageColumn key={c.id} column={c} />
+          <StageColumn key={c.id} column={c} avatars={avatars} />
         ))}
       </div>
       <datalist id="client-names">
@@ -100,7 +109,7 @@ export function Board({ stages, clientNames }: { stages: Column[]; clientNames: 
   );
 }
 
-function StageColumn({ column }: { column: Column }) {
+function StageColumn({ column, avatars }: { column: Column; avatars: Record<string, string> }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id });
   const total = column.deals.reduce((acc, d) => acc + d.amount, 0);
 
@@ -120,14 +129,14 @@ function StageColumn({ column }: { column: Column }) {
       <div className="flex min-h-24 flex-1 flex-col gap-2 px-2 pb-3">
         <QuickDeal stageId={column.id} />
         {column.deals.map((d) => (
-          <DealItem key={d.id} deal={d} overdue={isOverdue(d, column.kind)} />
+          <DealItem key={d.id} deal={d} overdue={isOverdue(d, column.kind)} avatar={d.owner ? avatars[d.owner] : null} />
         ))}
       </div>
     </section>
   );
 }
 
-function DealItem({ deal, overdue }: { deal: DealCard; overdue: boolean }) {
+function DealItem({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean; avatar: string | null }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: deal.id });
   const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined;
 
@@ -155,7 +164,14 @@ function DealItem({ deal, overdue }: { deal: DealCard; overdue: boolean }) {
         </p>
       )}
       <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500">
-        <span className="truncate">{deal.owner && `Отв.: ${deal.owner}`}</span>
+        {deal.owner ? (
+          <span className="flex min-w-0 items-center gap-1.5 text-slate-600" title="Ответственный">
+            <Avatar name={deal.owner} src={avatar} size={20} />
+            <span className="truncate">{deal.owner}</span>
+          </span>
+        ) : (
+          <span />
+        )}
         <time dateTime={deal.startDate} title="Дата начала" className="shrink-0">
           с {shortDate.format(new Date(deal.startDate))}
         </time>

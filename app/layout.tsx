@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Suspense } from "react";
 import { NewLeadsBadge } from "@/components/new-leads-badge";
+import { HeaderProfile } from "@/components/header-profile";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -44,6 +45,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 Интеграции
               </Link>
             </nav>
+            <Suspense fallback={null}>
+              <HeaderProfile />
+            </Suspense>
           </div>
         </header>
         <main>{children}</main>

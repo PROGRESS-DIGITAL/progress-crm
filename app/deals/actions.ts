@@ -7,6 +7,7 @@ import { Service } from "@prisma/client";
 import { db } from "@/lib/db";
 import { invalid, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 import { isSalesStep } from "@/lib/sales-map";
+import { getOwner } from "@/lib/profile";
 
 const dealSchema = z.object({
   title: z.string().trim().min(1, "Укажите название сделки"),
@@ -123,7 +124,8 @@ export async function quickCreateDeal(
     })) ?? (await db.company.create({ data: { name: clientName }, select: { id: true } }));
   const top = await db.deal.findFirst({ where: { stageId }, orderBy: { position: "asc" }, select: { position: true } });
   await db.deal.create({
-    data: { title, amount, companyId: company.id, stageId, position: (top?.position ?? 1) - 1 },
+    // Ответственный за быструю сделку — владелец CRM, его можно сменить в карточке
+    data: { title, amount, owner: (await getOwner()).name, companyId: company.id, stageId, position: (top?.position ?? 1) - 1 },
   });
   revalidateDeal(company.id);
   return {};
