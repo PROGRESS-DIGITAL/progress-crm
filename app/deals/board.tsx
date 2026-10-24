@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   DndContext,
@@ -13,7 +13,7 @@ import {
 } from "@dnd-kit/core";
 import type { Service, StageKind } from "@prisma/client";
 import { SERVICE_LABELS, formatRub } from "@/lib/format";
-import { moveDeal } from "./actions";
+import { moveDeal, quickCreateDeal } from "./actions";
 
 type DealCard = {
   id: string;
@@ -34,7 +34,7 @@ const KIND_ACCENT: Record<StageKind, string> = {
   LOST: "border-t-rose-400",
 };
 
-export function Board({ stages }: { stages: Column[] }) {
+export function Board({ stages, clientNames }: { stages: Column[]; clientNames: string[] }) {
   const [columns, setColumns] = useState(stages);
   // Свежие данные с сервера (после revalidate) заменяют локальное состояние
   useEffect(() => setColumns(stages), [stages]);
@@ -81,6 +81,11 @@ export function Board({ stages }: { stages: Column[] }) {
           <StageColumn key={c.id} column={c} />
         ))}
       </div>
+      <datalist id="client-names">
+        {clientNames.map((n) => (
+          <option key={n} value={n} />
+        ))}
+      </datalist>
     </DndContext>
   );
 }
@@ -103,6 +108,7 @@ function StageColumn({ column }: { column: Column }) {
         <p className="text-xs text-slate-500">{formatRub(total)}</p>
       </header>
       <div className="flex min-h-24 flex-1 flex-col gap-2 px-2 pb-3">
+        <QuickDeal stageId={column.id} />
         {column.deals.map((d) => (
           <DealItem key={d.id} deal={d} />
         ))}
@@ -135,5 +141,80 @@ function DealItem({ deal }: { deal: DealCard }) {
       </div>
       {deal.owner && <p className="mt-1 text-[11px] text-slate-500">Отв.: {deal.owner}</p>}
     </div>
+  );
+}
+
+// «Быстрая сделка»: название, клиент и сумма прямо в колонке; остальное заполняется в карточке сделки
+function QuickDeal({ stageId }: { stageId: string }) {
+  const [open, setOpen] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
+  const formRef = useRef<HTMLFormElement>(null);
+
+  if (!open) {
+    return (
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="rounded-lg border border-dashed border-slate-300 py-1.5 text-sm text-slate-500 hover:border-blue-400 hover:bg-white hover:text-blue-700"
+      >
+        + Быстрая сделка
+      </button>
+    );
+  }
+
+  const input = "w-full rounded-md border border-slate-300 px-2 py-1.5 text-sm outline-none focus:border-blue-500";
+
+  return (
+    <form
+      ref={formRef}
+      onSubmit={(e) => {
+        e.preventDefault();
+        const f = new FormData(e.currentTarget);
+        const data = {
+          title: String(f.get("title") ?? ""),
+          clientName: String(f.get("clientName") ?? ""),
+          amount: String(f.get("amount") || "0"),
+        };
+        setError(null);
+        startTransition(async () => {
+          const result = await quickCreateDeal(stageId, data);
+          if (result.error) setError(result.error);
+          else {
+            formRef.current?.reset();
+            setOpen(false);
+          }
+        });
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") setOpen(false);
+      }}
+      className="flex flex-col gap-1.5 rounded-lg border border-blue-300 bg-white p-2 shadow-sm"
+    >
+      <input name="title" aria-label="Название сделки" placeholder="Название сделки" autoFocus required className={input} />
+      <input
+        name="clientName"
+        aria-label="Клиент"
+        placeholder="Клиент"
+        list="client-names"
+        autoComplete="off"
+        required
+        className={input}
+      />
+      <input name="amount" aria-label="Сумма, ₽" placeholder="Сумма, ₽" inputMode="numeric" className={input} />
+      {error && <p className="text-xs text-rose-600">{error}</p>}
+      <div className="flex items-center gap-2">
+        <button
+          type="submit"
+          disabled={pending}
+          className="rounded-md bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60"
+        >
+          {pending ? "Добавляю…" : "Добавить"}
+        </button>
+        <button type="button" onClick={() => setOpen(false)} className="text-sm text-slate-500 hover:text-slate-800">
+          Отмена
+        </button>
+      </div>
+    </form>
   );
 }

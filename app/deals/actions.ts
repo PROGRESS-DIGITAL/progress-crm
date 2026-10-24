@@ -84,6 +84,40 @@ export async function deleteDeal(id: string) {
   redirect("/deals");
 }
 
+const quickSchema = z.object({
+  title: z.string().trim().min(1, "Укажите название сделки").max(200, "Слишком длинное название"),
+  clientName: z.string().trim().min(1, "Укажите клиента").max(200, "Слишком длинное название клиента"),
+  amount: z
+    .string()
+    .transform((v) => v.replace(/\s/g, ""))
+    .pipe(z.coerce.number().int("Сумма в целых рублях").min(0, "Сумма не может быть отрицательной")),
+});
+
+// Быстрая сделка из колонки воронки: клиент ищется по названию, а если его нет — создаётся
+export async function quickCreateDeal(
+  stageId: string,
+  input: { title: string; clientName: string; amount: string },
+): Promise<{ error?: string }> {
+  const parsed = quickSchema.safeParse(input);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const { title, clientName, amount } = parsed.data;
+  if (!(await db.stage.findUnique({ where: { id: stageId }, select: { id: true } }))) {
+    return { error: "Этап не найден, обновите страницу" };
+  }
+
+  const company =
+    (await db.company.findFirst({
+      where: { name: { equals: clientName, mode: "insensitive" } },
+      select: { id: true },
+    })) ?? (await db.company.create({ data: { name: clientName }, select: { id: true } }));
+  const top = await db.deal.findFirst({ where: { stageId }, orderBy: { position: "asc" }, select: { position: true } });
+  await db.deal.create({
+    data: { title, amount, companyId: company.id, stageId, position: (top?.position ?? 1) - 1 },
+  });
+  revalidateDeal(company.id);
+  return {};
+}
+
 export async function moveDeal(id: string, stageId: string, position: number) {
   const deal = await db.deal.update({ where: { id }, data: { stageId, position } });
   revalidateDeal(deal.companyId);

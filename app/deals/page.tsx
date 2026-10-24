@@ -6,6 +6,7 @@ import { Board } from "./board";
 export const dynamic = "force-dynamic";
 
 export default async function DealsPage() {
+  const clientNames = (await db.company.findMany({ select: { name: true }, orderBy: { name: "asc" } })).map((c) => c.name);
   const stages = await db.stage.findMany({
     orderBy: { order: "asc" },
     include: {
@@ -36,6 +37,7 @@ export default async function DealsPage() {
         </Link>
       </div>
       <Board
+        clientNames={clientNames}
         stages={stages.map((s) => ({
           id: s.id,
           name: s.name,
