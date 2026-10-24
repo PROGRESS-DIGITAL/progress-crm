@@ -51,6 +51,14 @@ export function CompanyForm({
         const el = input(name);
         if (el && value && (!onlyIfEmpty || !el.value.trim())) el.value = value;
       };
+      // Менеджер должен видеть, чего DaData не прислала, а не гадать, почему поле пустое
+      const missing = [
+        !p.individual && !p.kpp && "КПП",
+        !p.address && "адрес",
+        !p.director && "руководитель",
+        !p.phone && "телефон",
+        !p.email && "email",
+      ].filter(Boolean);
       set("inn", p.inn);
       set("kpp", p.kpp);
       set("ogrn", p.ogrn);
@@ -60,7 +68,15 @@ export function CompanyForm({
       set("phone", p.phone, true);
       set("email", p.email, true);
       setLookup({
-        ok: `Найдено: ${p.name}.${p.inactive ? " Внимание: компания не действует." : ""} Проверьте поля и сохраните.`,
+        ok: [
+          `Найдено: ${p.name}.`,
+          p.inactive && "Внимание: компания не действует.",
+          p.individual && "У ИП нет КПП.",
+          missing.length > 0 && `DaData не прислала: ${missing.join(", ")}.`,
+          "Проверьте поля и сохраните.",
+        ]
+          .filter(Boolean)
+          .join(" "),
       });
     });
   }

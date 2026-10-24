@@ -28,6 +28,7 @@ test("разбирает юрлицо из ответа DaData", () => {
     phone: null,
     email: null,
     inactive: false,
+    individual: false,
   });
 });
 
@@ -40,6 +41,22 @@ test("ИП без КПП и руководителя, ликвидированн
   assert.equal(party?.kpp, null);
   assert.equal(party?.director, null);
   assert.equal(party?.inactive, true);
+  assert.equal(party?.individual, true);
+});
+
+test("у ИП руководитель — сам предприниматель, адрес берётся из полной записи", () => {
+  const party = partyFromSuggestion({
+    value: "ИП Петров Пётр Петрович",
+    data: {
+      inn: "772800123456",
+      ogrn: "318774600123456",
+      type: "INDIVIDUAL",
+      fio: { surname: "Петров", name: "Пётр", patronymic: "Петрович" },
+      address: { value: null, unrestricted_value: "117036, г Москва" },
+    },
+  });
+  assert.equal(party?.director, "Петров Пётр Петрович (индивидуальный предприниматель)");
+  assert.equal(party?.address, "117036, г Москва");
 });
 
 test("пустой ответ — ничего не найдено", () => {
