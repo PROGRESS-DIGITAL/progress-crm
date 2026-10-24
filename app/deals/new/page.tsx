@@ -31,6 +31,7 @@ export default async function NewDealPage({
           companies={companies}
           products={products}
           initial={{
+            startDate: new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Moscow" }),
             companyId: companies.some((c) => c.id === companyId) ? companyId : "",
             title: salesStep ? SALES_STEPS[salesStep] : "",
             salesStep,

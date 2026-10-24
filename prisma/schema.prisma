@@ -150,6 +150,8 @@ model Deal {
   service           Service   @default(WEBSITE)
   salesStep         String?
   owner             String?
+  // Когда начали работать по сделке; по умолчанию — дата создания
+  startDate         DateTime  @default(now())
   expectedCloseDate DateTime?
   lostReason        String?
   notes             String?

@@ -18,6 +18,7 @@ export type DealValues = {
   service: Service;
   salesStep: string | null;
   owner: string | null;
+  startDate: string | null; // YYYY-MM-DD
   expectedCloseDate: string | null; // YYYY-MM-DD
   lostReason: string | null;
   notes: string | null;
@@ -117,6 +118,9 @@ export function DealForm({ action, stages, companies, products, initial, submitL
       </Field>
       <Field label="Ответственный" error={err.owner}>
         <input name="owner" defaultValue={v("owner")} className={inputClass} />
+      </Field>
+      <Field label="Дата начала" error={err.startDate}>
+        <input name="startDate" type="date" defaultValue={v("startDate")} className={inputClass} />
       </Field>
       <Field label="Ожидаемая дата закрытия" error={err.expectedCloseDate}>
         <input name="expectedCloseDate" type="date" defaultValue={v("expectedCloseDate")} className={inputClass} />

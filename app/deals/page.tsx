@@ -50,6 +50,7 @@ export default async function DealsPage() {
             service: d.service,
             productName: d.product?.name ?? null,
             owner: d.owner,
+            startDate: d.startDate.toISOString(),
             position: d.position,
           })),
         }))}

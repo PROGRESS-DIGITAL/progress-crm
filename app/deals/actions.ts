@@ -18,6 +18,7 @@ const dealSchema = z.object({
   service: z.nativeEnum(Service),
   salesStep: optionalText.refine((v) => v === null || isSalesStep(v), "Нет такого шага планограммы"),
   owner: optionalText,
+  startDate: optionalText.refine((v) => v === null || !Number.isNaN(Date.parse(v)), "Неверная дата"),
   expectedCloseDate: optionalText,
   lostReason: optionalText,
   notes: optionalText,
@@ -26,7 +27,12 @@ const dealSchema = z.object({
 
 type Validated =
   | { errors: Record<string, string> }
-  | { data: Omit<z.infer<typeof dealSchema>, "expectedCloseDate"> & { expectedCloseDate: Date | null } };
+  | {
+      data: Omit<z.infer<typeof dealSchema>, "expectedCloseDate" | "startDate"> & {
+        expectedCloseDate: Date | null;
+        startDate: Date | undefined;
+      };
+    };
 
 async function validate(formData: FormData): Promise<Validated> {
   const parsed = parseForm(dealSchema, formData);
@@ -43,7 +49,12 @@ async function validate(formData: FormData): Promise<Validated> {
     return { errors: { productId: "Услуга не найдена в прайсе" } };
   }
   return {
-    data: { ...d, expectedCloseDate: d.expectedCloseDate ? new Date(d.expectedCloseDate) : null },
+    data: {
+      ...d,
+      // Пустая дата начала: при создании — сегодня, при правке — без изменений
+      startDate: d.startDate ? new Date(d.startDate) : undefined,
+      expectedCloseDate: d.expectedCloseDate ? new Date(d.expectedCloseDate) : null,
+    },
   }
 }
 

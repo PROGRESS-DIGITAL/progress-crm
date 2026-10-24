@@ -23,8 +23,11 @@ type DealCard = {
   service: Service;
   productName: string | null;
   owner: string | null;
+  startDate: string;
   position: number;
 };
+
+const shortDate = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: "Europe/Moscow" });
 
 type Column = { id: string; name: string; kind: StageKind; deals: DealCard[] };
 
@@ -139,7 +142,12 @@ function DealItem({ deal }: { deal: DealCard }) {
         </span>
         <span className="text-sm font-semibold tabular-nums">{formatRub(deal.amount)}</span>
       </div>
-      {deal.owner && <p className="mt-1 text-[11px] text-slate-500">Отв.: {deal.owner}</p>}
+      <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500">
+        <span className="truncate">{deal.owner && `Отв.: ${deal.owner}`}</span>
+        <time dateTime={deal.startDate} title="Дата начала" className="shrink-0">
+          с {shortDate.format(new Date(deal.startDate))}
+        </time>
+      </div>
     </div>
   );
 }

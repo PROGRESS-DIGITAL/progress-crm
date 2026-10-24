@@ -45,6 +45,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
           submitLabel="Сохранить"
           initial={{
             ...deal,
+            // Дата по Москве: сделка, созданная после полуночи, не должна «уезжать» на вчера
+            startDate: deal.startDate.toLocaleDateString("en-CA", { timeZone: "Europe/Moscow" }),
             expectedCloseDate: deal.expectedCloseDate?.toISOString().slice(0, 10) ?? null,
           }}
         />
