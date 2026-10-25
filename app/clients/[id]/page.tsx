@@ -8,6 +8,7 @@ import { CompanyForm } from "../company-form";
 import { ContactForm } from "../contact-form";
 import { SalesPlan } from "../sales-plan";
 import { getClientPlan, getStepProducts } from "@/lib/sales-map-data";
+import { CHANNEL_LABELS } from "@/lib/chat/channels";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function ClientPage({
     where: { id },
     include: {
       contacts: { orderBy: { fullName: "asc" } },
+      chats: { orderBy: { lastMessageAt: "desc" } },
       deals: {
         orderBy: { createdAt: "desc" },
         include: { stage: { select: { name: true, kind: true } }, contact: { select: { fullName: true } } },
@@ -39,13 +41,27 @@ export default async function ClientPage({
   const [plan, stepProducts] = await Promise.all([getClientPlan(company.id, company.situation), getStepProducts()]);
 
   return (
-    <div className="mx-auto max-w-5xl px-3 py-5">
+    <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <Link href="/clients" className="text-sm text-slate-500 hover:text-slate-800">
             ← Клиенты
           </Link>
           <h1 className="mt-1 text-2xl font-semibold tracking-tight">{company.name}</h1>
+          {company.chats.length > 0 && (
+            <div className="mt-2 flex flex-wrap gap-2">
+              {company.chats.map((ch) => (
+                <Link
+                  key={ch.id}
+                  href={`/chats?c=${ch.id}`}
+                  className="rounded-full bg-blue-50 px-3 py-1 text-sm text-blue-700 hover:bg-blue-100"
+                >
+                  Чат в {CHANNEL_LABELS[ch.channel]}: {ch.name}
+                  {ch.unread > 0 && ` · ${ch.unread} новых`}
+                </Link>
+              ))}
+            </div>
+          )}
         </div>
         <ConfirmDeleteButton
           action={deleteCompany.bind(null, company.id)}

@@ -96,7 +96,7 @@ model Stage {
 }
 
 model Company {
-  id        String    @id @default(cuid())
+  id        String         @id @default(cuid())
   name      String
   inn       String?
   kpp       String?
@@ -112,8 +112,9 @@ model Company {
   situation String?
   contacts  Contact[]
   deals     Deal[]
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  chats     Conversation[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@index([name])
 }
@@ -205,9 +206,63 @@ model Employee {
   position  String?
   phone     String?
   email     String?
+  telegram  String?
+  max       String?
+  vk        String?
+  instagram String?
+  whatsapp  String?
   // Аватар как data URL: сжимается в браузере до 256 px, чтобы не держать файлы на диске
   avatar    String?
   isOwner   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+enum Channel {
+  TELEGRAM
+  VK
+  MAX
+  WHATSAPP
+  INSTAGRAM
+}
+
+enum MessageDirection {
+  IN
+  OUT
+}
+
+// Переписка с человеком в одном мессенджере: externalId — id чата на стороне мессенджера
+model Conversation {
+  id            String        @id @default(cuid())
+  channel       Channel
+  externalId    String
+  name          String
+  username      String?
+  company       Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId     String?
+  unread        Int           @default(0)
+  lastText      String?
+  lastMessageAt DateTime      @default(now())
+  messages      ChatMessage[]
+  createdAt     DateTime      @default(now())
+
+  @@unique([channel, externalId])
+  @@index([lastMessageAt])
+  @@index([companyId])
+}
+
+model ChatMessage {
+  id             String           @id @default(cuid())
+  conversation   Conversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  conversationId String
+  direction      MessageDirection
+  text           String
+  // id сообщения в мессенджере: не даёт записать одно входящее дважды
+  externalId     String?
+  // Кто из CRM ответил
+  author         String?
+  createdAt      DateTime         @default(now())
+
+  @@unique([conversationId, direction, externalId])
+  @@index([conversationId, createdAt])
 }

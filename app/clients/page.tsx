@@ -27,17 +27,17 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-3 py-5">
+    <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Клиенты</h1>
           <p className="mt-1 text-sm text-slate-600">Всего: {companies.length}</p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex w-full items-center gap-3 sm:w-auto">
           <ClientSearch initial={q} />
           <Link
             href="/clients/new"
-            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-blue-600/25 hover:bg-blue-700"
+            className="shrink-0 rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium whitespace-nowrap text-white shadow-sm shadow-blue-600/25 hover:bg-blue-700"
           >
             + Новый клиент
           </Link>

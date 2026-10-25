@@ -10,7 +10,7 @@ export default async function DadataPage() {
   const key = await getDadataKey();
 
   return (
-    <div className="mx-auto max-w-3xl px-3 py-5">
+    <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <Link href="/integrations" className="text-sm text-slate-500 hover:text-slate-800">
         ← Интеграции
       </Link>

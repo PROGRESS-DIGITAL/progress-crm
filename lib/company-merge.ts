@@ -59,6 +59,7 @@ export async function mergeCompanies(targetId: string, sourceId: string, incomin
     const base = incoming ? mergeFields(incoming, target) : target;
     await tx.deal.updateMany({ where: { companyId: sourceId }, data: { companyId: targetId } });
     await tx.contact.updateMany({ where: { companyId: sourceId }, data: { companyId: targetId } });
+    await tx.conversation.updateMany({ where: { companyId: sourceId }, data: { companyId: targetId } });
     await tx.company.delete({ where: { id: sourceId } });
     await tx.company.update({ where: { id: targetId }, data: mergeFields(base, source) });
   });

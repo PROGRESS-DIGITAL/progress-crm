@@ -11,6 +11,11 @@ const profileSchema = z.object({
   position: optionalText,
   phone: optionalText,
   email: optionalEmail,
+  telegram: optionalText,
+  max: optionalText,
+  vk: optionalText,
+  instagram: optionalText,
+  whatsapp: optionalText,
   // Пустая строка — удалить фото; "keep" — оставить как есть
   avatar: z
     .string()

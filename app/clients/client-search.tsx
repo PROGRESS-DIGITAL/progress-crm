@@ -24,7 +24,7 @@ export function ClientSearch({ initial }: { initial: string }) {
   }
 
   return (
-    <form role="search" onSubmit={(e) => e.preventDefault()} className="relative w-72">
+    <form role="search" onSubmit={(e) => e.preventDefault()} className="relative min-w-0 flex-1 sm:w-72 sm:flex-none">
       <input
         type="search"
         name="q"

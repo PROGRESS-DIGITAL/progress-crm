@@ -12,7 +12,7 @@ const TABS = [
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
   const view = (await searchParams).view === "clients" ? "clients" : "months";
   return (
-    <div className="mx-auto max-w-6xl px-3 py-5">
+    <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Дашборд</h1>
         <nav className="flex rounded-xl bg-white p-1 text-sm shadow-card" aria-label="Вид дашборда">

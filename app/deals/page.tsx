@@ -22,7 +22,7 @@ export default async function DealsPage() {
 
   return (
     // Высота экрана без шапки (h-14 и рамка 1px): колонки воронки тянутся до низа
-    <div className="flex flex-1 flex-col px-3 py-4">
+    <div className="flex w-full flex-1 flex-col px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Сделки</h1>
