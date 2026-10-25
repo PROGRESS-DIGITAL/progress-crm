@@ -24,9 +24,9 @@ export default async function NewDealPage({
   const salesStep = isSalesStep(step) ? step : isSalesStep(productStep) ? productStep : null;
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
+    <div className="mx-auto max-w-3xl px-3 py-5">
       <h1 className="mb-6 text-2xl font-semibold tracking-tight">Новая сделка</h1>
-      <div className="rounded-xl border border-slate-200 bg-white p-6">
+      <div className="rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
         <DealForm
           action={createDeal}
           stages={stages}

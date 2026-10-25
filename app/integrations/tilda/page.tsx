@@ -50,7 +50,7 @@ export default async function TildaPage() {
   ].filter((k) => k.toLowerCase() !== "cookies");
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-6">
+    <div className="mx-auto max-w-5xl px-3 py-5">
       <Link href="/integrations" className="text-sm text-slate-500 hover:text-slate-800">
         ← Интеграции
       </Link>
@@ -75,7 +75,7 @@ export default async function TildaPage() {
         </p>
       )}
 
-      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+      <section className="mb-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-5">
         <h2 className="font-semibold">1. Подключите webhook в Тильде</h2>
         <div className="mt-4">
           <CopyField label="Адрес webhook" value={webhookUrl} />
@@ -107,7 +107,7 @@ export default async function TildaPage() {
         </div>
       </section>
 
-      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+      <section className="mb-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="font-semibold">2. Поля формы</h2>
@@ -139,7 +139,7 @@ export default async function TildaPage() {
         </div>
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white">
+      <section className="rounded-2xl border border-slate-200/60 bg-white shadow-card">
         <h2 className="border-b border-slate-200 px-5 py-4 font-semibold">3. Журнал запросов</h2>
         {logs.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-slate-500">Запросов от Тильды ещё не было</p>

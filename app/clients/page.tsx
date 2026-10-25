@@ -27,7 +27,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
   });
 
   return (
-    <div className="mx-auto max-w-6xl px-6 py-6">
+    <div className="mx-auto max-w-6xl px-3 py-5">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Клиенты</h1>
@@ -37,7 +37,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           <ClientSearch initial={q} />
           <Link
             href="/clients/new"
-            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+            className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-blue-600/25 hover:bg-blue-700"
           >
             + Новый клиент
           </Link>
@@ -49,7 +49,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           {q ? "Ничего не найдено" : "Клиентов пока нет"}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+        <div className="overflow-x-auto rounded-2xl border border-slate-200/60 bg-white shadow-card">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
               <tr>

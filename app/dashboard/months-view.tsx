@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { Icon, type IconName } from "@/components/icons";
 import { formatRub } from "@/lib/format";
 import { change, emptyMonth, monthKey, monthLabel, monthlyStats, shiftMonth, type MonthStats } from "@/lib/monthly";
 
@@ -17,13 +18,17 @@ function Delta({
 }) {
   const pct = change(current, previous);
   return (
-    <p className="text-xs text-slate-500">
-      {label}: <span className="tabular-nums">{fmt(previous)}</span>
+    <p className="flex items-center gap-1.5 text-xs text-slate-500">
       {pct !== null && (
-        <span className={`ml-1 font-medium ${pct >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
-          {pct >= 0 ? "▲" : "▼"} {Math.abs(pct)}%
+        <span
+          className={`rounded-full px-2 py-0.5 font-medium ${pct >= 0 ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-600"}`}
+        >
+          {pct >= 0 ? "↗" : "↘"} {Math.abs(pct)}%
         </span>
       )}
+      <span>
+        {label}: <span className="tabular-nums">{fmt(previous)}</span>
+      </span>
     </p>
   );
 }
@@ -34,7 +39,11 @@ function CompareTile({
   prev,
   yearAgo,
   money,
+  icon,
+  tone,
 }: {
+  icon: IconName;
+  tone: string;
   label: string;
   current: number;
   prev: number;
@@ -43,10 +52,15 @@ function CompareTile({
 }) {
   const fmt = (n: number) => (money ? formatRub(n) : n.toLocaleString("ru-RU"));
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{fmt(current)}</p>
-      <div className="mt-2 flex flex-col gap-0.5">
+    <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card">
+      <div className="flex items-center gap-3">
+        <span className={`flex h-10 w-10 items-center justify-center rounded-full text-white ${tone}`}>
+          <Icon name={icon} size={18} />
+        </span>
+        <p className="text-sm font-medium text-slate-700">{label}</p>
+      </div>
+      <p className="mt-4 text-[26px] font-semibold tracking-tight tabular-nums">{fmt(current)}</p>
+      <div className="mt-3 flex flex-col gap-1.5">
         <Delta current={current} previous={prev} label="прошлый месяц" fmt={fmt} />
         <Delta current={current} previous={yearAgo} label="год назад" fmt={fmt} />
       </div>
@@ -81,13 +95,13 @@ export async function MonthsView() {
       </p>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <CompareTile label={`Выручка · ${monthLabel(now)}`} current={cur.revenue} prev={prev.revenue} yearAgo={yearAgo.revenue} money />
-        <CompareTile label="Оплачено сделок" current={cur.paid} prev={prev.paid} yearAgo={yearAgo.paid} />
-        <CompareTile label="Новых сделок" current={cur.started} prev={prev.started} yearAgo={yearAgo.started} />
-        <CompareTile label="Средний чек" current={cur.avgCheck} prev={prev.avgCheck} yearAgo={yearAgo.avgCheck} money />
+        <CompareTile label={`Выручка · ${monthLabel(now)}`} current={cur.revenue} prev={prev.revenue} yearAgo={yearAgo.revenue} money icon="wallet" tone="bg-blue-600" />
+        <CompareTile label="Оплачено сделок" current={cur.paid} prev={prev.paid} yearAgo={yearAgo.paid} icon="check" tone="bg-emerald-500" />
+        <CompareTile label="Новых сделок" current={cur.started} prev={prev.started} yearAgo={yearAgo.started} icon="plus" tone="bg-orange-400" />
+        <CompareTile label="Средний чек" current={cur.avgCheck} prev={prev.avgCheck} yearAgo={yearAgo.avgCheck} money icon="receipt" tone="bg-sky-500" />
       </div>
 
-      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+      <section className="mb-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-5">
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <div>
             <h2 className="font-semibold">Выручка по месяцам</h2>
@@ -98,27 +112,27 @@ export async function MonthsView() {
           </div>
           <ul className="flex gap-4 text-xs text-slate-600" aria-label="Легенда">
             <li className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm bg-blue-600" /> Этот период
+              <span className="h-2.5 w-2.5 rounded-sm bg-blue-300" /> Этот период
             </li>
             <li className="flex items-center gap-1.5">
-              <span className="h-2.5 w-2.5 rounded-sm bg-slate-300" /> Год назад
+              <span className="h-2.5 w-2.5 rounded-sm bg-slate-200" /> Год назад
             </li>
           </ul>
         </div>
-        <div className="mt-6 flex h-56 items-end gap-2 border-b border-slate-200" role="img" aria-label="Выручка по месяцам">
+        <div className="mt-6 flex h-56 items-end gap-2" role="img" aria-label="Выручка по месяцам">
           {rows.map((r) => (
             <div key={r.key} className="group relative flex h-full flex-1 items-end justify-center gap-0.5">
               <div
-                className="w-2/5 rounded-t-[4px] bg-slate-300"
+                className="w-2/5 rounded-md bg-slate-200"
                 style={{ height: `${(r.lastYear / max) * 100}%`, minHeight: r.lastYear ? 2 : 0 }}
               />
               <div
-                className={`w-2/5 rounded-t-[4px] ${r.key === now ? "bg-blue-600" : "bg-blue-500"} group-hover:bg-blue-700`}
+                className={`w-2/5 rounded-md ${r.key === now ? "bg-blue-600" : "bg-blue-300"} group-hover:bg-blue-500`}
                 style={{ height: `${(r.revenue / max) * 100}%`, minHeight: r.revenue ? 2 : 0 }}
               />
               <div
                 role="tooltip"
-                className="pointer-events-none absolute bottom-full z-10 mb-2 hidden w-44 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-md group-hover:block"
+                className="pointer-events-none absolute bottom-full z-10 mb-2 hidden w-44 rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-700 shadow-lg group-hover:block"
               >
                 <p className="font-medium text-slate-900">{monthLabel(r.key)}</p>
                 <p>Выручка: {formatRub(r.revenue)}</p>
@@ -142,7 +156,7 @@ export async function MonthsView() {
         </div>
       </section>
 
-      <section className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <section className="overflow-x-auto rounded-2xl border border-slate-200/60 bg-white shadow-card">
         <h2 className="border-b border-slate-200 px-5 py-4 font-semibold">По месяцам</h2>
         <table className="w-full text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">

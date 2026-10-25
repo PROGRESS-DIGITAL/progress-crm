@@ -1,0 +1,64 @@
+import Link from "next/link";
+import { getOwner } from "@/lib/profile";
+import { Avatar } from "@/components/avatar";
+import { Icon } from "@/components/icons";
+
+function greeting(now: Date) {
+  const hour = Number(now.toLocaleString("en-GB", { hour: "2-digit", hour12: false, timeZone: "Europe/Moscow" }));
+  if (hour < 5) return "Доброй ночи";
+  if (hour < 12) return "Доброе утро";
+  if (hour < 18) return "Добрый день";
+  return "Добрый вечер";
+}
+
+// Верхняя панель: приветствие, поиск клиентов, новые лиды и карточка владельца
+export async function TopBar({ newLeads }: { newLeads: number }) {
+  const owner = await getOwner();
+  const firstName = owner.name.split(/\s+/)[0];
+  return (
+    <header className="flex min-h-16 flex-wrap items-center gap-4 rounded-3xl bg-white px-5 py-3 shadow-card">
+      <div className="min-w-0">
+        <p className="truncate text-lg font-semibold tracking-tight">
+          {greeting(new Date())}, {firstName}!
+        </p>
+        <p className="text-xs text-slate-500">Сделки, клиенты и выручка PROGRESS Digital</p>
+      </div>
+
+      <form action="/clients" className="relative ml-auto hidden w-full max-w-sm md:block" role="search">
+        <Icon name="search" size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-400" />
+        <input
+          name="q"
+          type="search"
+          placeholder="Найти клиента по названию, ИНН, телефону"
+          className="h-11 w-full rounded-2xl border border-transparent bg-slate-100 pr-4 pl-10 text-sm outline-none placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
+        />
+      </form>
+
+      <div className="ml-auto flex items-center gap-2 md:ml-0">
+        <Link
+          href="/leads"
+          title={newLeads ? `Новых лидов: ${newLeads}` : "Лиды"}
+          className="relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
+        >
+          <Icon name="bell" />
+          {newLeads > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white ring-2 ring-white">
+              {newLeads}
+            </span>
+          )}
+        </Link>
+        <Link
+          href="/profile"
+          title="Личные данные"
+          className="flex items-center gap-2.5 rounded-full border border-slate-200 py-1 pr-4 pl-1 hover:bg-slate-50"
+        >
+          <Avatar name={owner.name} src={owner.avatar} size={36} />
+          <span className="hidden flex-col leading-tight sm:flex">
+            <span className="text-sm font-medium text-slate-900">{owner.name}</span>
+            <span className="text-xs text-slate-500">{owner.position || "Владелец"}</span>
+          </span>
+        </Link>
+      </div>
+    </header>
+  );
+}

@@ -16,7 +16,7 @@ export function SalesPlan({
   products: StepProducts;
 }) {
   return (
-    <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
+    <section className="mt-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-semibold">Планограмма</h2>
         <Link href="/sales-map" className="text-sm text-blue-600 hover:underline">

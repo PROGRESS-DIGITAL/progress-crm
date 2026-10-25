@@ -17,7 +17,7 @@ export default async function PricePage() {
   const categories = [...new Set(products.map((p) => p.category))];
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-6">
+    <div className="mx-auto max-w-5xl px-3 py-5">
       <h1 className="text-2xl font-semibold tracking-tight">Прайс</h1>
       <p className="mt-1 mb-6 text-sm text-slate-600">
         Услуги для выбора в сделке. Название, описание и цену можно изменить кликом, всё остальное — карандашом слева; сумма в уже созданных сделках при этом не меняется. Шаг планограммы связывает услугу со схемой продаж.
@@ -25,7 +25,7 @@ export default async function PricePage() {
 
       <div className="flex flex-col gap-6">
         {categories.map((c) => (
-          <section key={c} className="overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <section key={c} className="overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-card">
             <h2 className="border-b border-slate-200 bg-slate-50 px-4 py-3 text-sm font-semibold">{c}</h2>
             <ul className="divide-y divide-slate-100">
               {products
@@ -73,7 +73,7 @@ export default async function PricePage() {
         ))}
       </div>
 
-      <section className="mt-8 rounded-xl border border-slate-200 bg-white p-6">
+      <section className="mt-8 rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
         <h2 className="mb-4 text-lg font-semibold">Новая услуга</h2>
         <ProductForm categories={categories} />
       </section>

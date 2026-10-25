@@ -22,7 +22,7 @@ export default async function DealsPage() {
 
   return (
     // Высота экрана без шапки (h-14 и рамка 1px): колонки воронки тянутся до низа
-    <div className="flex min-h-[calc(100dvh-3.5rem-1px)] flex-col px-6 py-6">
+    <div className="flex flex-1 flex-col px-3 py-4">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Сделки</h1>
@@ -33,7 +33,7 @@ export default async function DealsPage() {
         </div>
         <Link
           href="/deals/new"
-          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-blue-600/25 hover:bg-blue-700"
         >
           + Новая сделка
         </Link>
