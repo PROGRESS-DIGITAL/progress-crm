@@ -153,6 +153,8 @@ model Deal {
   // Когда начали работать по сделке; по умолчанию — дата создания
   startDate         DateTime  @default(now())
   expectedCloseDate DateTime?
+  // Когда сделка оплачена или проиграна: по этой дате выручка попадает в месяц на дашборде
+  closedAt          DateTime?
   lostReason        String?
   notes             String?
   // Порядок карточки внутри колонки: меньше — выше

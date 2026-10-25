@@ -21,6 +21,7 @@ const dealSchema = z.object({
   owner: optionalText,
   startDate: optionalText.refine((v) => v === null || !Number.isNaN(Date.parse(v)), "Неверная дата"),
   expectedCloseDate: optionalText,
+  closedAt: optionalText.refine((v) => v === null || !Number.isNaN(Date.parse(v)), "Неверная дата"),
   lostReason: optionalText,
   notes: optionalText,
   stageId: z.string().min(1),
@@ -29,9 +30,10 @@ const dealSchema = z.object({
 type Validated =
   | { errors: Record<string, string> }
   | {
-      data: Omit<z.infer<typeof dealSchema>, "expectedCloseDate" | "startDate"> & {
+      data: Omit<z.infer<typeof dealSchema>, "expectedCloseDate" | "startDate" | "closedAt"> & {
         expectedCloseDate: Date | null;
         startDate: Date | undefined;
+        closedAt: Date | null;
       };
     };
 
@@ -55,8 +57,23 @@ async function validate(formData: FormData): Promise<Validated> {
       // Пустая дата начала: при создании — сегодня, при правке — без изменений
       startDate: d.startDate ? new Date(d.startDate) : undefined,
       expectedCloseDate: d.expectedCloseDate ? new Date(d.expectedCloseDate) : null,
+      closedAt: d.closedAt ? new Date(d.closedAt) : null,
     },
   }
+}
+
+// Дата оплаты или проигрыша: ставится, когда сделка попадает в «Оплачен» или «Проиграна»,
+// сохраняется при переносе между закрытыми этапами и снимается, если сделку вернули в работу
+async function closedAtFor(
+  stageId: string,
+  before: { closedAt: Date | null; kind: "OPEN" | "WON" | "LOST" } | null,
+  typed: Date | null = null,
+) {
+  const stage = await db.stage.findUnique({ where: { id: stageId }, select: { kind: true } });
+  if (!stage || stage.kind === "OPEN") return null;
+  if (typed) return typed;
+  if (before && before.kind !== "OPEN" && before.closedAt) return before.closedAt;
+  return new Date();
 }
 
 function revalidateDeal(companyId: string) {
@@ -64,6 +81,7 @@ function revalidateDeal(companyId: string) {
   revalidatePath(`/clients/${companyId}`);
   revalidatePath("/clients");
   revalidatePath("/sales-map");
+  revalidatePath("/dashboard");
 }
 
 export async function createDeal(_prev: FormState, formData: FormData): Promise<FormState> {
@@ -76,7 +94,8 @@ export async function createDeal(_prev: FormState, formData: FormData): Promise<
     orderBy: { position: "asc" },
     select: { position: true },
   });
-  await db.deal.create({ data: { ...result.data, position: (top?.position ?? 1) - 1 } });
+  const closedAt = await closedAtFor(result.data.stageId, null, result.data.closedAt);
+  await db.deal.create({ data: { ...result.data, closedAt, position: (top?.position ?? 1) - 1 } });
   revalidateDeal(result.data.companyId);
   redirect("/deals");
 }
@@ -85,8 +104,14 @@ export async function updateDeal(id: string, _prev: FormState, formData: FormDat
   const result = await validate(formData);
   if ("errors" in result) return invalid(result.errors, formData);
 
-  const before = await db.deal.update({ where: { id }, data: result.data, select: { companyId: true } });
-  revalidateDeal(before.companyId);
+  const current = await db.deal.findUnique({ where: { id }, select: { closedAt: true, stage: { select: { kind: true } } } });
+  const closedAt = await closedAtFor(
+    result.data.stageId,
+    current && { closedAt: current.closedAt, kind: current.stage.kind },
+    result.data.closedAt,
+  );
+  const deal = await db.deal.update({ where: { id }, data: { ...result.data, closedAt }, select: { companyId: true } });
+  revalidateDeal(deal.companyId);
   redirect("/deals");
 }
 
@@ -125,13 +150,23 @@ export async function quickCreateDeal(
   const top = await db.deal.findFirst({ where: { stageId }, orderBy: { position: "asc" }, select: { position: true } });
   await db.deal.create({
     // Ответственный за быструю сделку — владелец CRM, его можно сменить в карточке
-    data: { title, amount, owner: (await getOwner()).name, companyId: company.id, stageId, position: (top?.position ?? 1) - 1 },
+    data: {
+      title,
+      amount,
+      owner: (await getOwner()).name,
+      companyId: company.id,
+      stageId,
+      closedAt: await closedAtFor(stageId, null),
+      position: (top?.position ?? 1) - 1,
+    },
   });
   revalidateDeal(company.id);
   return {};
 }
 
 export async function moveDeal(id: string, stageId: string, position: number) {
-  const deal = await db.deal.update({ where: { id }, data: { stageId, position } });
+  const current = await db.deal.findUnique({ where: { id }, select: { closedAt: true, stage: { select: { kind: true } } } });
+  const closedAt = await closedAtFor(stageId, current && { closedAt: current.closedAt, kind: current.stage.kind });
+  const deal = await db.deal.update({ where: { id }, data: { stageId, position, closedAt } });
   revalidateDeal(deal.companyId);
 }

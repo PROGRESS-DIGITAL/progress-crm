@@ -20,6 +20,7 @@ export type DealValues = {
   owner: string | null;
   startDate: string | null; // YYYY-MM-DD
   expectedCloseDate: string | null; // YYYY-MM-DD
+  closedAt: string | null; // YYYY-MM-DD
   lostReason: string | null;
   notes: string | null;
   stageId: string;
@@ -124,6 +125,10 @@ export function DealForm({ action, stages, companies, products, initial, submitL
       </Field>
       <Field label="Ожидаемая дата закрытия" error={err.expectedCloseDate}>
         <input name="expectedCloseDate" type="date" defaultValue={v("expectedCloseDate")} className={inputClass} />
+      </Field>
+      <Field label="Дата оплаты или закрытия" error={err.closedAt}>
+        <input name="closedAt" type="date" defaultValue={v("closedAt")} className={inputClass} />
+        <span className="text-xs text-slate-500">Ставится сама при переносе в «Оплачен»; по ней считается выручка месяца</span>
       </Field>
       <Field label="Причина отказа" error={err.lostReason}>
         <input name="lostReason" defaultValue={v("lostReason")} className={inputClass} />

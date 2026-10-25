@@ -43,7 +43,13 @@ async function main() {
       const { stage, clientName, ...rest } = d;
       const company = await prisma.company.create({ data: { name: clientName } });
       await prisma.deal.create({
-        data: { ...rest, companyId: company.id, stageId: created[stage].id, position: i },
+        data: {
+          ...rest,
+          companyId: company.id,
+          stageId: created[stage].id,
+          position: i,
+          closedAt: created[stage].kind === "OPEN" ? null : new Date(),
+        },
       });
     }
   }
