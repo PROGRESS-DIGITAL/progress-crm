@@ -23,7 +23,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
     s === "ALL" ? counts.reduce((a, c) => a + c._count, 0) : (counts.find((c) => c.status === s)?._count ?? 0);
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-1 py-4 sm:px-3 sm:py-5">
+    <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Лиды</h1>

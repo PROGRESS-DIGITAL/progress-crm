@@ -42,7 +42,7 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
   }
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-1 py-4 sm:px-3 sm:py-5">
+    <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <AutoRefresh />
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>

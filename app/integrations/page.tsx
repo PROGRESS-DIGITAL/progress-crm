@@ -32,7 +32,7 @@ export default async function IntegrationsPage() {
   const tildaLeads = await db.lead.count({ where: { source: "TILDA", createdAt: { gte: since } } });
 
   return (
-    <div className="mx-auto w-full max-w-7xl px-1 py-4 sm:px-3 sm:py-5">
+    <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <h1 className="text-2xl font-semibold tracking-tight">Интеграции</h1>
       <p className="mt-1 mb-6 text-sm text-slate-600">Откуда CRM получает данные автоматически</p>
 
