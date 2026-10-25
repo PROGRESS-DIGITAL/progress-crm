@@ -9,7 +9,7 @@ import { SIDEBAR_COOKIE } from "@/components/sidebar-cookie";
 type Item = { href: string; label: string; icon: IconName; badge?: number };
 type Group = { title: string; items: Item[] };
 
-function menu(newLeads: number): Group[] {
+function menu(newLeads: number, unreadChats: number): Group[] {
   return [
     {
       title: "Главное",
@@ -18,6 +18,7 @@ function menu(newLeads: number): Group[] {
         { href: "/leads", label: "Лиды", icon: "leads", badge: newLeads },
         { href: "/deals", label: "Сделки", icon: "deals" },
         { href: "/clients", label: "Клиенты", icon: "clients" },
+        { href: "/chats", label: "Чаты", icon: "chat", badge: unreadChats },
       ],
     },
     {
@@ -110,11 +111,19 @@ function NavGroups({ groups, collapsed, pathname }: { groups: Group[]; collapsed
 
 // На компьютере меню слева, свёрнутое до иконок или развёрнутое с названиями.
 // На телефоне снизу панель с главными разделами, остальные открываются кнопкой «Меню»
-export function Sidebar({ initialCollapsed, newLeads }: { initialCollapsed: boolean; newLeads: number }) {
+export function Sidebar({
+  initialCollapsed,
+  newLeads,
+  unreadChats,
+}: {
+  initialCollapsed: boolean;
+  newLeads: number;
+  unreadChats: number;
+}) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [drawer, setDrawer] = useState(false);
   const pathname = usePathname();
-  const groups = menu(newLeads);
+  const groups = menu(newLeads, unreadChats);
 
   // Переход по ссылке закрывает мобильное меню
   useEffect(() => setDrawer(false), [pathname]);
@@ -125,7 +134,8 @@ export function Sidebar({ initialCollapsed, newLeads }: { initialCollapsed: bool
     document.cookie = `${SIDEBAR_COOKIE}=${next ? "collapsed" : "expanded"}; path=/; max-age=31536000; samesite=lax`;
   }
 
-  const tabs = groups[0].items;
+  // Снизу на телефоне помещается пять кнопок: дашборд остаётся в «Меню»
+  const tabs = groups[0].items.filter((t) => t.href !== "/dashboard");
   const inTabs = tabs.some((t) => isActive(pathname, t.href));
 
   return (

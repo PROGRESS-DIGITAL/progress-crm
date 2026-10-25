@@ -62,3 +62,12 @@ export function sortByCategory<T extends { category: string; sortOrder: number }
 export function formatPrice(p: { price: number; unit: string | null }) {
   return `${formatRub(p.price)}${p.unit ? `/${p.unit}` : ""}`;
 }
+
+// Время в списке чатов: сегодня — часы, иначе дата
+export function formatChatTime(d: Date, now = new Date()) {
+  const day = (x: Date) => x.toLocaleDateString("ru-RU", { timeZone: TIME_ZONE });
+  if (day(d) === day(now)) {
+    return d.toLocaleTimeString("ru-RU", { timeZone: TIME_ZONE, hour: "2-digit", minute: "2-digit" });
+  }
+  return d.toLocaleDateString("ru-RU", { timeZone: TIME_ZONE, day: "numeric", month: "short" });
+}
