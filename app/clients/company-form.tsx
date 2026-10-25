@@ -25,10 +25,12 @@ export function CompanyForm({
   action,
   initial,
   submitLabel,
+  mode = "create",
 }: {
   action: (prev: FormState, formData: FormData) => Promise<FormState>;
   initial?: CompanyValues;
   submitLabel: string;
+  mode?: "create" | "edit";
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const err = state?.errors ?? {};
@@ -36,6 +38,9 @@ export function CompanyForm({
   const formRef = useRef<HTMLFormElement>(null);
   const [lookup, setLookup] = useState<{ ok?: string; error?: string } | null>(null);
   const [looking, startLookup] = useTransition();
+  // Вопрос о дубле закрывается «Отменой» и снова появляется при следующей отправке
+  const [dismissed, setDismissed] = useState<FormState>(undefined);
+  const duplicate = state !== dismissed ? state?.duplicate : undefined;
 
   // Реквизиты перезаписываются данными ЕГРЮЛ, а название, телефон и email — только если они пустые
   function fillByInn() {
@@ -149,6 +154,57 @@ export function CompanyForm({
       <Field label="Заметки" error={err.notes} wide>
         <textarea name="notes" rows={3} defaultValue={v("notes")} className={inputClass} />
       </Field>
+      {duplicate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 p-4">
+          <div role="dialog" aria-modal="true" aria-labelledby="dup-title" className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl">
+            <h2 id="dup-title" className="text-lg font-semibold">
+              Найден такой же клиент
+            </h2>
+            <p className="mt-2 text-sm text-slate-700">
+              <Link href={`/clients/${duplicate.id}`} target="_blank" className="font-medium text-blue-700 hover:underline">
+                {duplicate.name}
+              </Link>
+              {duplicate.inn && <span className="text-slate-500"> · ИНН {duplicate.inn}</span>}
+              <br />
+              <span className="text-slate-500">
+                {duplicate.reason === "inn" ? "Совпадает ИНН." : "Совпадает название."}
+              </span>
+            </p>
+            <p className="mt-3 text-sm text-slate-700">
+              {mode === "create"
+                ? "Объединить данные? Новый клиент не появится: пустые поля найденного заполнятся тем, что вы ввели."
+                : "Объединить данные? Его сделки и контакты перейдут к этому клиенту, пустые поля заполнятся, а дубль удалится."}
+            </p>
+            <div className="mt-5 flex flex-wrap items-center gap-3">
+              <button
+                type="submit"
+                name="duplicateChoice"
+                value={`merge:${duplicate.id}`}
+                disabled={pending}
+                className={primaryButton}
+              >
+                Объединить
+              </button>
+              <button
+                type="submit"
+                name="duplicateChoice"
+                value="separate"
+                disabled={pending}
+                className="rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm hover:bg-slate-50 disabled:opacity-60"
+              >
+                {mode === "create" ? "Создать отдельно" : "Сохранить отдельно"}
+              </button>
+              <button
+                type="button"
+                onClick={() => setDismissed(state)}
+                className="text-sm text-slate-500 hover:text-slate-800"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex items-center gap-3 sm:col-span-2">
         <button type="submit" disabled={pending} className={primaryButton}>
           {pending ? "Сохраняю…" : submitLabel}

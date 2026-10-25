@@ -6,6 +6,8 @@ export type FormState =
       // Введённые значения: React сбрасывает форму после отправки, и без них при ошибке ввод пропадёт
       values?: Record<string, string>;
       saved?: boolean;
+      // Найден похожий клиент: форма спрашивает, объединять ли
+      duplicate?: { id: string; name: string; inn: string | null; reason: "inn" | "name" };
     }
   | undefined;
 
