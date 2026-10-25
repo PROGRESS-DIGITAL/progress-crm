@@ -78,6 +78,16 @@ export async function createProduct(_prev: FormState, formData: FormData): Promi
   return { saved: true };
 }
 
+// Правка услуги целиком; сумма в уже созданных сделках не меняется
+export async function updateProduct(id: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = parseForm(productSchema, formData);
+  if (!parsed.success) return invalid(toErrors(parsed.error), formData);
+  await db.product.update({ where: { id }, data: parsed.data });
+  revalidatePrice();
+  revalidatePath("/sales-map");
+  return { saved: true };
+}
+
 // Сделки с этой услугой остаются: у них сохраняются сумма и направление
 export async function deleteProduct(id: string) {
   await db.product.delete({ where: { id } });
