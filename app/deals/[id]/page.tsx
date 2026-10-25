@@ -20,7 +20,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
   if (!deal) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-8">
+    <div className="mx-auto max-w-3xl px-3 py-5">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{deal.title}</h1>
@@ -36,7 +36,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
           message="Удалить сделку? Это действие нельзя отменить."
         />
       </div>
-      <div className="rounded-xl border border-slate-200 bg-white p-6">
+      <div className="rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
         <DealForm
           action={updateDeal.bind(null, deal.id)}
           stages={stages}

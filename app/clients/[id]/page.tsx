@@ -39,7 +39,7 @@ export default async function ClientPage({
   const [plan, stepProducts] = await Promise.all([getClientPlan(company.id, company.situation), getStepProducts()]);
 
   return (
-    <div className="mx-auto max-w-5xl px-6 py-8">
+    <div className="mx-auto max-w-5xl px-3 py-5">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <Link href="/clients" className="text-sm text-slate-500 hover:text-slate-800">
@@ -64,7 +64,7 @@ export default async function ClientPage({
       )}
 
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
-        <section className="rounded-xl border border-slate-200 bg-white p-6">
+        <section className="rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
           <h2 className="mb-4 text-lg font-semibold">Реквизиты</h2>
           <CompanyForm
             action={updateCompany.bind(null, company.id)}
@@ -74,7 +74,7 @@ export default async function ClientPage({
           />
         </section>
 
-        <section className="rounded-xl border border-slate-200 bg-white p-6">
+        <section className="rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
           <h2 className="mb-4 text-lg font-semibold">Контакты · {company.contacts.length}</h2>
           {company.contacts.length > 0 && (
             <ul className="mb-6 divide-y divide-slate-100">
@@ -107,7 +107,7 @@ export default async function ClientPage({
 
       <SalesPlan companyId={company.id} plan={plan} manual={company.situation} products={stepProducts} />
 
-      <section className="mt-6 rounded-xl border border-slate-200 bg-white p-6">
+      <section className="mt-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
         <div className="mb-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold">Сделки · {company.deals.length}</h2>
           <Link href={`/deals/new?companyId=${company.id}`} className="text-sm font-medium text-blue-600 hover:underline">

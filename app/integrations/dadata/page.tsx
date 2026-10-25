@@ -10,7 +10,7 @@ export default async function DadataPage() {
   const key = await getDadataKey();
 
   return (
-    <div className="mx-auto max-w-3xl px-6 py-6">
+    <div className="mx-auto max-w-3xl px-3 py-5">
       <Link href="/integrations" className="text-sm text-slate-500 hover:text-slate-800">
         ← Интеграции
       </Link>
@@ -19,7 +19,7 @@ export default async function DadataPage() {
         Заполнение карточки клиента по ИНН: название, КПП, ОГРН, адрес и руководитель из ЕГРЮЛ.
       </p>
 
-      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+      <section className="mb-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-5">
         <div className="mb-4 flex items-center justify-between gap-4">
           <h2 className="font-semibold">Ключ API</h2>
           {key ? (
@@ -40,7 +40,7 @@ export default async function DadataPage() {
         <DadataKeyForm hasKey={!!key} />
       </section>
 
-      <section className="rounded-xl border border-slate-200 bg-white p-5 text-sm text-slate-700">
+      <section className="rounded-2xl border border-slate-200/60 bg-white shadow-card p-5 text-sm text-slate-700">
         <h2 className="mb-2 font-semibold text-slate-900">Как получить ключ</h2>
         <ol className="list-decimal space-y-1 pl-5">
           <li>

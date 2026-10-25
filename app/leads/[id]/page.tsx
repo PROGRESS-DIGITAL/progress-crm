@@ -38,7 +38,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
   const open = lead.status === "NEW" || lead.status === "IN_PROGRESS";
 
   return (
-    <div className="mx-auto max-w-4xl px-6 py-8">
+    <div className="mx-auto max-w-4xl px-3 py-5">
       <Link href="/leads" className="text-sm text-slate-500 hover:text-slate-800">
         ← Лиды
       </Link>
@@ -52,7 +52,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         </span>
       </div>
 
-      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-6">
+      <section className="mb-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
         {lead.message && <p className="mb-4 whitespace-pre-line text-sm">{lead.message}</p>}
         <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-2">
           {details
@@ -76,7 +76,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
       )}
 
       {lead.status === "REJECTED" && (
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/60 bg-white shadow-card p-4 text-sm">
           <span>Отклонён: {lead.rejectReason}</span>
           <form action={setLeadStatus.bind(null, lead.id, "NEW")}>
             <button type="submit" className="text-blue-600 hover:underline">
@@ -88,7 +88,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
 
       {open && (
         <>
-          <section className="mb-6 rounded-xl border border-slate-200 bg-white p-6">
+          <section className="mb-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-semibold">Создать сделку</h2>
               {lead.status === "NEW" && (
@@ -112,7 +112,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
               }}
             />
           </section>
-          <section className="rounded-xl border border-slate-200 bg-white p-6">
+          <section className="rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
             <h2 className="mb-3 text-lg font-semibold">Не подходит</h2>
             <RejectForm action={rejectLead.bind(null, lead.id)} />
           </section>

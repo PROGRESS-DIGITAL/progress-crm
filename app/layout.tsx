@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
-import Link from "next/link";
-import { Suspense } from "react";
-import { NewLeadsBadge } from "@/components/new-leads-badge";
-import { HeaderProfile } from "@/components/header-profile";
+import { cookies } from "next/headers";
+import { db } from "@/lib/db";
+import { Sidebar } from "@/components/sidebar";
+import { SIDEBAR_COOKIE } from "@/components/sidebar-cookie";
+import { TopBar } from "@/components/top-bar";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -10,47 +11,20 @@ export const metadata: Metadata = {
   description: "CRM агентства PROGRESS Digital",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+// cookies() делает шапку динамической: меню и счётчик лидов читаются на каждый запрос, а не при сборке
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const collapsed = (await cookies()).get(SIDEBAR_COOKIE)?.value === "collapsed";
+  const newLeads = await db.lead.count({ where: { status: "NEW" } });
   return (
     <html lang="ru">
       <body className="min-h-screen">
-        <header className="border-b border-slate-200 bg-white">
-          <div className="flex h-14 items-center gap-6 px-6">
-            <Link href="/deals" className="font-semibold tracking-tight">
-              PROGRESS <span className="text-blue-600">CRM</span>
-            </Link>
-            <nav className="flex gap-4 text-sm text-slate-600">
-              <Link href="/dashboard" className="hover:text-slate-900">
-                Дашборд
-              </Link>
-              <Link href="/leads" className="hover:text-slate-900">
-                Лиды
-                <Suspense fallback={null}>
-                  <NewLeadsBadge />
-                </Suspense>
-              </Link>
-              <Link href="/deals" className="hover:text-slate-900">
-                Сделки
-              </Link>
-              <Link href="/clients" className="hover:text-slate-900">
-                Клиенты
-              </Link>
-              <Link href="/sales-map" className="hover:text-slate-900">
-                Планограмма
-              </Link>
-              <Link href="/price" className="hover:text-slate-900">
-                Прайс
-              </Link>
-              <Link href="/integrations" className="hover:text-slate-900">
-                Интеграции
-              </Link>
-            </nav>
-            <Suspense fallback={null}>
-              <HeaderProfile />
-            </Suspense>
+        <div className="flex min-h-screen gap-3 p-3">
+          <Sidebar initialCollapsed={collapsed} newLeads={newLeads} />
+          <div className="flex min-w-0 flex-1 flex-col gap-3">
+            <TopBar newLeads={newLeads} />
+            <main className="flex flex-1 flex-col *:w-full">{children}</main>
           </div>
-        </header>
-        <main>{children}</main>
+        </div>
       </body>
     </html>
   );

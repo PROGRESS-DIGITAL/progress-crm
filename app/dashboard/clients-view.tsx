@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
+import { Icon, type IconName } from "@/components/icons";
 import { formatRub } from "@/lib/format";
 import { clientLtv, rankClients } from "@/lib/ltv";
 
@@ -28,11 +29,28 @@ function Crown({ className = "" }: { className?: string }) {
   );
 }
 
-function Tile({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function Tile({
+  label,
+  value,
+  hint,
+  icon,
+  tone,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  icon: IconName;
+  tone: string;
+}) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-white p-4">
-      <p className="text-sm text-slate-500">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tracking-tight tabular-nums">{value}</p>
+    <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card">
+      <div className="flex items-center gap-3">
+        <span className={`flex h-10 w-10 items-center justify-center rounded-full text-white ${tone}`}>
+          <Icon name={icon} size={18} />
+        </span>
+        <p className="text-sm font-medium text-slate-700">{label}</p>
+      </div>
+      <p className="mt-4 text-[26px] font-semibold tracking-tight tabular-nums">{value}</p>
       {hint && <p className="mt-1 text-xs text-slate-500">{hint}</p>}
     </div>
   );
@@ -58,17 +76,19 @@ export async function ClientsView() {
       </p>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile label="Оплачено всего" value={formatRub(totalLtv)} />
+        <Tile icon="wallet" tone="bg-blue-600" label="Оплачено всего" value={formatRub(totalLtv)} />
         <Tile
+          icon="trend"
+          tone="bg-emerald-500"
           label="Средний LTV"
           value={formatRub(paying.length ? Math.round(totalLtv / paying.length) : 0)}
           hint="по клиентам с оплатами"
         />
-        <Tile label="Клиентов с оплатами" value={`${paying.length} из ${rows.length}`} />
-        <Tile label="В работе" value={formatRub(totalOpen)} hint="открытые сделки всех клиентов" />
+        <Tile icon="users" tone="bg-orange-400" label="Клиентов с оплатами" value={`${paying.length} из ${rows.length}`} />
+        <Tile icon="deals" tone="bg-sky-500" label="В работе" value={formatRub(totalOpen)} hint="открытые сделки всех клиентов" />
       </div>
 
-      <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5">
+      <section className="mb-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-5">
         <h2 className="font-semibold">Клиенты по LTV</h2>
         <p className="mt-1 text-sm text-slate-500">
           {paying.length > TOP ? `Топ-${TOP} из ${paying.length}` : "Все клиенты с оплатами"}
@@ -114,7 +134,7 @@ export async function ClientsView() {
         )}
       </section>
 
-      <section className="overflow-x-auto rounded-xl border border-slate-200 bg-white">
+      <section className="overflow-x-auto rounded-2xl border border-slate-200/60 bg-white shadow-card">
         <h2 className="border-b border-slate-200 px-5 py-4 font-semibold">Все клиенты</h2>
         <table className="w-full text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">

@@ -117,7 +117,7 @@ function StageColumn({ column, avatars }: { column: Column; avatars: Record<stri
     <section
       ref={setNodeRef}
       data-testid={`stage-${column.name}`}
-      className={`flex w-64 shrink-0 flex-col rounded-xl border border-t-4 border-slate-200 bg-slate-100/70 ${KIND_ACCENT[column.kind]} ${isOver ? "ring-2 ring-blue-400" : ""}`}
+      className={`flex w-64 shrink-0 flex-col rounded-2xl border border-t-4 border-slate-200/60 bg-white/60 ${KIND_ACCENT[column.kind]} ${isOver ? "ring-2 ring-blue-400" : ""}`}
     >
       <header className="px-3 pt-3 pb-2">
         <div className="flex items-baseline justify-between">
@@ -146,7 +146,7 @@ function DealItem({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean;
       style={style}
       {...listeners}
       {...attributes}
-      className={`cursor-grab rounded-lg border bg-white p-3 shadow-sm ${overdue ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200"} ${isDragging ? "z-10 opacity-80 shadow-lg" : ""}`}
+      className={`cursor-grab rounded-xl border bg-white p-3 shadow-card ${overdue ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200/70"} ${isDragging ? "z-10 opacity-80 shadow-lg" : ""}`}
     >
       <Link href={`/deals/${deal.id}`} className="block text-sm font-medium hover:text-blue-700">
         {deal.title}
@@ -192,7 +192,7 @@ function QuickDeal({ stageId }: { stageId: string }) {
       <button
         type="button"
         onClick={() => setOpen(true)}
-        className="rounded-lg border border-dashed border-slate-300 py-1.5 text-sm text-slate-500 hover:border-blue-400 hover:bg-white hover:text-blue-700"
+        className="rounded-xl border border-dashed border-slate-300 py-1.5 text-sm text-slate-500 hover:border-blue-400 hover:bg-white hover:text-blue-700"
       >
         + Быстрая сделка
       </button>
@@ -225,7 +225,7 @@ function QuickDeal({ stageId }: { stageId: string }) {
       onKeyDown={(e) => {
         if (e.key === "Escape") setOpen(false);
       }}
-      className="flex flex-col gap-1.5 rounded-lg border border-blue-300 bg-white p-2 shadow-sm"
+      className="flex flex-col gap-1.5 rounded-xl border border-blue-300 bg-white p-2 shadow-sm"
     >
       <input name="title" aria-label="Название сделки" placeholder="Название сделки" autoFocus required className={input} />
       <input
