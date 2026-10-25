@@ -1,27 +1,53 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useId, useRef } from "react";
 import { SERVICE_LABELS } from "@/lib/format";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { createProduct } from "./actions";
 import { SALES_STEPS } from "@/lib/sales-map";
 
-export function ProductForm({ categories }: { categories: string[] }) {
-  const [state, formAction, pending] = useActionState(createProduct, undefined);
+export type ProductValues = {
+  category: string;
+  name: string;
+  description: string | null;
+  price: number;
+  unit: string | null;
+  service: string;
+  salesStep: string | null;
+};
+
+// Одна форма на добавление и на правку услуги целиком (кнопка-карандаш в строке прайса)
+export function ProductForm({
+  categories,
+  action = createProduct,
+  initial,
+  submitLabel = "Добавить услугу",
+  onDone,
+}: {
+  categories: string[];
+  action?: (prev: FormState, formData: FormData) => Promise<FormState>;
+  initial?: ProductValues;
+  submitLabel?: string;
+  onDone?: () => void;
+}) {
+  const [state, formAction, pending] = useActionState(action, undefined);
   const formRef = useRef<HTMLFormElement>(null);
+  const listId = useId();
   const err = state?.errors ?? {};
-  const v = (name: string) => fieldValue(state, undefined, name);
+  const v = (name: string) => fieldValue(state, initial, name);
 
   useEffect(() => {
-    if (state?.saved) formRef.current?.reset();
-  }, [state]);
+    if (!state?.saved) return;
+    if (onDone) onDone();
+    else formRef.current?.reset();
+  }, [state, onDone]);
 
   return (
     <form ref={formRef} action={formAction} className="grid gap-3 sm:grid-cols-4">
       <Field label="Раздел" error={err.category}>
-        <input name="category" list="categories" defaultValue={v("category")} className={inputClass} />
-        <datalist id="categories">
+        <input name="category" list={listId} defaultValue={v("category")} className={inputClass} />
+        <datalist id={listId}>
           {categories.map((c) => (
             <option key={c} value={c} />
           ))}
@@ -35,7 +61,7 @@ export function ProductForm({ categories }: { categories: string[] }) {
       <Field label="Цена, ₽" error={err.price}>
         <input name="price" type="number" min={0} step={1} defaultValue={v("price")} className={inputClass} />
       </Field>
-      <Field label="Единица (час, страница)" error={err.unit}>
+      <Field label="Единица (месяц, час, страница)" error={err.unit}>
         <input name="unit" defaultValue={v("unit")} className={inputClass} />
       </Field>
       <div className="sm:col-span-2">
@@ -66,10 +92,15 @@ export function ProductForm({ categories }: { categories: string[] }) {
           <input name="description" defaultValue={v("description")} className={inputClass} />
         </Field>
       </div>
-      <div className="sm:col-span-4">
+      <div className="flex items-center gap-3 sm:col-span-4">
         <button type="submit" disabled={pending} className={primaryButton}>
-          {pending ? "Сохраняю…" : "Добавить услугу"}
+          {pending ? "Сохраняю…" : submitLabel}
         </button>
+        {onDone && (
+          <button type="button" onClick={onDone} className="text-sm text-slate-600 hover:text-slate-900">
+            Отмена
+          </button>
+        )}
       </div>
     </form>
   );

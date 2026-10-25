@@ -6,6 +6,7 @@ import { PriceEditor } from "./price-editor";
 import { TextEditor } from "./text-editor";
 import { StepSelect } from "./step-select";
 import { ProductForm } from "./product-form";
+import { ProductRow } from "./product-row";
 
 export const dynamic = "force-dynamic";
 
@@ -19,7 +20,7 @@ export default async function PricePage() {
     <div className="mx-auto max-w-5xl px-6 py-6">
       <h1 className="text-2xl font-semibold tracking-tight">Прайс</h1>
       <p className="mt-1 mb-6 text-sm text-slate-600">
-        Услуги для выбора в сделке. Название, описание и цену можно изменить кликом; сумма в уже созданных сделках при этом не меняется. Шаг планограммы связывает услугу со схемой продаж.
+        Услуги для выбора в сделке. Название, описание и цену можно изменить кликом, всё остальное — карандашом слева; сумма в уже созданных сделках при этом не меняется. Шаг планограммы связывает услугу со схемой продаж.
       </p>
 
       <div className="flex flex-col gap-6">
@@ -30,7 +31,21 @@ export default async function PricePage() {
               {products
                 .filter((p) => p.category === c)
                 .map((p) => (
-                  <li key={p.id} data-testid={`product-${p.name}`} className="flex items-center gap-4 px-4 py-3">
+                  <ProductRow
+                    key={p.id}
+                    id={p.id}
+                    name={p.name}
+                    categories={categories}
+                    product={{
+                      category: p.category,
+                      name: p.name,
+                      description: p.description,
+                      price: p.price,
+                      unit: p.unit,
+                      service: p.service,
+                      salesStep: p.salesStep,
+                    }}
+                  >
                     <div className="min-w-0 flex-1">
                       <TextEditor id={p.id} field="name" value={p.name} className="text-sm font-medium" placeholder="Название" />
                       <TextEditor
@@ -51,7 +66,7 @@ export default async function PricePage() {
                       message={`Удалить «${p.name}» из прайса? Сделки с этой услугой сохранятся.`}
                       label="×"
                     />
-                  </li>
+                  </ProductRow>
                 ))}
             </ul>
           </section>
