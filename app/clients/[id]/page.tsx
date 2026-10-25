@@ -39,7 +39,7 @@ export default async function ClientPage({
   const [plan, stepProducts] = await Promise.all([getClientPlan(company.id, company.situation), getStepProducts()]);
 
   return (
-    <div className="mx-auto max-w-5xl px-3 py-5">
+    <div className="mx-auto w-full max-w-7xl px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <Link href="/clients" className="text-sm text-slate-500 hover:text-slate-800">

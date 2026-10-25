@@ -205,6 +205,11 @@ model Employee {
   position  String?
   phone     String?
   email     String?
+  telegram  String?
+  max       String?
+  vk        String?
+  instagram String?
+  whatsapp  String?
   // Аватар как data URL: сжимается в браузере до 256 px, чтобы не держать файлы на диске
   avatar    String?
   isOwner   Boolean  @default(false)

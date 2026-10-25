@@ -17,7 +17,7 @@ export default async function PricePage() {
   const categories = [...new Set(products.map((p) => p.category))];
 
   return (
-    <div className="mx-auto max-w-5xl px-3 py-5">
+    <div className="mx-auto w-full max-w-7xl px-1 py-4 sm:px-3 sm:py-5">
       <h1 className="text-2xl font-semibold tracking-tight">Прайс</h1>
       <p className="mt-1 mb-6 text-sm text-slate-600">
         Услуги для выбора в сделке. Название, описание и цену можно изменить кликом, всё остальное — карандашом слева; сумма в уже созданных сделках при этом не меняется. Шаг планограммы связывает услугу со схемой продаж.

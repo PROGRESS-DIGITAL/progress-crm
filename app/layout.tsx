@@ -18,9 +18,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ru">
       <body className="min-h-screen">
-        <div className="flex min-h-screen gap-3 p-3">
+        <div className="flex min-h-screen gap-3 p-2 pb-24 sm:p-3 md:pb-3">
           <Sidebar initialCollapsed={collapsed} newLeads={newLeads} />
-          <div className="flex min-w-0 flex-1 flex-col gap-3">
+          <div className="flex min-w-0 flex-1 flex-col gap-2 sm:gap-3">
             <TopBar newLeads={newLeads} />
             <main className="flex flex-1 flex-col *:w-full">{children}</main>
           </div>

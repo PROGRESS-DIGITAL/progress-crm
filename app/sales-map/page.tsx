@@ -79,7 +79,7 @@ export default async function SalesMapPage() {
   const [plans, products] = await Promise.all([getAllPlans(), getStepProducts()]);
 
   return (
-    <div className="px-6 py-6">
+    <div className="mx-auto w-full max-w-7xl px-1 py-4 sm:px-3 sm:py-5">
       <h1 className="text-2xl font-semibold tracking-tight">Планограмма продаж</h1>
       <p className="mt-1 mb-6 max-w-3xl text-sm text-slate-600">
         С чем клиент приходит и что ему продавать дальше. ✓ — оплатили, ◷ — в работе, «Предложить» — клиенты, которым

@@ -2,25 +2,28 @@
 
 import { useActionState, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
+import { AvatarCropper } from "@/components/avatar-cropper";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { saveProfile } from "./actions";
 
-type Profile = { name: string; position: string | null; phone: string | null; email: string | null; avatar: string | null };
+export const MESSENGERS = [
+  { name: "telegram", label: "Telegram", placeholder: "@username" },
+  { name: "max", label: "Max", placeholder: "+7 900 000-00-00" },
+  { name: "vk", label: "VK", placeholder: "vk.com/username" },
+  { name: "instagram", label: "Instagram", placeholder: "@username" },
+  { name: "whatsapp", label: "WhatsApp", placeholder: "+7 900 000-00-00" },
+] as const;
 
-const AVATAR_PX = 256;
+type Messenger = (typeof MESSENGERS)[number]["name"];
 
-// Фото обрезается по центру в квадрат и сжимается, чтобы в базе лежало несколько десятков килобайт
-async function toAvatar(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file);
-  const side = Math.min(bitmap.width, bitmap.height);
-  const canvas = document.createElement("canvas");
-  canvas.width = canvas.height = AVATAR_PX;
-  canvas
-    .getContext("2d")!
-    .drawImage(bitmap, (bitmap.width - side) / 2, (bitmap.height - side) / 2, side, side, 0, 0, AVATAR_PX, AVATAR_PX);
-  return canvas.toDataURL("image/jpeg", 0.85);
-}
+type Profile = {
+  name: string;
+  position: string | null;
+  phone: string | null;
+  email: string | null;
+  avatar: string | null;
+} & Record<Messenger, string | null>;
 
 export function ProfileForm({ initial }: { initial: Profile }) {
   const [state, formAction, pending] = useActionState(saveProfile, undefined);
@@ -31,13 +34,16 @@ export function ProfileForm({ initial }: { initial: Profile }) {
   const [photoError, setPhotoError] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(initial.name);
+  // Исходное фото держим, пока открыта страница: кадр можно поправить ещё раз без новой загрузки
+  const [source, setSource] = useState<string | null>(null);
+  const [cropping, setCropping] = useState(false);
 
   return (
     <form action={formAction} className="grid gap-4 sm:grid-cols-2">
       <div className="flex items-center gap-4 sm:col-span-2">
         <Avatar name={name} src={avatar} size={72} />
         <div className="flex flex-col items-start gap-1">
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <button
               type="button"
               onClick={() => fileRef.current?.click()}
@@ -45,10 +51,20 @@ export function ProfileForm({ initial }: { initial: Profile }) {
             >
               {avatar ? "Сменить фото" : "Загрузить фото"}
             </button>
+            {source && (
+              <button
+                type="button"
+                onClick={() => setCropping(true)}
+                className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm hover:bg-slate-50"
+              >
+                Изменить кадр
+              </button>
+            )}
             {avatar && (
               <button
                 type="button"
                 onClick={() => {
+                  setSource(null);
                   setAvatar(null);
                   setAvatarField("");
                 }}
@@ -58,7 +74,7 @@ export function ProfileForm({ initial }: { initial: Profile }) {
               </button>
             )}
           </div>
-          <p className="text-xs text-slate-500">JPG или PNG, обрежется по кругу</p>
+          <p className="text-xs text-slate-500">JPG или PNG, кадр в круге выберете сами</p>
           {(photoError || err.avatar) && <p className="text-xs text-rose-600">{photoError || err.avatar}</p>}
         </div>
         <input
@@ -67,20 +83,31 @@ export function ProfileForm({ initial }: { initial: Profile }) {
           accept="image/jpeg,image/png,image/webp"
           aria-label="Фото"
           className="hidden"
-          onChange={async (e) => {
+          onChange={(e) => {
             const file = e.target.files?.[0];
             e.target.value = "";
             if (!file) return;
             setPhotoError(null);
-            try {
-              const data = await toAvatar(file);
-              setAvatar(data);
-              setAvatarField(data);
-            } catch {
-              setPhotoError("Не удалось прочитать файл, попробуйте другое фото");
-            }
+            const reader = new FileReader();
+            reader.onload = () => {
+              setSource(reader.result as string);
+              setCropping(true);
+            };
+            reader.onerror = () => setPhotoError("Не удалось прочитать файл, попробуйте другое фото");
+            reader.readAsDataURL(file);
           }}
         />
+        {cropping && source && (
+          <AvatarCropper
+            src={source}
+            onCancel={() => setCropping(false)}
+            onDone={(data) => {
+              setAvatar(data);
+              setAvatarField(data);
+              setCropping(false);
+            }}
+          />
+        )}
         <input type="hidden" name="avatar" value={avatarField} />
       </div>
       <Field label="Имя" error={err.name}>
@@ -101,6 +128,12 @@ export function ProfileForm({ initial }: { initial: Profile }) {
       <Field label="Email" error={err.email}>
         <input name="email" type="email" defaultValue={v("email")} className={inputClass} />
       </Field>
+      <h2 className="mt-2 font-semibold sm:col-span-2">Мессенджеры</h2>
+      {MESSENGERS.map((m) => (
+        <Field key={m.name} label={m.label} error={err[m.name]}>
+          <input name={m.name} defaultValue={v(m.name)} placeholder={m.placeholder} className={inputClass} />
+        </Field>
+      ))}
       <div className="flex items-center gap-3 sm:col-span-2">
         <button type="submit" disabled={pending} className={primaryButton}>
           {pending ? "Сохраняю…" : "Сохранить"}

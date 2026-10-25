@@ -16,12 +16,12 @@ export async function TopBar({ newLeads }: { newLeads: number }) {
   const owner = await getOwner();
   const firstName = owner.name.split(/\s+/)[0];
   return (
-    <header className="flex min-h-16 flex-wrap items-center gap-4 rounded-3xl bg-white px-5 py-3 shadow-card">
+    <header className="flex min-h-14 items-center gap-3 rounded-2xl bg-white px-3 py-2 shadow-card sm:min-h-16 sm:gap-4 sm:rounded-3xl sm:px-5 sm:py-3">
       <div className="min-w-0">
-        <p className="truncate text-lg font-semibold tracking-tight">
+        <p className="truncate text-base font-semibold tracking-tight sm:text-lg">
           {greeting(new Date())}, {firstName}!
         </p>
-        <p className="text-xs text-slate-500">Сделки, клиенты и выручка PROGRESS Digital</p>
+        <p className="hidden text-xs text-slate-500 sm:block">Сделки, клиенты и выручка PROGRESS Digital</p>
       </div>
 
       <form action="/clients" className="relative ml-auto hidden w-full max-w-sm md:block" role="search">
@@ -34,7 +34,7 @@ export async function TopBar({ newLeads }: { newLeads: number }) {
         />
       </form>
 
-      <div className="ml-auto flex items-center gap-2 md:ml-0">
+      <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
         <Link
           href="/leads"
           title={newLeads ? `Новых лидов: ${newLeads}` : "Лиды"}
@@ -50,7 +50,7 @@ export async function TopBar({ newLeads }: { newLeads: number }) {
         <Link
           href="/profile"
           title="Личные данные"
-          className="flex items-center gap-2.5 rounded-full border border-slate-200 py-1 pr-4 pl-1 hover:bg-slate-50"
+          className="flex items-center gap-2.5 rounded-full border-slate-200 hover:bg-slate-50 sm:border sm:py-1 sm:pr-4 sm:pl-1"
         >
           <Avatar name={owner.name} src={owner.avatar} size={36} />
           <span className="hidden flex-col leading-tight sm:flex">

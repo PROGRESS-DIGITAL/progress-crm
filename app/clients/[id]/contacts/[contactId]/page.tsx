@@ -15,7 +15,7 @@ export default async function ContactPage({ params }: { params: Promise<{ id: st
   if (!contact || contact.companyId !== id) notFound();
 
   return (
-    <div className="mx-auto max-w-3xl px-3 py-5">
+    <div className="mx-auto w-full max-w-7xl px-1 py-4 sm:px-3 sm:py-5">
       <Link href={`/clients/${id}`} className="text-sm text-slate-500 hover:text-slate-800">
         ← {contact.company.name}
       </Link>

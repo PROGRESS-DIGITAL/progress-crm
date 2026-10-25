@@ -50,7 +50,7 @@ export default async function TildaPage() {
   ].filter((k) => k.toLowerCase() !== "cookies");
 
   return (
-    <div className="mx-auto max-w-5xl px-3 py-5">
+    <div className="mx-auto w-full max-w-7xl px-1 py-4 sm:px-3 sm:py-5">
       <Link href="/integrations" className="text-sm text-slate-500 hover:text-slate-800">
         ← Интеграции
       </Link>

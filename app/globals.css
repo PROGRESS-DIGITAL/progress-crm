@@ -23,3 +23,11 @@ select:not([multiple]) {
   background-position: right 14px center;
   background-size: 12px 8px;
 }
+
+/* На телефоне таблицы прокручиваются вбок внутри карточки, а не переносят номера и суммы по словам */
+@media (max-width: 640px) {
+  th,
+  td {
+    white-space: nowrap;
+  }
+}
