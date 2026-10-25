@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatRub } from "@/lib/format";
-import { inputClass } from "@/components/field";
+import { ClientSearch } from "./client-search";
 
 export const dynamic = "force-dynamic";
 
@@ -13,6 +13,8 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           OR: [
             { name: { contains: q, mode: "insensitive" } },
             { inn: { contains: q } },
+            { phone: { contains: q } },
+            { email: { contains: q, mode: "insensitive" } },
             { contacts: { some: { fullName: { contains: q, mode: "insensitive" } } } },
           ],
         }
@@ -32,14 +34,7 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
           <p className="mt-1 text-sm text-slate-600">Всего: {companies.length}</p>
         </div>
         <div className="flex items-center gap-3">
-          <form className="w-72">
-            <input
-              name="q"
-              defaultValue={q}
-              placeholder="Поиск по названию, ИНН, контакту"
-              className={inputClass}
-            />
-          </form>
+          <ClientSearch initial={q} />
           <Link
             href="/clients/new"
             className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
