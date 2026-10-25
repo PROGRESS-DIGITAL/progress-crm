@@ -22,9 +22,9 @@ export default async function ClientPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; merged?: string }>;
 }) {
-  const [{ id }, { error }] = await Promise.all([params, searchParams]);
+  const [{ id }, { error, merged }] = await Promise.all([params, searchParams]);
   const company = await db.company.findUnique({
     where: { id },
     include: {
@@ -52,6 +52,11 @@ export default async function ClientPage({
           message="Удалить клиента вместе с контактами?"
         />
       </div>
+      {merged && (
+        <p className="mb-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800">
+          Клиенты объединены. Проверьте реквизиты: заполненные поля остались прежними, пустые дополнены.
+        </p>
+      )}
       {error === "has-deals" && (
         <p className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
           У клиента есть сделки. Удалите или перенесите их, прежде чем удалять клиента.
@@ -61,7 +66,12 @@ export default async function ClientPage({
       <div className="grid gap-6 lg:grid-cols-[1fr_1fr]">
         <section className="rounded-xl border border-slate-200 bg-white p-6">
           <h2 className="mb-4 text-lg font-semibold">Реквизиты</h2>
-          <CompanyForm action={updateCompany.bind(null, company.id)} initial={company} submitLabel="Сохранить" />
+          <CompanyForm
+            action={updateCompany.bind(null, company.id)}
+            initial={company}
+            submitLabel="Сохранить"
+            mode="edit"
+          />
         </section>
 
         <section className="rounded-xl border border-slate-200 bg-white p-6">
