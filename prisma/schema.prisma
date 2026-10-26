@@ -345,33 +345,48 @@ enum EventKind {
 
 // Событие календаря: встреча или задача, при желании привязанная к клиенту, сделке или другой задаче
 model Event {
-  id            String    @id @default(cuid())
-  kind          EventKind @default(MEETING)
+  id            String      @id @default(cuid())
+  kind          EventKind   @default(MEETING)
   title         String
   notes         String?
   start         DateTime
   end           DateTime
   // Событие на весь день: время в start и end не важно, только даты
-  allDay        Boolean   @default(false)
+  allDay        Boolean     @default(false)
   // Для задач: отметка о выполнении
-  done          Boolean   @default(false)
+  done          Boolean     @default(false)
   // За сколько минут до начала напомнить в Telegram; пусто — не напоминать
   remindMinutes Int?
   // Когда напоминание ушло: при переносе события сбрасывается
   remindedAt    DateTime?
-  company       Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  company       Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
   companyId     String?
-  deal          Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  deal          Deal?       @relation(fields: [dealId], references: [id], onDelete: SetNull)
   dealId        String?
-  task          Event?    @relation("EventTask", fields: [taskId], references: [id], onDelete: SetNull)
+  task          Event?      @relation("EventTask", fields: [taskId], references: [id], onDelete: SetNull)
   taskId        String?
-  linked        Event[]   @relation("EventTask")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  linked        Event[]     @relation("EventTask")
+  files         EventFile[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
 
   @@index([start])
   @@index([companyId])
   @@index([dealId])
+}
+
+// Файл, прикреплённый к задаче: хранится прямо в базе, чтобы CRM не зависела от папок на диске
+model EventFile {
+  id        String   @id @default(cuid())
+  event     Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId   String
+  name      String
+  mime      String
+  size      Int
+  data      Bytes
+  createdAt DateTime @default(now())
+
+  @@index([eventId])
 }
 
 // Шаблон договора: HTML с полями вида {{клиент.инн}}, которые заполняются при создании договора

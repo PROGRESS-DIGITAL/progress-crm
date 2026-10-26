@@ -26,7 +26,7 @@ export async function LinkedEvents({ dealId, companyId }: { dealId?: string; com
             <Icon name="plus" size={16} />
             Встреча
           </Link>
-          <Link href={`/calendar?new=TASK&${query}`} className={button}>
+          <Link href={`/tasks/new?${query}`} className={button}>
             <Icon name="plus" size={16} />
             Задача
           </Link>
@@ -42,7 +42,7 @@ export async function LinkedEvents({ dealId, companyId }: { dealId?: string; com
               <li key={e.id} className="flex items-center gap-3 py-2.5 text-sm">
                 <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${e.kind === "TASK" ? (e.done ? "bg-slate-300" : "bg-amber-500") : "bg-blue-500"}`} />
                 <Link
-                  href={`/calendar?view=day&date=${dayKey(e.start)}&open=${e.id}`}
+                  href={e.kind === "TASK" ? `/tasks/${e.id}` : `/calendar?view=day&date=${dayKey(e.start)}&open=${e.id}`}
                   className={`min-w-0 flex-1 truncate font-medium hover:text-blue-700 ${e.done ? "text-slate-400 line-through" : ""}`}
                 >
                   {e.title}

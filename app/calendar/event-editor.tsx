@@ -2,56 +2,13 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { DEFAULT_REMIND, REMIND_OPTIONS, addDays, dayKey, minutesOfDay, timeLabel } from "@/lib/calendar";
+import { REMIND_OPTIONS } from "@/lib/calendar";
 import { deleteEvent, saveEvent, type EventInput } from "./actions";
-import type { CalEvent, Options } from "./types";
+import type { Options } from "./types";
 
 const field =
   "mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
 const label = "block text-sm font-medium text-slate-700";
-
-export function draftFromEvent(e: CalEvent): EventInput {
-  const start = new Date(e.start);
-  const end = new Date(e.end);
-  return {
-    kind: e.kind,
-    title: e.title,
-    notes: e.notes,
-    date: dayKey(start),
-    // У события на весь день end — полночь после последнего дня
-    endDate: e.allDay ? addDays(dayKey(end), -1) : dayKey(end),
-    startTime: timeLabel(minutesOfDay(start)),
-    endTime: timeLabel(minutesOfDay(end)),
-    allDay: e.allDay,
-    done: e.done,
-    clientName: e.companyName ?? "",
-    dealId: e.dealId ?? "",
-    newDealTitle: "",
-    taskId: e.taskId ?? "",
-    remindMinutes: e.remindMinutes === null ? "" : String(e.remindMinutes),
-  };
-}
-
-export function emptyDraft(date: string, startMin: number, extra: Partial<EventInput> = {}): EventInput {
-  const endMin = Math.min(startMin + 60, 23 * 60 + 59);
-  return {
-    kind: "MEETING",
-    title: "",
-    notes: "",
-    date,
-    endDate: date,
-    startTime: timeLabel(startMin),
-    endTime: timeLabel(endMin),
-    allDay: false,
-    done: false,
-    clientName: "",
-    dealId: "",
-    newDealTitle: "",
-    taskId: "",
-    remindMinutes: String(DEFAULT_REMIND),
-    ...extra,
-  };
-}
 
 // Окно встречи или задачи: на телефоне выезжает снизу, на компьютере по центру
 export function EventEditor({
@@ -280,8 +237,13 @@ export function EventEditor({
           <textarea value={d.notes} onChange={(e) => set("notes", e.target.value)} rows={3} className={field} />
         </label>
 
-        {id && (company || currentDeal) && (
+        {id && (company || currentDeal || d.kind === "TASK") && (
           <p className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm">
+            {d.kind === "TASK" && (
+              <Link href={`/tasks/${id}`} className="text-blue-600 hover:underline">
+                Карточка задачи и файлы
+              </Link>
+            )}
             {company && (
               <Link href={`/clients/${company.id}`} className="text-blue-600 hover:underline">
                 Карточка клиента

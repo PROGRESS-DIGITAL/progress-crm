@@ -15,7 +15,8 @@ import {
   type CalendarView as View,
 } from "@/lib/calendar";
 import { moveEvent, toggleDone } from "./actions";
-import { EventEditor, draftFromEvent, emptyDraft } from "./event-editor";
+import { draftFromEvent, emptyDraft } from "./drafts";
+import { EventEditor } from "./event-editor";
 import type { EventInput } from "./actions";
 import type { CalEvent, Options, Prefill } from "./types";
 
