@@ -17,6 +17,7 @@ function menu(newLeads: number, unreadChats: number): Group[] {
         { href: "/dashboard", label: "Дашборд", icon: "dashboard" },
         { href: "/leads", label: "Лиды", icon: "leads", badge: newLeads },
         { href: "/deals", label: "Сделки", icon: "deals" },
+        { href: "/calendar", label: "Календарь", icon: "calendar" },
         { href: "/clients", label: "Клиенты", icon: "clients" },
         { href: "/chats", label: "Чаты", icon: "chat", badge: unreadChats },
       ],

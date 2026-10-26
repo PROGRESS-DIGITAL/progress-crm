@@ -114,6 +114,7 @@ model Company {
   deals       Deal[]
   chats       Conversation[]
   documents   Document[]
+  events      Event[]
   // Ящик клиента в Диадоке: туда уходят акты
   diadocBoxId String?
   createdAt   DateTime       @default(now())
@@ -165,6 +166,7 @@ model Deal {
   position          Float      @default(0)
   lead              Lead?
   documents         Document[]
+  events            Event[]
   stage             Stage      @relation(fields: [stageId], references: [id])
   stageId           String
   createdAt         DateTime   @default(now())
@@ -327,4 +329,36 @@ model BankPayment {
   createdAt     DateTime  @default(now())
 
   @@index([date])
+}
+
+enum EventKind {
+  MEETING
+  TASK
+}
+
+// Событие календаря: встреча или задача, при желании привязанная к клиенту, сделке или другой задаче
+model Event {
+  id        String    @id @default(cuid())
+  kind      EventKind @default(MEETING)
+  title     String
+  notes     String?
+  start     DateTime
+  end       DateTime
+  // Событие на весь день: время в start и end не важно, только даты
+  allDay    Boolean   @default(false)
+  // Для задач: отметка о выполнении
+  done      Boolean   @default(false)
+  company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId String?
+  deal      Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  dealId    String?
+  task      Event?    @relation("EventTask", fields: [taskId], references: [id], onDelete: SetNull)
+  taskId    String?
+  linked    Event[]   @relation("EventTask")
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([start])
+  @@index([companyId])
+  @@index([dealId])
 }

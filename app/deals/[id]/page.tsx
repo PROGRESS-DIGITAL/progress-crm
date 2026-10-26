@@ -5,6 +5,7 @@ import { TIME_ZONE } from "@/lib/format";
 import { getCompanyOptions, getProductOptions, getStageOptions } from "@/lib/queries";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { DealDocuments } from "@/components/deal-documents";
+import { LinkedEvents } from "@/components/linked-events";
 import { deleteDeal, updateDeal } from "../actions";
 import { DealForm } from "../deal-form";
 
@@ -53,6 +54,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
           }}
         />
       </div>
+      <LinkedEvents dealId={deal.id} />
       <DealDocuments dealId={deal.id} hasEmail={!!deal.company.email} />
     </div>
   );
