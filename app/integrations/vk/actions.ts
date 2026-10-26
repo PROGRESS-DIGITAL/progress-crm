@@ -25,7 +25,7 @@ export async function saveVkToken(_prev: TokenState, formData: FormData): Promis
     revalidate();
     return { ok: `Сообщество «${group.name}» подключено` };
   } catch (e) {
-    return { error: `VK не принял ключ: ${e instanceof Error ? e.message : "ошибка"}` };
+    return { error: `Не получилось подключить VK: ${e instanceof Error ? e.message : "ошибка"}` };
   }
 }
 

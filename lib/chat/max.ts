@@ -1,4 +1,5 @@
 import type { Incoming } from "./inbox";
+import { netFetch } from "@/lib/net";
 
 // Max Bot API: https://dev.max.ru/docs-api
 // Как и в Telegram, входящие забираем длинным опросом GET /updates, публичный адрес CRM не нужен
@@ -36,7 +37,7 @@ export function incomingFromMax(u: MaxUpdate): Incoming | null {
 }
 
 async function call<T>(token: string, path: string, init?: { method?: string; body?: object; signal?: AbortSignal }) {
-  const res = await fetch(`${API}${path}`, {
+  const res = await netFetch(`${API}${path}`, {
     method: init?.method ?? "GET",
     headers: { Authorization: token, "content-type": "application/json" },
     body: init?.body ? JSON.stringify(init.body) : undefined,

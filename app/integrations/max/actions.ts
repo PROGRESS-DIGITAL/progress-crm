@@ -19,7 +19,7 @@ export async function saveMaxToken(_prev: TokenState, formData: FormData): Promi
     const me = await getMaxBot(token);
     bot = me.username ? `@${me.username}` : (me.name ?? me.first_name ?? "бот");
   } catch (e) {
-    return { error: `Max не принял токен: ${e instanceof Error ? e.message : "ошибка"}` };
+    return { error: `Не получилось подключить Max: ${e instanceof Error ? e.message : "ошибка"}` };
   }
   await setSetting(MAX_TOKEN_SETTING, token);
   await setSetting(MAX_BOT_SETTING, bot);

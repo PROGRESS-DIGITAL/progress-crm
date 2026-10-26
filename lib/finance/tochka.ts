@@ -1,3 +1,4 @@
+import { netFetch } from "@/lib/net";
 // API Точки: https://developers.tochka.com/docs/tochka-api/
 // Авторизация — JWT-токен, выпущенный в интернет-банке («Интеграции и API»)
 const API = process.env.TOCHKA_API_URL ?? "https://enter.tochka.com/uapi";
@@ -25,7 +26,7 @@ export function isNdsKind(v: unknown): v is NdsKind {
 export class TochkaError extends Error {}
 
 async function call<T>(token: string, path: string, init?: { method?: string; body?: object }): Promise<T> {
-  const res = await fetch(`${API}${path}`, {
+  const res = await netFetch(`${API}${path}`, {
     method: init?.method ?? "GET",
     headers: { Authorization: `Bearer ${token}`, "content-type": "application/json" },
     body: init?.body ? JSON.stringify(init.body) : undefined,
@@ -151,7 +152,7 @@ export async function invoicePaymentStatus(token: string, customerCode: string, 
 
 // PDF счёта или акта
 export async function documentPdf(token: string, kind: "bills" | "closing-documents", customerCode: string, documentId: string) {
-  const res = await fetch(`${API}/invoice/v1.0/${kind}/${customerCode}/${documentId}/file`, {
+  const res = await netFetch(`${API}/invoice/v1.0/${kind}/${customerCode}/${documentId}/file`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   if (!res.ok) throw new TochkaError(`Точка не отдала PDF: ${res.status}`);
