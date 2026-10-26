@@ -8,9 +8,11 @@ import { sendTelegram } from "@/lib/chat/telegram";
 import {
   deleteWebhook,
   getMe,
+  isProxyUrl,
   isTelegramToken,
   TELEGRAM_BOT_SETTING,
   TELEGRAM_OFFSET_SETTING,
+  TELEGRAM_PROXY_SETTING,
   TELEGRAM_TOKEN_SETTING,
 } from "@/lib/chat/telegram";
 
@@ -21,22 +23,33 @@ function revalidate() {
 }
 
 export async function saveTelegramToken(_prev: TokenState, formData: FormData): Promise<TokenState> {
-  const token = String(formData.get("token") ?? "").trim();
-  if (!isTelegramToken(token)) return { error: "Токен выглядит как 123456789:AAE… — скопируйте его из @BotFather целиком" };
+  const typed = String(formData.get("token") ?? "").trim();
+  const proxy = String(formData.get("proxy") ?? "").trim() || null;
+  // Токен уже сохранён — можно поменять только прокси, не вводя токен заново
+  const token = typed || (await getSetting(TELEGRAM_TOKEN_SETTING));
+  if (!token || !isTelegramToken(token)) {
+    return { error: "Токен выглядит как 123456789:AAE… — скопируйте его из @BotFather целиком" };
+  }
+  if (proxy && !isProxyUrl(proxy)) return { error: "Прокси укажите как http://адрес:порт, например http://127.0.0.1:1087" };
+  const via = proxy ?? process.env.TELEGRAM_PROXY ?? null;
   let bot: string;
   try {
-    bot = (await getMe(token)).username;
-    await deleteWebhook(token);
+    bot = (await getMe(token, via)).username;
+    await deleteWebhook(token, via);
   } catch (e) {
-    return { error: `Telegram не принял токен: ${e instanceof Error ? e.message : "ошибка"}` };
+    return { error: `Не получилось подключить бота: ${e instanceof Error ? e.message : "ошибка"}` };
   }
+  if (proxy) await setSetting(TELEGRAM_PROXY_SETTING, proxy);
+  else await deleteSettings(TELEGRAM_PROXY_SETTING);
   // Другой бот не может писать в чат, привязанный к прежнему: напоминания нужно привязать заново
   if ((await getSetting(TELEGRAM_BOT_SETTING)) !== bot) await deleteSettings(REMIND_CHAT_SETTING);
-  await setSetting(TELEGRAM_TOKEN_SETTING, token);
-  await setSetting(TELEGRAM_BOT_SETTING, bot);
-  await deleteSettings(TELEGRAM_OFFSET_SETTING);
+  if (typed) {
+    await setSetting(TELEGRAM_TOKEN_SETTING, token);
+    await setSetting(TELEGRAM_BOT_SETTING, bot);
+    await deleteSettings(TELEGRAM_OFFSET_SETTING);
+  }
   revalidate();
-  return { ok: `Бот @${bot} подключён` };
+  return { ok: `Бот @${bot} подключён${via ? " через прокси" : ""}` };
 }
 
 export async function deleteTelegramToken() {

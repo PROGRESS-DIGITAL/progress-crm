@@ -12,6 +12,7 @@ export function TokenForm({
   placeholder,
   submitLabel,
   extra,
+  after,
 }: {
   action: (prev: TokenState, formData: FormData) => Promise<TokenState>;
   label: string;
@@ -19,6 +20,8 @@ export function TokenForm({
   submitLabel: string;
   // Дополнительные поля перед ключом
   extra?: React.ReactNode;
+  // Дополнительные поля после ключа
+  after?: React.ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   return (
@@ -27,6 +30,7 @@ export function TokenForm({
       <Field label={label} error={state?.error}>
         <input name="token" type="password" autoComplete="off" placeholder={placeholder} className={inputClass} />
       </Field>
+      {after}
       <div className="flex flex-wrap items-center gap-3">
         <button type="submit" disabled={pending} className={primaryButton}>
           {pending ? "Проверяю…" : submitLabel}

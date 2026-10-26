@@ -1,7 +1,8 @@
 import { ChannelPage } from "@/components/channel-page";
 import { TokenForm } from "@/components/token-form";
 import { getSetting } from "@/lib/settings";
-import { TELEGRAM_BOT_SETTING, TELEGRAM_TOKEN_SETTING } from "@/lib/chat/telegram";
+import { TELEGRAM_BOT_SETTING, TELEGRAM_PROXY_SETTING, TELEGRAM_TOKEN_SETTING } from "@/lib/chat/telegram";
+import { Field, inputClass } from "@/components/field";
 import { ActionButton } from "@/components/action-button";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { getRemindChat, getRemindCode } from "@/lib/reminders";
@@ -11,11 +12,13 @@ import { deleteTelegramToken, saveTelegramToken, sendTestReminder, unlinkReminde
 export const dynamic = "force-dynamic";
 
 export default async function TelegramPage() {
-  const [token, bot, remindChat] = await Promise.all([
+  const [token, bot, remindChat, proxy] = await Promise.all([
     getSetting(TELEGRAM_TOKEN_SETTING),
     getSetting(TELEGRAM_BOT_SETTING),
     getRemindChat(),
+    getSetting(TELEGRAM_PROXY_SETTING),
   ]);
+  const systemProxy = process.env.TELEGRAM_PROXY;
   const code = token && bot && !remindChat ? await getRemindCode() : null;
   return (
     <ChannelPage
@@ -27,9 +30,20 @@ export default async function TelegramPage() {
       form={
         <TokenForm
           action={saveTelegramToken}
-          label={token ? "Новый токен бота" : "Токен бота"}
+          label={token ? "Новый токен бота (пусто — оставить прежний)" : "Токен бота"}
           placeholder="123456789:AAE… из @BotFather"
-          submitLabel="Подключить бота"
+          submitLabel={token ? "Сохранить" : "Подключить бота"}
+          after={
+            <Field label="Прокси для Telegram, если без него не подключается">
+              <input
+                name="proxy"
+                defaultValue={proxy ?? ""}
+                autoComplete="off"
+                placeholder={systemProxy ? `Сейчас системный: ${systemProxy}` : "http://127.0.0.1:1087"}
+                className={inputClass}
+              />
+            </Field>
+          }
         />
       }
       steps={[
@@ -43,6 +57,7 @@ export default async function TelegramPage() {
         "Придумайте название (например, «PROGRESS Digital») и имя бота, которое заканчивается на bot.",
         "BotFather пришлёт токен вида 123456789:AAE…: вставьте его выше и нажмите «Подключить бота».",
         "Напишите боту сами, и сообщение через несколько секунд появится в «Чатах».",
+        "Если CRM пишет, что api.telegram.org не отвечает, значит провайдер блокирует Telegram. Включите VPN в режиме для всего Мака (TUN) или впишите HTTP-прокси вашего VPN-клиента, например http://127.0.0.1:1087, и сохраните.",
       ]}
       note="Сообщения принимаются, пока CRM запущена. Бот не пишет первым: клиент должен начать диалог."
       extra={
