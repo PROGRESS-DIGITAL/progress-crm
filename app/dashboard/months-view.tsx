@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { Icon, type IconName } from "@/components/icons";
+import { CountUp } from "@/components/count-up";
 import { formatRub } from "@/lib/format";
 import { change, emptyMonth, monthKey, monthLabel, monthlyStats, shiftMonth, type MonthStats } from "@/lib/monthly";
 
@@ -59,7 +60,9 @@ function CompareTile({
         </span>
         <p className="text-sm font-medium text-slate-700">{label}</p>
       </div>
-      <p className="mt-4 text-[26px] font-semibold tracking-tight tabular-nums">{fmt(current)}</p>
+      <p className="mt-4 text-[26px] font-semibold tracking-tight tabular-nums">
+        <CountUp value={current} money={money} />
+      </p>
       <div className="mt-3 flex flex-col gap-1.5">
         <Delta current={current} previous={prev} label="прошлый месяц" fmt={fmt} />
         <Delta current={current} previous={yearAgo} label="год назад" fmt={fmt} />
