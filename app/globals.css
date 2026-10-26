@@ -31,3 +31,93 @@ select:not([multiple]) {
     white-space: nowrap;
   }
 }
+
+/* Договоры и шаблоны: лист как в Word */
+.contract-doc {
+  font-family: Calibri, Carlito, "Segoe UI", Arial, sans-serif;
+  font-size: 11pt;
+  line-height: 1.35;
+  color: #0f172a;
+}
+.contract-doc p {
+  margin: 0 0 0.35em;
+  text-align: justify;
+}
+.contract-doc h1,
+.contract-doc h2 {
+  margin: 0.8em 0 0.4em;
+  font-size: 1.15em;
+  font-weight: 700;
+}
+.contract-doc h3 {
+  margin: 0.6em 0 0.3em;
+  font-weight: 700;
+}
+.contract-doc ul,
+.contract-doc ol {
+  margin: 0 0 0.5em;
+  padding-left: 1.6em;
+}
+.contract-doc ul {
+  list-style: disc;
+}
+.contract-doc ol {
+  list-style: decimal;
+}
+.contract-doc table {
+  border-collapse: collapse;
+  margin: 0.3em 0 0.6em;
+}
+.contract-doc td,
+.contract-doc th {
+  border: 1px solid #94a3b8;
+  padding: 4px 6px;
+  vertical-align: top;
+  white-space: normal;
+}
+.contract-doc table.contract-plain td {
+  border: none;
+  padding: 2px 8px 2px 0;
+}
+.contract-doc td p {
+  text-align: left;
+}
+.contract-doc hr {
+  border: 0;
+  border-top: 1px dashed #64748b;
+  margin: 0.4em 0 0.8em;
+}
+.contract-doc img {
+  display: inline-block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Печать договора: только лист, без меню и кнопок */
+@media print {
+  @page {
+    size: A4;
+    margin: 18mm 15mm;
+  }
+  body {
+    background: #fff;
+  }
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    max-width: none;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+  .contract-doc .page-break {
+    break-before: page;
+  }
+}

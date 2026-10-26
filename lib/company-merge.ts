@@ -11,6 +11,10 @@ export const MERGE_FIELDS = [
   "phone",
   "email",
   "address",
+  "bankAccount",
+  "corrAccount",
+  "bankName",
+  "bik",
   "situation",
   "notes",
 ] as const;
@@ -62,6 +66,7 @@ export async function mergeCompanies(targetId: string, sourceId: string, incomin
     await tx.conversation.updateMany({ where: { companyId: sourceId }, data: { companyId: targetId } });
     await tx.document.updateMany({ where: { companyId: sourceId }, data: { companyId: targetId } });
     await tx.event.updateMany({ where: { companyId: sourceId }, data: { companyId: targetId } });
+    await tx.contract.updateMany({ where: { companyId: sourceId }, data: { companyId: targetId } });
     await tx.company.delete({ where: { id: sourceId } });
     await tx.company.update({
       where: { id: targetId },

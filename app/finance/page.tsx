@@ -55,6 +55,9 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
                 {t.label}
               </Link>
             ))}
+            <Link href="/documents" className="rounded-lg px-4 py-1.5 text-slate-600 hover:text-slate-900">
+              Договоры
+            </Link>
           </nav>
         </div>
       </div>

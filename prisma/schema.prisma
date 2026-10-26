@@ -107,6 +107,11 @@ model Company {
   phone       String?
   email       String?
   address     String?
+  // Банковские реквизиты для договоров и счетов
+  bankAccount String?
+  corrAccount String?
+  bankName    String?
+  bik         String?
   notes       String?
   // Ситуация клиента в планограмме; пусто — определяется по оплаченным сделкам
   situation   String?
@@ -115,6 +120,7 @@ model Company {
   chats       Conversation[]
   documents   Document[]
   events      Event[]
+  contracts   Contract[]
   // Ящик клиента в Диадоке: туда уходят акты
   diadocBoxId String?
   createdAt   DateTime       @default(now())
@@ -167,6 +173,7 @@ model Deal {
   lead              Lead?
   documents         Document[]
   events            Event[]
+  contracts         Contract[]
   stage             Stage      @relation(fields: [stageId], references: [id])
   stageId           String
   createdAt         DateTime   @default(now())
@@ -365,4 +372,34 @@ model Event {
   @@index([start])
   @@index([companyId])
   @@index([dealId])
+}
+
+// Шаблон договора: HTML с полями вида {{клиент.инн}}, которые заполняются при создании договора
+model ContractTemplate {
+  id        String     @id @default(cuid())
+  name      String
+  body      String
+  contracts Contract[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+}
+
+// Договор: копия шаблона с подставленными данными; дальше правится сам по себе
+model Contract {
+  id         String            @id @default(cuid())
+  number     String
+  date       DateTime
+  title      String
+  body       String
+  templateId String?
+  template   ContractTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  companyId  String?
+  company    Company?          @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  dealId     String?
+  deal       Deal?             @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
+
+  @@index([dealId])
+  @@index([companyId])
 }
