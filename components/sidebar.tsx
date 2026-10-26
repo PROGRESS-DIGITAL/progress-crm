@@ -9,7 +9,7 @@ import { SIDEBAR_COOKIE } from "@/components/sidebar-cookie";
 type Item = { href: string; label: string; icon: IconName; badge?: number };
 type Group = { title: string; items: Item[] };
 
-function menu(newLeads: number, unreadChats: number): Group[] {
+function menu(newLeads: number, unreadChats: number, dueTasks: number): Group[] {
   return [
     {
       title: "Главное",
@@ -18,6 +18,7 @@ function menu(newLeads: number, unreadChats: number): Group[] {
         { href: "/dashboard", label: "Дашборд", icon: "dashboard" },
         { href: "/leads", label: "Лиды", icon: "leads", badge: newLeads },
         { href: "/calendar", label: "Календарь", icon: "calendar" },
+        { href: "/tasks", label: "Задачи", icon: "tasks", badge: dueTasks },
         { href: "/clients", label: "Клиенты", icon: "clients" },
         { href: "/chats", label: "Чаты", icon: "chat", badge: unreadChats },
       ],
@@ -122,15 +123,17 @@ export function Sidebar({
   initialCollapsed,
   newLeads,
   unreadChats,
+  dueTasks,
 }: {
   initialCollapsed: boolean;
   newLeads: number;
   unreadChats: number;
+  dueTasks: number;
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [drawer, setDrawer] = useState(false);
   const pathname = usePathname();
-  const groups = menu(newLeads, unreadChats);
+  const groups = menu(newLeads, unreadChats, dueTasks);
 
   // Переход по ссылке закрывает мобильное меню
   useEffect(() => setDrawer(false), [pathname]);
@@ -141,8 +144,8 @@ export function Sidebar({
     document.cookie = `${SIDEBAR_COOKIE}=${next ? "collapsed" : "expanded"}; path=/; max-age=31536000; samesite=lax`;
   }
 
-  // Снизу на телефоне помещается пять кнопок: дашборд остаётся в «Меню»
-  const tabs = groups[0].items.filter((t) => t.href !== "/dashboard");
+  // Снизу на телефоне помещается пять кнопок: дашборд и задачи остаются в «Меню»
+  const tabs = groups[0].items.filter((t) => t.href !== "/dashboard" && t.href !== "/tasks");
   const inTabs = tabs.some((t) => isActive(pathname, t.href));
 
   return (

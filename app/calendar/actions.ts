@@ -51,6 +51,7 @@ const minutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
 
 function revalidate(companyId?: string | null, dealId?: string | null) {
   revalidatePath("/calendar");
+  revalidatePath("/tasks");
   if (companyId) revalidatePath(`/clients/${companyId}`);
   if (dealId) revalidatePath(`/deals/${dealId}`);
 }
@@ -74,7 +75,7 @@ async function createDeal(title: string, companyId: string) {
   return deal.id;
 }
 
-export async function saveEvent(id: string | null, input: EventInput): Promise<{ error?: string }> {
+export async function saveEvent(id: string | null, input: EventInput): Promise<{ error?: string; id?: string }> {
   const parsed = schema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const v = parsed.data;
@@ -131,11 +132,12 @@ export async function saveEvent(id: string | null, input: EventInput): Promise<{
   if (id && !before) return { error: "Событие уже удалено" };
   // Перенесли событие или поменяли напоминание — напомнить заново
   const remindAgain = !before || before.start.getTime() !== start.getTime() || before.remindMinutes !== data.remindMinutes;
-  if (id) await db.event.update({ where: { id }, data: { ...data, ...(remindAgain && { remindedAt: null }) } });
-  else await db.event.create({ data });
+  const saved = id
+    ? await db.event.update({ where: { id }, data: { ...data, ...(remindAgain && { remindedAt: null }) }, select: { id: true } })
+    : await db.event.create({ data, select: { id: true } });
   revalidate(companyId, dealId);
   revalidate(before?.companyId, before?.dealId);
-  return {};
+  return { id: saved.id };
 }
 
 // Перетаскивание в сетке: сохраняется новое время, длительность прежняя
