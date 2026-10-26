@@ -9,7 +9,7 @@ import { unreadChats } from "@/lib/chat/inbox";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PROCRM",
+  title: "PROGRESSCRM",
   description: "CRM агентства PROGRESS Digital",
 };
 

@@ -45,10 +45,10 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-// Логотип: знак «>» и название PROCRM. На компьютере клик по нему сворачивает и разворачивает меню
+// Логотип: знак «>» и название PROGRESSCRM. На компьютере клик по нему сворачивает и разворачивает меню
 function Logo({ withName, onClick, title }: { withName: boolean; onClick?: () => void; title?: string }) {
   return (
-    <button type="button" onClick={onClick} className="flex items-center gap-2.5" title={title} aria-label={title ?? "PROCRM"}>
+    <button type="button" onClick={onClick} className="flex items-center gap-2.5" title={title} aria-label={title ?? "PROGRESSCRM"}>
       <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="5.4" strokeLinecap="square" strokeLinejoin="miter" aria-hidden>
           <path d="M8.5 5l7 7-7 7" />
@@ -56,7 +56,7 @@ function Logo({ withName, onClick, title }: { withName: boolean; onClick?: () =>
       </span>
       {withName && (
         <span className="text-lg leading-tight tracking-tight">
-          <span className="font-bold">PRO</span>
+          <span className="font-bold">PROGRESS</span>
           <span className="font-light text-blue-600">CRM</span>
         </span>
       )}
