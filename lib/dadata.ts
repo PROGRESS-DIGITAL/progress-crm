@@ -4,6 +4,8 @@ import { netFetch } from "@/lib/net";
 // Поиск компании по ИНН через DaData: https://dadata.ru/api/find-party/
 const FIND_PARTY_URL =
   process.env.DADATA_FIND_PARTY_URL ?? "https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/party";
+const FIND_BANK_URL =
+  process.env.DADATA_FIND_BANK_URL ?? "https://suggestions.dadata.ru/suggestions/api/4_1/rs/findById/bank";
 export const DADATA_KEY_SETTING = "dadata.apiKey";
 
 export type PartyInfo = {
@@ -88,4 +90,37 @@ export async function findPartyByInn(
   const body = (await res.json()) as { suggestions?: Suggestion[] };
   const party = body.suggestions?.[0] ? partyFromSuggestion(body.suggestions[0]) : null;
   return party ? { party } : { error: "Компания с таким ИНН не найдена." };
+}
+
+export type BankInfo = { bik: string; name: string; corrAccount: string | null };
+
+type BankSuggestion = {
+  value?: string;
+  data?: { bic?: string; correspondent_account?: string | null; name?: { payment?: string | null; short?: string | null } | null };
+};
+
+export function bankFromSuggestion(s: BankSuggestion): BankInfo | null {
+  const d = s.data;
+  if (!d?.bic) return null;
+  return { bik: d.bic, name: d.name?.payment || s.value || d.name?.short || "", corrAccount: d.correspondent_account || null };
+}
+
+export async function findBankByBic(bic: string, apiKey: string): Promise<{ bank: BankInfo } | { error: string }> {
+  let res: Response;
+  try {
+    res = await netFetch(FIND_BANK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Token ${apiKey}` },
+      body: JSON.stringify({ query: bic, count: 1 }),
+      signal: AbortSignal.timeout(8000),
+      cache: "no-store",
+    });
+  } catch {
+    return { error: "DaData не отвечает. Проверьте интернет и попробуйте ещё раз." };
+  }
+  if (res.status === 401 || res.status === 403) return { error: "DaData не приняла ключ. Проверьте его в «Интеграциях»." };
+  if (!res.ok) return { error: `DaData ответила ошибкой ${res.status}.` };
+  const body = (await res.json()) as { suggestions?: BankSuggestion[] };
+  const bank = body.suggestions?.[0] ? bankFromSuggestion(body.suggestions[0]) : null;
+  return bank ? { bank } : { error: "Банк с таким БИК не найден." };
 }

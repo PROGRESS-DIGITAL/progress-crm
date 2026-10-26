@@ -4,10 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { findPartyByInn, getDadataKey, type PartyInfo } from "@/lib/dadata";
+import { findBankByBic, findPartyByInn, getDadataKey, type BankInfo, type PartyInfo } from "@/lib/dadata";
 import { invalid, optionalEmail, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 import { isSituation } from "@/lib/sales-map";
 import { findDuplicate, mergeCompanies, mergeFields } from "@/lib/company-merge";
+
+// Счета и БИК часто копируют с пробелами: убираем их перед проверкой
+const digits = (n: number, message: string) =>
+  optionalText
+    .transform((v) => v?.replace(/\s/g, "") || null)
+    .refine((v) => v === null || new RegExp(`^\\d{${n}}$`).test(v), message);
 
 const companySchema = z.object({
   name: z.string().trim().min(1, "Укажите название компании"),
@@ -19,6 +25,10 @@ const companySchema = z.object({
   phone: optionalText,
   email: optionalEmail,
   address: optionalText,
+  bankAccount: digits(20, "Расчётный счёт — 20 цифр"),
+  corrAccount: digits(20, "Корр. счёт — 20 цифр"),
+  bankName: optionalText,
+  bik: digits(9, "БИК — 9 цифр"),
   notes: optionalText,
   situation: optionalText.refine((v) => v === null || isSituation(v), "Нет такой ситуации"),
 });
@@ -30,6 +40,15 @@ export async function lookupInn(inn: string): Promise<{ party?: PartyInfo; error
   const key = await getDadataKey();
   if (!key) return { error: "no-key" };
   return findPartyByInn(clean, key);
+}
+
+// Банк и корр. счёт по БИК из справочника DaData
+export async function lookupBic(bic: string): Promise<{ bank?: BankInfo; error?: string }> {
+  const clean = bic.replace(/\s/g, "");
+  if (!/^\d{9}$/.test(clean)) return { error: "БИК — 9 цифр" };
+  const key = await getDadataKey();
+  if (!key) return { error: "no-key" };
+  return findBankByBic(clean, key);
 }
 
 const contactSchema = z.object({

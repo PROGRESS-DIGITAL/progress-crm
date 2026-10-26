@@ -5,6 +5,7 @@ import { useActionState, useRef, useState, useTransition } from "react";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { lookupInn } from "./actions";
+import { BankFields } from "@/components/bank-fields";
 import { SALES_COLUMNS } from "@/lib/sales-map";
 
 export type CompanyValues = {
@@ -17,6 +18,10 @@ export type CompanyValues = {
   phone: string | null;
   email: string | null;
   address: string | null;
+  bankAccount: string | null;
+  corrAccount: string | null;
+  bankName: string | null;
+  bik: string | null;
   notes: string | null;
   situation: string | null;
 };
@@ -141,6 +146,7 @@ export function CompanyForm({
       <Field label="Адрес" error={err.address} wide>
         <input name="address" defaultValue={v("address")} className={inputClass} />
       </Field>
+      <BankFields value={v} errors={err} />
       <Field label="Что есть у клиента (планограмма)" error={err.situation} wide>
         <select key={v("situation")} name="situation" defaultValue={v("situation")} className={inputClass}>
           <option value="">Определить по оплаченным сделкам</option>
