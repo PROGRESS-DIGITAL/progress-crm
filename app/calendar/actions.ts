@@ -5,6 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { addDays, fromKey, isDayKey } from "@/lib/calendar";
 import { getOwner } from "@/lib/profile";
+import { REMIND_OPTIONS } from "@/lib/reminders";
 
 export type EventInput = {
   kind: "MEETING" | "TASK";
@@ -21,6 +22,8 @@ export type EventInput = {
   dealId: string;
   newDealTitle: string;
   taskId: string;
+  // Минуты до начала для напоминания в Telegram; "" — не напоминать
+  remindMinutes: string;
 };
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Время в формате ЧЧ:ММ");
@@ -39,6 +42,9 @@ const schema = z.object({
   dealId: z.string(),
   newDealTitle: z.string().trim().max(200, "Слишком длинное название сделки"),
   taskId: z.string(),
+  remindMinutes: z
+    .string()
+    .refine((v) => v === "" || REMIND_OPTIONS.some((o) => String(o.value) === v), "Неизвестное время напоминания"),
 });
 
 const minutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
@@ -117,10 +123,15 @@ export async function saveEvent(id: string | null, input: EventInput): Promise<{
     companyId,
     dealId,
     taskId,
+    remindMinutes: v.remindMinutes === "" ? null : Number(v.remindMinutes),
   };
-  const before = id ? await db.event.findUnique({ where: { id }, select: { companyId: true, dealId: true } }) : null;
+  const before = id
+    ? await db.event.findUnique({ where: { id }, select: { companyId: true, dealId: true, start: true, remindMinutes: true } })
+    : null;
   if (id && !before) return { error: "Событие уже удалено" };
-  if (id) await db.event.update({ where: { id }, data });
+  // Перенесли событие или поменяли напоминание — напомнить заново
+  const remindAgain = !before || before.start.getTime() !== start.getTime() || before.remindMinutes !== data.remindMinutes;
+  if (id) await db.event.update({ where: { id }, data: { ...data, ...(remindAgain && { remindedAt: null }) } });
   else await db.event.create({ data });
   revalidate(companyId, dealId);
   revalidate(before?.companyId, before?.dealId);
@@ -134,7 +145,7 @@ export async function moveEvent(id: string, startIso: string): Promise<{ error?:
   const start = new Date(startIso);
   if (Number.isNaN(start.getTime())) return { error: "Некорректное время" };
   const end = new Date(start.getTime() + (event.end.getTime() - event.start.getTime()));
-  await db.event.update({ where: { id }, data: { start, end } });
+  await db.event.update({ where: { id }, data: { start, end, remindedAt: null } });
   revalidate(event.companyId, event.dealId);
   return {};
 }

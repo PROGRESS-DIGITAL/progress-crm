@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
-import { addDays, dayKey, minutesOfDay, timeLabel } from "@/lib/calendar";
+import { DEFAULT_REMIND, REMIND_OPTIONS, addDays, dayKey, minutesOfDay, timeLabel } from "@/lib/calendar";
 import { deleteEvent, saveEvent, type EventInput } from "./actions";
 import type { CalEvent, Options } from "./types";
 
@@ -28,6 +28,7 @@ export function draftFromEvent(e: CalEvent): EventInput {
     dealId: e.dealId ?? "",
     newDealTitle: "",
     taskId: e.taskId ?? "",
+    remindMinutes: e.remindMinutes === null ? "" : String(e.remindMinutes),
   };
 }
 
@@ -47,6 +48,7 @@ export function emptyDraft(date: string, startMin: number, extra: Partial<EventI
     dealId: "",
     newDealTitle: "",
     taskId: "",
+    remindMinutes: String(DEFAULT_REMIND),
     ...extra,
   };
 }
@@ -56,12 +58,14 @@ export function EventEditor({
   id,
   initial,
   options,
+  remindersOn,
   onClose,
   onSaved,
 }: {
   id: string | null;
   initial: EventInput;
   options: Options;
+  remindersOn: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
@@ -184,6 +188,26 @@ export function EventEditor({
             </label>
           )}
         </div>
+
+        <label className={`${label} mt-4`}>
+          Напомнить в Telegram
+          <select value={d.remindMinutes} onChange={(e) => set("remindMinutes", e.target.value)} className={field}>
+            <option value="">Не напоминать</option>
+            {REMIND_OPTIONS.map((o) => (
+              <option key={o.value} value={String(o.value)}>
+                {d.allDay ? (o.value >= 1440 ? "Накануне в 9:00" : "В 9:00 в этот день") : o.label}
+              </option>
+            ))}
+          </select>
+          {!remindersOn && d.remindMinutes !== "" && (
+            <span className="mt-1 block text-xs font-normal text-amber-700">
+              Напоминания пока не приходят:{" "}
+              <Link href="/integrations/telegram#reminders" className="text-blue-600 hover:underline">
+                подключите их в Telegram
+              </Link>
+            </span>
+          )}
+        </label>
 
         <label className={`${label} mt-4`}>
           Клиент

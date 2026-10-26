@@ -46,6 +46,7 @@ export function CalendarView({
   prefill,
   openEvent,
   explicitView,
+  remindersOn,
 }: Options & {
   view: View;
   date: string;
@@ -55,6 +56,7 @@ export function CalendarView({
   prefill: Prefill | null;
   openEvent: CalEvent | null;
   explicitView: boolean;
+  remindersOn: boolean;
 }) {
   const router = useRouter();
   const [events, setEvents] = useState(serverEvents);
@@ -163,6 +165,7 @@ export function CalendarView({
           id={editing.id}
           initial={editing.draft}
           options={options}
+          remindersOn={remindersOn}
           onClose={() => closeEditor(false)}
           onSaved={() => closeEditor(true)}
         />

@@ -127,3 +127,15 @@ export function timeLabel(minutes: number) {
   const m = minutes % 60;
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
+
+// Варианты напоминания в Telegram: минуты до начала события
+export const REMIND_OPTIONS: { value: number; label: string }[] = [
+  { value: 0, label: "В момент начала" },
+  { value: 5, label: "За 5 минут" },
+  { value: 15, label: "За 15 минут" },
+  { value: 30, label: "За 30 минут" },
+  { value: 60, label: "За 1 час" },
+  { value: 120, label: "За 2 часа" },
+  { value: 1440, label: "За 1 день" },
+];
+export const DEFAULT_REMIND = 15;

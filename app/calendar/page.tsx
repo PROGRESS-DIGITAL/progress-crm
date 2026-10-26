@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { getRemindChat } from "@/lib/reminders";
 import { addDays, dayKey, fromKey, isDayKey, isView, viewDays } from "@/lib/calendar";
 import { CalendarView } from "./calendar-view";
 import type { CalEvent, Prefill } from "./types";
@@ -16,7 +17,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   const from = fromKey(days[0]);
   const to = fromKey(addDays(days.at(-1)!, 1));
 
-  const [events, companies, deals, tasks] = await Promise.all([
+  const [events, companies, deals, tasks, remindChat] = await Promise.all([
     db.event.findMany({
       where: { start: { lt: to }, end: { gt: from } },
       orderBy: { start: "asc" },
@@ -37,6 +38,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       take: 200,
       select: { id: true, title: true, done: true },
     }),
+    getRemindChat(),
   ]);
 
   const items: CalEvent[] = events.map((e) => ({
@@ -54,6 +56,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     dealTitle: e.deal?.title ?? null,
     taskId: e.taskId,
     taskTitle: e.task?.title ?? null,
+    remindMinutes: e.remindMinutes,
   }));
 
   // Ссылки «Встреча» и «Задача» из сделки или клиента сразу открывают окно с привязкой
@@ -84,6 +87,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         prefill={prefill}
         openEvent={open}
         explicitView={isView(sp.view)}
+        remindersOn={!!remindChat}
       />
     </div>
   );

@@ -338,25 +338,29 @@ enum EventKind {
 
 // Событие календаря: встреча или задача, при желании привязанная к клиенту, сделке или другой задаче
 model Event {
-  id        String    @id @default(cuid())
-  kind      EventKind @default(MEETING)
-  title     String
-  notes     String?
-  start     DateTime
-  end       DateTime
+  id            String    @id @default(cuid())
+  kind          EventKind @default(MEETING)
+  title         String
+  notes         String?
+  start         DateTime
+  end           DateTime
   // Событие на весь день: время в start и end не важно, только даты
-  allDay    Boolean   @default(false)
+  allDay        Boolean   @default(false)
   // Для задач: отметка о выполнении
-  done      Boolean   @default(false)
-  company   Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
-  companyId String?
-  deal      Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
-  dealId    String?
-  task      Event?    @relation("EventTask", fields: [taskId], references: [id], onDelete: SetNull)
-  taskId    String?
-  linked    Event[]   @relation("EventTask")
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  done          Boolean   @default(false)
+  // За сколько минут до начала напомнить в Telegram; пусто — не напоминать
+  remindMinutes Int?
+  // Когда напоминание ушло: при переносе события сбрасывается
+  remindedAt    DateTime?
+  company       Company?  @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId     String?
+  deal          Deal?     @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  dealId        String?
+  task          Event?    @relation("EventTask", fields: [taskId], references: [id], onDelete: SetNull)
+  taskId        String?
+  linked        Event[]   @relation("EventTask")
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
   @@index([start])
   @@index([companyId])

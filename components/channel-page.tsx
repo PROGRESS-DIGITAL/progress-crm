@@ -11,6 +11,7 @@ export function ChannelPage({
   form,
   steps,
   note,
+  extra,
 }: {
   title: string;
   intro: string;
@@ -20,6 +21,7 @@ export function ChannelPage({
   form: React.ReactNode;
   steps: React.ReactNode[];
   note: string;
+  extra?: React.ReactNode;
 }) {
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
@@ -56,6 +58,7 @@ export function ChannelPage({
         )}
         {form}
       </section>
+      {extra}
 
       <section className="rounded-2xl border border-slate-200/60 bg-white p-5 text-sm text-slate-700 shadow-card">
         <h2 className="mb-2 font-semibold text-slate-900">Как подключить</h2>
