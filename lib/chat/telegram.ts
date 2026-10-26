@@ -1,5 +1,6 @@
 import { fetch as proxyFetch, ProxyAgent } from "undici";
 import { getSetting } from "@/lib/settings";
+import { errorCode, networkError as baseNetworkError } from "@/lib/net";
 import type { Incoming } from "./inbox";
 
 // Telegram Bot API: https://core.telegram.org/bots/api
@@ -27,30 +28,14 @@ function agentFor(proxy: string) {
   return agent;
 }
 
-// «fetch failed» ничего не говорит: достаём настоящую причину из error.cause
+const TG_HINT = "похоже, провайдер его блокирует: включите VPN или укажите прокси";
+
 export function networkError(e: unknown, proxy?: string | null) {
-  const cause = (e as { cause?: { code?: string } })?.cause;
-  const code = cause?.code ?? (e as { code?: string })?.code;
+  const code = errorCode(e);
   if (proxy && code !== "UND_ERR_ABORTED") {
     return `прокси ${proxy} не пропустил запрос${code ? ` (${code})` : ""}: проверьте, что VPN-клиент запущен и адрес верный`;
   }
-  switch (code) {
-    case "ENOTFOUND":
-    case "EAI_AGAIN":
-      return "не найден адрес api.telegram.org: проверьте интернет";
-    case "ETIMEDOUT":
-    case "UND_ERR_CONNECT_TIMEOUT":
-      return "api.telegram.org не отвечает, похоже, провайдер его блокирует: включите VPN или укажите прокси";
-    case "ECONNRESET":
-    case "ECONNREFUSED":
-    case "UND_ERR_SOCKET":
-      return "соединение с api.telegram.org сброшено, похоже, провайдер его блокирует: включите VPN или укажите прокси";
-    case "UND_ERR_ABORTED":
-      return "запрос прерван";
-    default:
-      if (e instanceof Error && e.message !== "fetch failed") return e.message;
-      return `нет связи с api.telegram.org${code ? ` (${code})` : ""}: включите VPN или укажите прокси`;
-  }
+  return baseNetworkError(e, "api.telegram.org", TG_HINT);
 }
 
 export function isTelegramToken(value: string) {

@@ -49,7 +49,7 @@ test("понятная причина вместо fetch failed", async () => {
   assert.match(networkError(failed("UND_ERR_CONNECT_TIMEOUT")), /не отвечает.*VPN/);
   assert.match(networkError(failed("ECONNRESET")), /сброшено/);
   assert.match(networkError(failed("ENOTFOUND")), /интернет/);
-  assert.match(networkError(new TypeError("fetch failed")), /нет связи с api\.telegram\.org: включите VPN/);
+  assert.match(networkError(new TypeError("fetch failed")), /нет связи с api\.telegram\.org: похоже, провайдер/);
   assert.ok(isProxyUrl("http://127.0.0.1:1087"));
   assert.ok(isProxyUrl("http://user:pass@proxy.example.com:3128"));
   assert.ok(!isProxyUrl("socks5://127.0.0.1:1080"));

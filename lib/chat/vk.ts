@@ -1,4 +1,5 @@
 import type { Incoming } from "./inbox";
+import { netFetch } from "@/lib/net";
 
 // Сообщения сообщества ВКонтакте через Bots Long Poll API: https://dev.vk.com/ru/api/bots-long-poll/getting-started
 const API = process.env.VK_API_URL ?? "https://api.vk.com/method";
@@ -30,7 +31,7 @@ export function incomingFromVk(u: VkUpdate, users: Map<number, VkUser>): Incomin
 export async function vkCall<T>(token: string, method: string, params: Record<string, string | number> = {}) {
   const body = new URLSearchParams({ access_token: token, v: VERSION });
   for (const [k, v] of Object.entries(params)) body.set(k, String(v));
-  const res = await fetch(`${API}/${method}`, { method: "POST", body });
+  const res = await netFetch(`${API}/${method}`, { method: "POST", body });
   const json = (await res.json().catch(() => null)) as { response?: T; error?: { error_msg?: string } } | null;
   if (!json || json.error || json.response === undefined) throw new Error(json?.error?.error_msg ?? `VK ответил ${res.status}`);
   return json.response;
@@ -56,7 +57,7 @@ export function getVkLongPollServer(token: string, groupId: number) {
 // Один запрос к серверу Long Poll; failed: 1 — сдвинуть ts, 2 и 3 — получить сервер заново
 export async function vkCheck(server: Server, signal?: AbortSignal) {
   const q = new URLSearchParams({ act: "a_check", key: server.key, ts: server.ts, wait: "25" });
-  const res = await fetch(`${server.server}?${q}`, { signal });
+  const res = await netFetch(`${server.server}?${q}`, { signal });
   return (await res.json()) as { ts?: string; updates?: VkUpdate[]; failed?: number };
 }
 

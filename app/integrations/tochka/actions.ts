@@ -26,7 +26,7 @@ export async function saveTochkaToken(_prev: TokenState, formData: FormData): Pr
   try {
     accounts = await getAccounts(token);
   } catch (e) {
-    return { error: `Точка не приняла токен: ${e instanceof Error ? e.message : "ошибка"}` };
+    return { error: `Не получилось подключить Точку: ${e instanceof Error ? e.message : "ошибка"}` };
   }
   if (!accounts.length) return { error: "Токен рабочий, но рублёвых счетов в нём не видно: проверьте права токена" };
   await setSetting(TOCHKA_TOKEN_SETTING, token);

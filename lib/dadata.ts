@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { netFetch } from "@/lib/net";
 
 // Поиск компании по ИНН через DaData: https://dadata.ru/api/find-party/
 const FIND_PARTY_URL =
@@ -71,7 +72,7 @@ export async function findPartyByInn(
 ): Promise<{ party: PartyInfo } | { error: string }> {
   let res: Response;
   try {
-    res = await fetch(FIND_PARTY_URL, {
+    res = await netFetch(FIND_PARTY_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json", Authorization: `Token ${apiKey}` },
       body: JSON.stringify({ query: inn, count: 1 }),

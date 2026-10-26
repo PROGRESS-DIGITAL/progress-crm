@@ -1,3 +1,4 @@
+import { netFetch } from "@/lib/net";
 // API Диадока: https://developer.kontur.ru/doc/diadoc-api/
 // Вход через Контур по OpenID Connect (Device Flow): пользователь подтверждает вход кодом, CRM хранит refresh-токен
 const API = process.env.DIADOC_API_URL ?? "https://diadoc-api.kontur.ru";
@@ -16,7 +17,7 @@ export type DiadocOrg = { boxId: string; name: string; inn: string };
 export class DiadocError extends Error {}
 
 async function identity<T>(path: string, form: Record<string, string>) {
-  const res = await fetch(`${IDENTITY}${path}`, { method: "POST", body: new URLSearchParams(form) });
+  const res = await netFetch(`${IDENTITY}${path}`, { method: "POST", body: new URLSearchParams(form) });
   const json = (await res.json().catch(() => null)) as (T & { error?: string; error_description?: string }) | null;
   if (!json) throw new DiadocError(`Контур ответил ${res.status}`);
   return { ok: res.ok, json };
@@ -69,7 +70,7 @@ export async function refreshTokens(c: DiadocClient, refreshToken: string) {
 }
 
 async function call<T>(accessToken: string, path: string, init?: { method?: string; body?: object }) {
-  const res = await fetch(`${API}${path}`, {
+  const res = await netFetch(`${API}${path}`, {
     method: init?.method ?? "GET",
     headers: {
       Authorization: `Bearer ${accessToken}`,
