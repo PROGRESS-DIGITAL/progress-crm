@@ -2,6 +2,8 @@ import Link from "next/link";
 import { getOwner } from "@/lib/profile";
 import { Avatar } from "@/components/avatar";
 import { Icon } from "@/components/icons";
+import { ThemeToggle } from "@/components/theme-toggle";
+import type { Theme } from "@/components/theme-cookie";
 
 function greeting(now: Date) {
   const hour = Number(now.toLocaleString("en-GB", { hour: "2-digit", hour12: false, timeZone: "Europe/Moscow" }));
@@ -12,7 +14,7 @@ function greeting(now: Date) {
 }
 
 // Верхняя панель: приветствие, поиск клиентов, новые лиды и карточка владельца
-export async function TopBar({ newLeads }: { newLeads: number }) {
+export async function TopBar({ newLeads, theme }: { newLeads: number; theme: Theme }) {
   const owner = await getOwner();
   const firstName = owner.name.split(/\s+/)[0];
   return (
@@ -23,6 +25,7 @@ export async function TopBar({ newLeads }: { newLeads: number }) {
         </p>
         <p className="hidden text-xs text-slate-500 sm:block">Сделки, клиенты и выручка PROGRESS Digital</p>
       </div>
+      <ThemeToggle initial={theme} />
 
       <form action="/clients" className="relative ml-auto hidden w-full max-w-sm md:block" role="search">
         <Icon name="search" size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-400" />

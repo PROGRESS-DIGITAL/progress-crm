@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "./dark-theme.css";
 
 @theme {
   --font-sans: "Inter", "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -7,10 +8,11 @@
 
 :root {
   color-scheme: light;
+  --page-bg: #f1f3f8;
 }
 
 body {
-  @apply bg-[#f1f3f8] text-slate-900 antialiased;
+  @apply bg-(--page-bg) text-slate-900 antialiased;
 }
 
 /* Своя стрелка у выпадающих списков: системная прижата к самому краю поля.
@@ -91,6 +93,12 @@ select:not([multiple]) {
   display: inline-block;
   max-width: 100%;
   height: auto;
+}
+
+/* Договор — это лист бумаги: в тёмной теме он остаётся белым */
+html.dark .contract-doc {
+  background-color: #fff;
+  color: #0f172a;
 }
 
 /* Печать договора: только лист, без меню и кнопок */
