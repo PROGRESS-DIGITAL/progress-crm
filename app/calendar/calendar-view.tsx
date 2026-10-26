@@ -319,7 +319,7 @@ function TimeGrid({
                   data-day={day}
                   onClick={(e) => onColumnClick(e, day)}
                   className="relative cursor-pointer border-l border-slate-100"
-                  style={{ backgroundImage: `repeating-linear-gradient(to bottom, transparent 0 ${HOUR - 1}px, #eef0f4 ${HOUR - 1}px ${HOUR}px)` }}
+                  style={{ backgroundImage: `repeating-linear-gradient(to bottom, transparent 0 ${HOUR - 1}px, var(--color-slate-100) ${HOUR - 1}px ${HOUR}px)` }}
                 >
                   {placed.map((p) => {
                     const e = mine.find((x) => x.id === p.id)!;
