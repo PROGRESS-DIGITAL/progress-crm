@@ -39,7 +39,9 @@ const PARTY_FIELDS = [
   ["телефон", "телефон"],
   ["email", "email"],
   ["руководитель", "руководитель (ФИО)"],
+  ["название_с_огрн", "название с ОГРН: ООО «Ромашка» (ОГРН …)"],
   ["именуемый", "«именуемое/именуемый»"],
+  ["в_лице", "«, в лице директора …, действующего на основании устава» (у ИП пусто)"],
   ["представитель", "«в лице директора … действующего на основании устава»"],
   ["подпись", "подпись (Фамилия И.О.)"],
   ["реквизиты", "все реквизиты списком"],
@@ -68,6 +70,8 @@ export const PLACEHOLDER_GROUPS: { title: string; fields: { key: string; label: 
       { key: "сделка.сумма", label: "сумма: 200 000 (двести тысяч) рублей" },
       { key: "сделка.сумма_числом", label: "сумма числом: 200 000" },
       { key: "сделка.предоплата", label: "предоплата 50% прописью" },
+      { key: "сделка.сумма_30", label: "30% суммы прописью" },
+      { key: "сделка.сумма_20", label: "20% суммы прописью" },
       { key: "сделка.остаток", label: "остаток 50% прописью" },
     ],
   },
@@ -133,6 +137,12 @@ function partyValues(p: Party | null): Record<string, string> {
     p.email && `E-mail: ${escapeHtml(p.email)}`,
   ].filter(Boolean);
   const text = (v: string | null | undefined) => (v ? escapeHtml(v) : "");
+  // В преамбуле ИП пишется полностью: «Индивидуальный предприниматель Иванов Иван Иванович (ОГРНИП …)»
+  const fullName = individual ? p.name.replace(/^ип\s+/i, "Индивидуальный предприниматель ") : p.name;
+  const withOgrn = p.ogrn ? `${fullName} (${individual ? "ОГРНИП" : "ОГРН"} ${p.ogrn})` : fullName;
+  const inPerson = individual
+    ? ""
+    : `, в лице ${postGenitive(post.toLowerCase())} ${fio ? fioGenitive(fio) : blank}, ${fio && female ? "действующей" : "действующего"} на основании устава`;
   return {
     название: text(p.name),
     инн: text(p.inn),
@@ -146,6 +156,8 @@ function partyValues(p: Party | null): Record<string, string> {
     телефон: text(p.phone),
     email: text(p.email),
     руководитель: text(fio),
+    название_с_огрн: escapeHtml(withOgrn),
+    в_лице: escapeHtml(inPerson),
     именуемый: individual ? (female ? "именуемая" : "именуемый") : "именуемое",
     представитель: escapeHtml(representative),
     подпись: text(fio ? fioShort(fio) : ""),
@@ -172,6 +184,8 @@ export function contractValues(data: ContractData) {
       "сделка.сумма_числом": data.deal.amount ? groupDigits(data.deal.amount) : "",
       "сделка.предоплата": data.deal.amount ? rublesText(half) : "",
       "сделка.остаток": data.deal.amount ? rublesText(data.deal.amount - half) : "",
+      "сделка.сумма_30": data.deal.amount ? rublesText(Math.round(data.deal.amount * 0.3)) : "",
+      "сделка.сумма_20": data.deal.amount ? rublesText(data.deal.amount - half - Math.round(data.deal.amount * 0.3)) : "",
     });
   }
   return values;
@@ -188,8 +202,8 @@ export function fillTemplate(html: string, values: Record<string, string>) {
     // Номер и дату помечаем, чтобы при их смене в карточке договора текст обновился сам
     if (v && key.startsWith("договор.")) return `<span data-field="${key}">${v}</span>`;
     if (v) return v;
-    // Логотипа может не быть: тогда просто пусто
-    if (key === "исполнитель.логотип") return "";
+    // Логотипа может не быть, а у ИП нет «в лице директора»: тогда просто пусто
+    if (key === "исполнитель.логотип" || key.endsWith(".в_лице")) return "";
     missing.add(LABELS.get(key) ?? key);
     return "____________";
   });
