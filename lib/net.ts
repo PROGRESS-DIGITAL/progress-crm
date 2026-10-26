@@ -20,7 +20,9 @@ export function errorCode(e: unknown): string | undefined {
 
 export function networkError(e: unknown, host: string, hint = RU_SERVICE_HINT) {
   const code = errorCode(e);
-  if (code && CERT_CODES.has(code)) return `${host}: система не доверяет сертификату сайта (${code})`;
+  // Российские сервисы всё чаще работают на сертификатах Минцифры, которых нет в Node.js
+  if (code && CERT_CODES.has(code))
+    return `${host}: система не доверяет сертификату сайта (${code}). Скорее всего, это сертификат Минцифры: перезапустите CRM через start.command, он подключит сертификат сам, или установите его по инструкции allo.tochka.com/sertifikat-mincifry`;
   switch (code) {
     case "ENOTFOUND":
     case "EAI_AGAIN":
