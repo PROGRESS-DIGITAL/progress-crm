@@ -9,10 +9,10 @@ import { lookupInn } from "@/app/clients/actions";
 import type { Party } from "@/lib/contracts/fields";
 import { saveExecutorAction } from "./actions";
 
-// Логотип для шапки договора: уменьшаем до 600 px по ширине, чтобы договор не разрастался
+// Логотип для шапки договора: в договоре он шириной до 215 px, храним вдвое крупнее для чёткой печати
 async function shrinkImage(file: File) {
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, 600 / bitmap.width);
+  const scale = Math.min(1, 430 / bitmap.width);
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(bitmap.width * scale);
   canvas.height = Math.round(bitmap.height * scale);
@@ -108,7 +108,7 @@ export function ExecutorForm({ initial }: { initial: Party | null }) {
         <div className="mt-1 flex flex-wrap items-center gap-3">
           {logo ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={logo} alt="Логотип" className="max-h-14 max-w-full rounded sm:max-w-sm border border-slate-200 bg-white p-1" />
+            <img src={logo} alt="Логотип" className="max-h-14 max-w-[215px] rounded border border-slate-200 bg-white p-1" />
           ) : (
             <span className="text-sm text-slate-500">не загружен</span>
           )}

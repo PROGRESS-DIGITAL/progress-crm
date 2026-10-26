@@ -150,7 +150,7 @@ function partyValues(p: Party | null): Record<string, string> {
     представитель: escapeHtml(representative),
     подпись: text(fio ? fioShort(fio) : ""),
     реквизиты: lines.join("<br>"),
-    логотип: p.logo?.startsWith("data:image/") ? `<img src="${p.logo}" alt="" style="max-height:60px">` : "",
+    логотип: p.logo?.startsWith("data:image/") ? `<img src="${p.logo}" alt="" style="max-width:215px;max-height:60px">` : "",
   };
 }
 

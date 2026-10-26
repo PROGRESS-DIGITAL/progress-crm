@@ -69,7 +69,8 @@ function image(el: HTMLElement): ImageRun | null {
   const size = imageSize(data);
   if (!size || !size.w || !size.h) return null;
   const maxH = Number.parseInt(styleOf(el, "max-height") ?? "", 10);
-  let scale = Math.min(1, PAGE_WIDTH_PX / size.w);
+  const maxW = Number.parseInt(styleOf(el, "max-width") ?? "", 10);
+  let scale = Math.min(1, (maxW || PAGE_WIDTH_PX) / size.w);
   if (maxH) scale = Math.min(scale, maxH / size.h);
   return new ImageRun({ type: size.type, data, transformation: { width: Math.round(size.w * scale), height: Math.round(size.h * scale) } });
 }
