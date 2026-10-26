@@ -45,18 +45,20 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-function Logo({ withName }: { withName: boolean }) {
+// Логотип: знак «>» и название PROCRM. На компьютере клик по нему сворачивает и разворачивает меню
+function Logo({ withName, onClick, title }: { withName: boolean; onClick?: () => void; title?: string }) {
   return (
-    <Link href="/deals" className="flex items-center gap-2.5" title="PROGRESS CRM">
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-lg font-bold text-white shadow-sm">
-        P
+    <button type="button" onClick={onClick} className="flex items-center gap-2.5" title={title} aria-label={title ?? "PROCRM"}>
+      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 pb-0.5 pl-0.5 text-2xl leading-none font-black text-white shadow-sm">
+        &gt;
       </span>
       {withName && (
-        <span className="text-lg leading-tight font-semibold tracking-tight">
-          PROGRESS <span className="text-blue-600">CRM</span>
+        <span className="text-lg leading-tight tracking-tight">
+          <span className="font-bold">PRO</span>
+          <span className="font-light text-blue-600">CRM</span>
         </span>
       )}
-    </Link>
+    </button>
   );
 }
 
@@ -148,34 +150,12 @@ export function Sidebar({
           collapsed ? "w-[76px]" : "w-64"
         }`}
       >
-        <div className={`flex h-12 items-center ${collapsed ? "justify-center" : "justify-between pl-2"}`}>
-          <Logo withName={!collapsed} />
-          {!collapsed && (
-            <button
-              type="button"
-              onClick={toggle}
-              title="Свернуть меню"
-              aria-label="Свернуть меню"
-              className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-            >
-              <Icon name="collapse" size={16} />
-            </button>
-          )}
+        <div className={`flex h-12 items-center ${collapsed ? "justify-center" : "pl-2"}`}>
+          <Logo withName={!collapsed} onClick={toggle} title={collapsed ? "Развернуть меню" : "Свернуть меню"} />
         </div>
 
         <NavGroups groups={groups} collapsed={collapsed} pathname={pathname} />
 
-        {collapsed && (
-          <button
-            type="button"
-            onClick={toggle}
-            title="Развернуть меню"
-            aria-label="Развернуть меню"
-            className="mx-auto mt-2 flex h-10 w-10 items-center justify-center rounded-xl bg-slate-100 text-slate-500 hover:bg-slate-200 hover:text-slate-700"
-          >
-            <Icon name="expand" size={18} />
-          </button>
-        )}
       </aside>
 
       <nav
@@ -221,7 +201,7 @@ export function Sidebar({
           />
           <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85vw] flex-col bg-white p-3 pt-[max(0.75rem,env(safe-area-inset-top))] shadow-xl">
             <div className="flex h-12 items-center justify-between pl-2">
-              <Logo withName />
+              <Logo withName onClick={() => setDrawer(false)} />
               <button
                 type="button"
                 onClick={() => setDrawer(false)}
