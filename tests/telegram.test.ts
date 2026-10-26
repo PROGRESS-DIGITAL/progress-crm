@@ -42,3 +42,16 @@ test("проверяет формат токена", () => {
   assert.ok(isTelegramToken("123456789:AAEhBP0av28dRkyuX0Bvx7S-9oP6K9JV0nA"));
   assert.ok(!isTelegramToken("0337fef1234"));
 });
+
+test("понятная причина вместо fetch failed", async () => {
+  const { networkError, isProxyUrl } = await import("../lib/chat/telegram");
+  const failed = (code: string) => Object.assign(new TypeError("fetch failed"), { cause: { code } });
+  assert.match(networkError(failed("UND_ERR_CONNECT_TIMEOUT")), /не отвечает.*VPN/);
+  assert.match(networkError(failed("ECONNRESET")), /сброшено/);
+  assert.match(networkError(failed("ENOTFOUND")), /интернет/);
+  assert.match(networkError(new TypeError("fetch failed")), /нет связи с api\.telegram\.org: включите VPN/);
+  assert.ok(isProxyUrl("http://127.0.0.1:1087"));
+  assert.ok(isProxyUrl("http://user:pass@proxy.example.com:3128"));
+  assert.ok(!isProxyUrl("socks5://127.0.0.1:1080"));
+  assert.ok(!isProxyUrl("127.0.0.1:1087"));
+});
