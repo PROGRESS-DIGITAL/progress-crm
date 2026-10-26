@@ -1,6 +1,6 @@
 import { ChannelPage } from "@/components/channel-page";
 import { TokenForm } from "@/components/token-form";
-import { getSetting } from "@/lib/chat/settings";
+import { getSetting } from "@/lib/settings";
 import { VK_GROUP_SETTING, VK_TOKEN_SETTING, type VkGroup } from "@/lib/chat/vk";
 import { deleteVkToken, saveVkToken } from "./actions";
 

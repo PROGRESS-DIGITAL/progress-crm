@@ -26,6 +26,7 @@ function menu(newLeads: number, unreadChats: number): Group[] {
       items: [
         { href: "/sales-map", label: "Планограмма", icon: "map" },
         { href: "/price", label: "Прайс", icon: "price" },
+        { href: "/finance", label: "Финансы", icon: "wallet" },
       ],
     },
     {

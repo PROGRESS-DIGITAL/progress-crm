@@ -1,6 +1,6 @@
 import { ChannelPage } from "@/components/channel-page";
 import { TokenForm } from "@/components/token-form";
-import { getSetting } from "@/lib/chat/settings";
+import { getSetting } from "@/lib/settings";
 import { TELEGRAM_BOT_SETTING, TELEGRAM_TOKEN_SETTING } from "@/lib/chat/telegram";
 import { deleteTelegramToken, saveTelegramToken } from "./actions";
 

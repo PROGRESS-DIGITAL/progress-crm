@@ -11,15 +11,19 @@ export function TokenForm({
   label,
   placeholder,
   submitLabel,
+  extra,
 }: {
   action: (prev: TokenState, formData: FormData) => Promise<TokenState>;
   label: string;
   placeholder: string;
   submitLabel: string;
+  // Дополнительные поля перед ключом
+  extra?: React.ReactNode;
 }) {
   const [state, formAction, pending] = useActionState(action, undefined);
   return (
     <form action={formAction} className="flex flex-col gap-3">
+      {extra}
       <Field label={label} error={state?.error}>
         <input name="token" type="password" autoComplete="off" placeholder={placeholder} className={inputClass} />
       </Field>

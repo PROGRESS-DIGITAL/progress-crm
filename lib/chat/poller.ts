@@ -1,6 +1,6 @@
 import { receiveIncoming } from "./inbox";
 import { getMaxUpdates, incomingFromMax, MAX_MARKER_SETTING, MAX_TOKEN_SETTING } from "./max";
-import { getSetting, setSetting } from "./settings";
+import { getSetting, setSetting } from "@/lib/settings";
 import { getUpdates, incomingFromUpdate, TELEGRAM_OFFSET_SETTING, TELEGRAM_TOKEN_SETTING } from "./telegram";
 import { getVkLongPollServer, getVkUsers, incomingFromVk, VK_GROUP_SETTING, VK_TOKEN_SETTING, vkCheck, type VkGroup } from "./vk";
 
@@ -63,6 +63,21 @@ export async function pollVkOnce() {
   return true;
 }
 
+// Фоновая задача раз в period: оплаты из Точки, клиенты из Диадока
+function every(name: string, periodMs: number, task: () => Promise<unknown>) {
+  void (async () => {
+    await sleep(30_000); // даём серверу спокойно запуститься
+    for (;;) {
+      try {
+        await task();
+      } catch (e) {
+        console.error(`${name}:`, e instanceof Error ? e.message : e);
+      }
+      await sleep(periodMs);
+    }
+  })();
+}
+
 function loop(name: string, poll: Poll) {
   void (async () => {
     for (;;) {
@@ -84,4 +99,12 @@ export function startPolling() {
   loop("Telegram", pollTelegramOnce);
   loop("Max", pollMaxOnce);
   loop("VK", pollVkOnce);
+  every("Точка", 15 * 60_000, async () => {
+    const { syncPayments } = await import("@/lib/finance/documents");
+    await syncPayments(14);
+  });
+  every("Диадок", 24 * 60 * 60_000, async () => {
+    const { getDiadoc, importCounteragents } = await import("@/lib/finance/diadoc-service");
+    if (await getDiadoc()) await importCounteragents();
+  });
 }

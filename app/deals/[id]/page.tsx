@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { TIME_ZONE } from "@/lib/format";
 import { getCompanyOptions, getProductOptions, getStageOptions } from "@/lib/queries";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
+import { DealDocuments } from "@/components/deal-documents";
 import { deleteDeal, updateDeal } from "../actions";
 import { DealForm } from "../deal-form";
 
@@ -12,7 +13,7 @@ export const dynamic = "force-dynamic";
 export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [deal, stages, companies, products] = await Promise.all([
-    db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true } } } }),
+    db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true, email: true } } } }),
     getStageOptions(),
     getCompanyOptions(),
     getProductOptions(),
@@ -52,6 +53,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
           }}
         />
       </div>
+      <DealDocuments dealId={deal.id} hasEmail={!!deal.company.email} />
     </div>
   );
 }

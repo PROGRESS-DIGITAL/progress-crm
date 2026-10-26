@@ -96,25 +96,28 @@ model Stage {
 }
 
 model Company {
-  id        String         @id @default(cuid())
-  name      String
-  inn       String?
-  kpp       String?
-  ogrn      String?
+  id          String         @id @default(cuid())
+  name        String
+  inn         String?
+  kpp         String?
+  ogrn        String?
   // Руководитель по данным ЕГРЮЛ: ФИО и должность
-  director  String?
-  website   String?
-  phone     String?
-  email     String?
-  address   String?
-  notes     String?
+  director    String?
+  website     String?
+  phone       String?
+  email       String?
+  address     String?
+  notes       String?
   // Ситуация клиента в планограмме; пусто — определяется по оплаченным сделкам
-  situation String?
-  contacts  Contact[]
-  deals     Deal[]
-  chats     Conversation[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  situation   String?
+  contacts    Contact[]
+  deals       Deal[]
+  chats       Conversation[]
+  documents   Document[]
+  // Ящик клиента в Диадоке: туда уходят акты
+  diadocBoxId String?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
   @@index([name])
 }
@@ -136,35 +139,36 @@ model Contact {
 }
 
 model Deal {
-  id                String    @id @default(cuid())
+  id                String     @id @default(cuid())
   title             String
-  company           Company   @relation(fields: [companyId], references: [id])
+  company           Company    @relation(fields: [companyId], references: [id])
   companyId         String
   // Контакт удаляется — сделка остаётся без контакта
-  contact           Contact?  @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  contact           Contact?   @relation(fields: [contactId], references: [id], onDelete: SetNull)
   contactId         String?
   // Услуга из прайса; сумма сделки копирует цену и дальше правится независимо
-  product           Product?  @relation(fields: [productId], references: [id], onDelete: SetNull)
+  product           Product?   @relation(fields: [productId], references: [id], onDelete: SetNull)
   productId         String?
-  quantity          Int       @default(1)
-  amount            Int       @default(0) // рубли
-  service           Service   @default(WEBSITE)
+  quantity          Int        @default(1)
+  amount            Int        @default(0) // рубли
+  service           Service    @default(WEBSITE)
   salesStep         String?
   owner             String?
   // Когда начали работать по сделке; по умолчанию — дата создания
-  startDate         DateTime  @default(now())
+  startDate         DateTime   @default(now())
   expectedCloseDate DateTime?
   // Когда сделка оплачена или проиграна: по этой дате выручка попадает в месяц на дашборде
   closedAt          DateTime?
   lostReason        String?
   notes             String?
   // Порядок карточки внутри колонки: меньше — выше
-  position          Float     @default(0)
+  position          Float      @default(0)
   lead              Lead?
-  stage             Stage     @relation(fields: [stageId], references: [id])
+  documents         Document[]
+  stage             Stage      @relation(fields: [stageId], references: [id])
   stageId           String
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
 
   @@index([stageId, position])
   @@index([companyId])
@@ -265,4 +269,62 @@ model ChatMessage {
 
   @@unique([conversationId, direction, externalId])
   @@index([conversationId, createdAt])
+}
+
+enum DocumentKind {
+  INVOICE
+  ACT
+}
+
+enum DocumentStatus {
+  ISSUED
+  PAID
+  EXPIRED
+}
+
+// Счёт или акт, выставленный через Точку
+model Document {
+  id              String         @id @default(cuid())
+  kind            DocumentKind
+  // Порядковый номер в году: счёт № 12 от 26.10.2026
+  year            Int
+  seq             Int
+  date            DateTime
+  amount          Int
+  title           String
+  deal            Deal           @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  dealId          String
+  company         Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId       String
+  // Акт создаётся на основании счёта
+  invoice         Document?      @relation("ActInvoice", fields: [invoiceId], references: [id], onDelete: SetNull)
+  invoiceId       String?
+  acts            Document[]     @relation("ActInvoice")
+  tochkaId        String?
+  status          DocumentStatus @default(ISSUED)
+  paidAt          DateTime?
+  payments        BankPayment[]
+  // Черновик в Диадоке: id сообщения и когда загружен
+  diadocMessageId String?
+  diadocAt        DateTime?
+  createdAt       DateTime       @default(now())
+
+  @@unique([kind, year, seq])
+  @@index([dealId])
+}
+
+// Поступление на расчётный счёт из выписки Точки
+model BankPayment {
+  id            String    @id @default(cuid())
+  transactionId String    @unique
+  date          DateTime
+  amount        Int
+  payerName     String?
+  payerInn      String?
+  purpose       String?
+  document      Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  documentId    String?
+  createdAt     DateTime  @default(now())
+
+  @@index([date])
 }

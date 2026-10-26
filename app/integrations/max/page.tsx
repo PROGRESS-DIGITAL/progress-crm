@@ -1,7 +1,7 @@
 import { ChannelPage } from "@/components/channel-page";
 import { TokenForm } from "@/components/token-form";
 import { MAX_BOT_SETTING, MAX_TOKEN_SETTING } from "@/lib/chat/max";
-import { getSetting } from "@/lib/chat/settings";
+import { getSetting } from "@/lib/settings";
 import { deleteMaxToken, saveMaxToken } from "./actions";
 
 export const dynamic = "force-dynamic";
