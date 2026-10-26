@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import type { TokenState } from "@/components/token-form";
-import { deleteSettings, setSetting } from "@/lib/chat/settings";
+import { deleteSettings, getSetting, setSetting } from "@/lib/settings";
+import { getRemindChat, REMIND_CHAT_SETTING } from "@/lib/reminders";
+import { sendTelegram } from "@/lib/chat/telegram";
 import {
   deleteWebhook,
   getMe,
@@ -28,6 +30,8 @@ export async function saveTelegramToken(_prev: TokenState, formData: FormData): 
   } catch (e) {
     return { error: `Telegram не принял токен: ${e instanceof Error ? e.message : "ошибка"}` };
   }
+  // Другой бот не может писать в чат, привязанный к прежнему: напоминания нужно привязать заново
+  if ((await getSetting(TELEGRAM_BOT_SETTING)) !== bot) await deleteSettings(REMIND_CHAT_SETTING);
   await setSetting(TELEGRAM_TOKEN_SETTING, token);
   await setSetting(TELEGRAM_BOT_SETTING, bot);
   await deleteSettings(TELEGRAM_OFFSET_SETTING);
@@ -36,6 +40,22 @@ export async function saveTelegramToken(_prev: TokenState, formData: FormData): 
 }
 
 export async function deleteTelegramToken() {
-  await deleteSettings(TELEGRAM_TOKEN_SETTING, TELEGRAM_BOT_SETTING, TELEGRAM_OFFSET_SETTING);
+  await deleteSettings(TELEGRAM_TOKEN_SETTING, TELEGRAM_BOT_SETTING, TELEGRAM_OFFSET_SETTING, REMIND_CHAT_SETTING);
+  revalidate();
+}
+
+export async function sendTestReminder(): Promise<{ error?: string; ok?: string }> {
+  const [token, chat] = await Promise.all([getSetting(TELEGRAM_TOKEN_SETTING), getRemindChat()]);
+  if (!token || !chat) return { error: "Сначала привяжите Telegram для напоминаний" };
+  try {
+    await sendTelegram(token, chat.chatId, "⏰ Проверка: так будут выглядеть напоминания из календаря CRM.");
+  } catch (e) {
+    return { error: `Telegram не доставил сообщение: ${e instanceof Error ? e.message : "ошибка"}` };
+  }
+  return { ok: "Отправил, проверьте Telegram" };
+}
+
+export async function unlinkReminders() {
+  await deleteSettings(REMIND_CHAT_SETTING);
   revalidate();
 }

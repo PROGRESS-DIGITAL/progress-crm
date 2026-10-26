@@ -1,7 +1,7 @@
 import type { Channel } from "@prisma/client";
 import { CHANNEL_LABELS } from "./channels";
 import { MAX_TOKEN_SETTING, sendMax } from "./max";
-import { getSetting } from "./settings";
+import { getSetting } from "@/lib/settings";
 import { sendTelegram, TELEGRAM_TOKEN_SETTING } from "./telegram";
 import { sendVk, VK_TOKEN_SETTING } from "./vk";
 

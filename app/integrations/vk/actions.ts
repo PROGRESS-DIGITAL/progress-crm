@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import type { TokenState } from "@/components/token-form";
-import { deleteSettings, setSetting } from "@/lib/chat/settings";
+import { deleteSettings, setSetting } from "@/lib/settings";
 import { getVkGroup, getVkLongPollServer, VK_GROUP_SETTING, VK_TOKEN_SETTING } from "@/lib/chat/vk";
 
 function revalidate() {

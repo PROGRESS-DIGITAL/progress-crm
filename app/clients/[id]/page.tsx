@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { SERVICE_LABELS, formatRub } from "@/lib/format";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
+import { LinkedEvents } from "@/components/linked-events";
 import { createContact, deleteCompany, deleteContact, updateCompany } from "../actions";
 import { CompanyForm } from "../company-form";
 import { ContactForm } from "../contact-form";
@@ -155,6 +156,7 @@ export default async function ClientPage({
           </ul>
         )}
       </section>
+      <LinkedEvents companyId={company.id} />
     </div>
   );
 }

@@ -2,22 +2,41 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { getDadataKey } from "@/lib/dadata";
 import { getTildaSettings } from "@/lib/tilda-settings";
-import { getSetting } from "@/lib/chat/settings";
+import { getSetting } from "@/lib/settings";
 import { TELEGRAM_BOT_SETTING } from "@/lib/chat/telegram";
 import { MAX_BOT_SETTING } from "@/lib/chat/max";
 import { VK_GROUP_SETTING, type VkGroup } from "@/lib/chat/vk";
+import { DIADOC_ORG_SETTING, DIADOC_REFRESH_SETTING, type DiadocOrg } from "@/lib/finance/diadoc";
+import { getTochka } from "@/lib/finance/documents";
 
 export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage() {
-  const [tilda, lastTilda, dadataKey, telegramBot, maxBot, vkGroup] = await Promise.all([
+  const [tilda, lastTilda, dadataKey, telegramBot, maxBot, vkGroup, tochka, diadocRefresh, diadocOrg] = await Promise.all([
     getTildaSettings(),
     db.webhookLog.findFirst({ where: { source: "tilda", status: "ok" }, orderBy: { createdAt: "desc" } }),
     getDadataKey(),
     getSetting(TELEGRAM_BOT_SETTING),
     getSetting(MAX_BOT_SETTING),
     getSetting(VK_GROUP_SETTING),
+    getTochka(),
+    getSetting(DIADOC_REFRESH_SETTING),
+    getSetting(DIADOC_ORG_SETTING),
   ]);
+  const finance = [
+    {
+      href: "/integrations/tochka",
+      title: "Точка",
+      status: tochka && `счёт ${tochka.account.name}`,
+      text: "Счета и акты из сделки, оплаты из выписки.",
+    },
+    {
+      href: "/integrations/diadoc",
+      title: "Диадок",
+      status: diadocRefresh && diadocOrg && (JSON.parse(diadocOrg) as DiadocOrg).name,
+      text: "Акты клиентам через ЭДО, реквизиты клиентов из контрагентов.",
+    },
+  ];
   const messengers = [
     { href: "/integrations/telegram", title: "Telegram", status: telegramBot && `@${telegramBot}`, text: "Переписка с клиентами через бота." },
     { href: "/integrations/max", title: "Max", status: maxBot, text: "Переписка с клиентами через бота компании в Max." },
@@ -68,7 +87,7 @@ export default async function IntegrationsPage() {
           </div>
           <p className="mt-2 text-sm text-slate-600">Реквизиты клиента по ИНН: название, КПП, ОГРН, адрес, руководитель.</p>
         </Link>
-        {messengers.map((m) => (
+        {[...finance, ...messengers.map((m) => ({ ...m, text: `${m.text} Сообщения приходят в «Чаты».` }))].map((m) => (
           <Link
             key={m.href}
             href={m.href}
@@ -82,7 +101,7 @@ export default async function IntegrationsPage() {
                 {m.status || "Не подключено"}
               </span>
             </div>
-            <p className="mt-2 text-sm text-slate-600">{m.text} Сообщения приходят в «Чаты».</p>
+            <p className="mt-2 text-sm text-slate-600">{m.text}</p>
           </Link>
         ))}
       </div>

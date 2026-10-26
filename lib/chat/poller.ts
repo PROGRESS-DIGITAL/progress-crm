@@ -1,6 +1,7 @@
 import { receiveIncoming } from "./inbox";
 import { getMaxUpdates, incomingFromMax, MAX_MARKER_SETTING, MAX_TOKEN_SETTING } from "./max";
-import { getSetting, setSetting } from "./settings";
+import { getSetting, setSetting } from "@/lib/settings";
+import { linkReminderChat, sendDueReminders } from "@/lib/reminders";
 import { getUpdates, incomingFromUpdate, TELEGRAM_OFFSET_SETTING, TELEGRAM_TOKEN_SETTING } from "./telegram";
 import { getVkLongPollServer, getVkUsers, incomingFromVk, VK_GROUP_SETTING, VK_TOKEN_SETTING, vkCheck, type VkGroup } from "./vk";
 
@@ -18,7 +19,7 @@ export async function pollTelegramOnce() {
   const updates = await getUpdates(token, offset);
   for (const u of updates) {
     const m = incomingFromUpdate(u);
-    if (m) await receiveIncoming("TELEGRAM", m);
+    if (m && !(await linkReminderChat(token, m))) await receiveIncoming("TELEGRAM", m);
     offset = u.update_id + 1;
   }
   if (updates.length) await setSetting(TELEGRAM_OFFSET_SETTING, String(offset));
@@ -63,6 +64,21 @@ export async function pollVkOnce() {
   return true;
 }
 
+// Фоновая задача раз в period: напоминания, оплаты из Точки, клиенты из Диадока
+function every(name: string, periodMs: number, task: () => Promise<unknown>) {
+  void (async () => {
+    await sleep(30_000); // даём серверу спокойно запуститься
+    for (;;) {
+      try {
+        await task();
+      } catch (e) {
+        console.error(`${name}:`, e instanceof Error ? e.message : e);
+      }
+      await sleep(periodMs);
+    }
+  })();
+}
+
 function loop(name: string, poll: Poll) {
   void (async () => {
     for (;;) {
@@ -84,4 +100,13 @@ export function startPolling() {
   loop("Telegram", pollTelegramOnce);
   loop("Max", pollMaxOnce);
   loop("VK", pollVkOnce);
+  every("Напоминания", 60_000, sendDueReminders);
+  every("Точка", 15 * 60_000, async () => {
+    const { syncPayments } = await import("@/lib/finance/documents");
+    await syncPayments(14);
+  });
+  every("Диадок", 24 * 60 * 60_000, async () => {
+    const { getDiadoc, importCounteragents } = await import("@/lib/finance/diadoc-service");
+    if (await getDiadoc()) await importCounteragents();
+  });
 }
