@@ -39,7 +39,8 @@ export function ChannelPage({
               <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">{connected}</span>
               <ConfirmDeleteButton
                 action={onDelete}
-                message={`Отключить ${title}? Новые сообщения перестанут приходить в CRM, переписка останется.`}
+                title={`Отключить ${title}?`}
+                message="Новые сообщения перестанут приходить в CRM, переписка останется."
                 label="Отключить"
               />
             </div>

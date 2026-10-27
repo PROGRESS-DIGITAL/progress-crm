@@ -101,7 +101,8 @@ export default async function TildaPage() {
           <span>Если адрес попал к посторонним,</span>
           <ConfirmDeleteButton
             action={regenerateWebhookKey}
-            message="Сменить ключ? Старый адрес перестанет работать, его нужно будет заменить в Тильде."
+            title="Сменить ключ?"
+            message="Старый адрес перестанет работать, его нужно будет заменить в Тильде."
             label="смените ключ"
           />
         </div>
@@ -118,7 +119,7 @@ export default async function TildaPage() {
           </div>
           <ConfirmDeleteButton
             action={resetFieldMap}
-            message="Вернуть названия полей по умолчанию?"
+            title="Вернуть названия полей по умолчанию?"
             label="Сбросить по умолчанию"
           />
         </div>

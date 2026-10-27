@@ -26,10 +26,11 @@ export default async function TemplatePage({ params }: { params: Promise<{ id: s
         </div>
         <ConfirmDeleteButton
           action={deleteTemplate.bind(null, template.id)}
+          what={`шаблон «${template.name}»`}
           message={
             template._count.contracts
-              ? "Удалить шаблон? Уже созданные по нему договоры останутся."
-              : "Удалить шаблон? Это действие нельзя отменить."
+              ? "Уже созданные по нему договоры останутся."
+              : "Это действие нельзя отменить."
           }
         />
       </div>

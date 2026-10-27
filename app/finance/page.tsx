@@ -130,7 +130,8 @@ async function Documents({ kind }: { kind: "INVOICE" | "ACT" }) {
                   icon
                   action={deleteDocumentAction.bind(null, d.id)}
                   label={`Удалить ${docTitle(d).toLowerCase()}`}
-                  message={`Удалить ${docTitle(d).toLowerCase()} из CRM? В Точке${kind === "ACT" ? " и Диадоке" : ""} он останется.`}
+                  what={docTitle(d).toLowerCase()}
+                  message={`Документ удалится только из CRM, в Точке${kind === "ACT" ? " и Диадоке" : ""} он останется.`}
                 />
               </td>
             </tr>

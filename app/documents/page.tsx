@@ -122,7 +122,8 @@ async function Contracts() {
                   icon
                   action={deleteContractFromList.bind(null, c.id)}
                   label={`Удалить договор № ${c.number}`}
-                  message={`Удалить договор № ${c.number} от ${shortDate(c.date)}? Это нельзя отменить.`}
+                  what={`договор № ${c.number} от ${shortDate(c.date)}`}
+                  message="Это действие нельзя отменить."
                 />
               </td>
             </tr>

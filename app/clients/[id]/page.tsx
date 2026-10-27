@@ -66,7 +66,8 @@ export default async function ClientPage({
         </div>
         <ConfirmDeleteButton
           action={deleteCompany.bind(null, company.id)}
-          message="Удалить клиента вместе с контактами?"
+          what={`клиента «${company.name}»`}
+          message="Вместе с ним удалятся его контакты."
         />
       </div>
       {merged && (
@@ -111,7 +112,7 @@ export default async function ClientPage({
                   </div>
                   <ConfirmDeleteButton
                     action={deleteContact.bind(null, c.id)}
-                    message={`Удалить контакт «${c.fullName}»?`}
+                    what={`контакт «${c.fullName}»`}
                   />
                 </li>
               ))}

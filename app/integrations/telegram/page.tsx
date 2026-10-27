@@ -68,7 +68,7 @@ export default async function TelegramPage() {
               {remindChat ? (
                 <div className="flex items-center gap-3 text-sm">
                   <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs text-emerald-700">Приходят: {remindChat.name}</span>
-                  <ConfirmDeleteButton action={unlinkReminders} message="Отключить напоминания в Telegram?" label="Отключить" />
+                  <ConfirmDeleteButton action={unlinkReminders} title="Отключить напоминания в Telegram?" label="Отключить" />
                 </div>
               ) : (
                 <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">Не подключены</span>

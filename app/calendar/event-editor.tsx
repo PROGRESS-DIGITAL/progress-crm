@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { REMIND_OPTIONS } from "@/lib/calendar";
+import { useConfirm } from "@/components/confirm-dialog";
 import { deleteEvent, saveEvent, type EventInput } from "./actions";
 import type { Options } from "./types";
 
@@ -26,6 +27,7 @@ export function EventEditor({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const confirm = useConfirm();
   const [d, setD] = useState(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
@@ -56,8 +58,10 @@ export function EventEditor({
     });
   }
 
-  function remove() {
-    if (!id || !confirm("Удалить событие?")) return;
+  async function remove() {
+    if (!id) return;
+    const what = d.kind === "TASK" ? "задачу" : "встречу";
+    if (!(await confirm({ title: `Вы точно хотите удалить ${what} «${d.title || "без названия"}»?` }))) return;
     start(async () => {
       await deleteEvent(id);
       onSaved();

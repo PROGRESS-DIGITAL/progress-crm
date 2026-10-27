@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/icons";
+import { useConfirm } from "@/components/confirm-dialog";
 import { REMIND_OPTIONS } from "@/lib/calendar";
 import { MAX_FILE_SIZE, fileSize } from "@/lib/tasks";
 import { deleteEvent, saveEvent, type EventInput } from "@/app/calendar/actions";
@@ -34,6 +35,7 @@ export function TaskForm({
   remindersOn: boolean;
 }) {
   const router = useRouter();
+  const confirm = useConfirm();
   const [d, setD] = useState(initial);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -85,16 +87,19 @@ export function TaskForm({
     });
   }
 
-  function remove() {
-    if (!id || !confirm("Удалить задачу вместе с файлами?")) return;
+  async function remove() {
+    if (!id) return;
+    const ok = await confirm({ title: `Вы точно хотите удалить задачу «${d.title || "без названия"}»?`, text: "Вместе с ней удалятся прикреплённые файлы." });
+    if (!ok) return;
     start(async () => {
       await deleteEvent(id);
       router.push("/tasks");
     });
   }
 
-  function removeFile(fileId: string) {
-    if (!confirm("Удалить файл?")) return;
+  async function removeFile(fileId: string) {
+    const name = files.find((f) => f.id === fileId)?.name ?? "файл";
+    if (!(await confirm({ title: `Вы точно хотите удалить файл «${name}»?` }))) return;
     start(async () => {
       await deleteTaskFile(fileId);
       router.refresh();
