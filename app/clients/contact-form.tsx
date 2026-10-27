@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { Field, inputClass, primaryButton } from "@/components/field";
+import { PhoneInput } from "@/components/phone-input";
 
 export type ContactValues = {
   fullName: string;
@@ -40,7 +41,7 @@ export function ContactForm({
         <input name="position" defaultValue={v("position")} className={inputClass} />
       </Field>
       <Field label="Телефон" error={err.phone}>
-        <input name="phone" type="tel" defaultValue={v("phone")} className={inputClass} />
+        <PhoneInput defaultValue={v("phone")} className={inputClass} />
       </Field>
       <Field label="Email" error={err.email}>
         <input name="email" type="email" defaultValue={v("email")} className={inputClass} />

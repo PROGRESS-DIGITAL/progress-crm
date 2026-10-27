@@ -5,13 +5,13 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { LeadStatus, Service } from "@prisma/client";
 import { db } from "@/lib/db";
-import { invalid, optionalEmail, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
+import { invalid, optionalEmail, optionalPhone, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 import { isSalesStep } from "@/lib/sales-map";
 
 const leadSchema = z
   .object({
     name: optionalText,
-    phone: optionalText,
+    phone: optionalPhone,
     email: optionalEmail,
     companyName: optionalText,
     message: optionalText,

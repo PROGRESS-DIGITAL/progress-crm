@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import Link from "next/link";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { Field, inputClass, primaryButton } from "@/components/field";
+import { PhoneInput } from "@/components/phone-input";
 
 export function LeadForm({ action }: { action: (prev: FormState, formData: FormData) => Promise<FormState> }) {
   const [state, formAction, pending] = useActionState(action, undefined);
@@ -19,7 +20,7 @@ export function LeadForm({ action }: { action: (prev: FormState, formData: FormD
         <input name="companyName" defaultValue={v("companyName")} className={inputClass} />
       </Field>
       <Field label="Телефон" error={err.phone}>
-        <input name="phone" type="tel" defaultValue={v("phone")} className={inputClass} />
+        <PhoneInput defaultValue={v("phone")} className={inputClass} />
       </Field>
       <Field label="Email" error={err.email}>
         <input name="email" type="email" defaultValue={v("email")} className={inputClass} />

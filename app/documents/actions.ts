@@ -6,7 +6,7 @@ import { z } from "zod";
 import mammoth from "mammoth";
 import { db } from "@/lib/db";
 import { fromKey, isDayKey } from "@/lib/calendar";
-import { invalid, optionalEmail, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
+import { invalid, optionalEmail, optionalPhone, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 import { sanitizeHtml } from "@/lib/contracts/sanitize";
 import { createContract, saveExecutor } from "@/lib/contracts/store";
 import { updateContractFields } from "@/lib/contracts/fields";
@@ -117,7 +117,7 @@ const executorSchema = z.object({
   corrAccount: digits(20, "Корр. счёт — 20 цифр"),
   bankName: optionalText,
   bik: digits(9, "БИК — 9 цифр"),
-  phone: optionalText,
+  phone: optionalPhone,
   email: optionalEmail,
   logo: optionalText.refine((v) => v === null || /^data:image\/(png|jpeg|gif|webp);base64,/.test(v), "Логотип должен быть картинкой"),
 });

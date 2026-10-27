@@ -8,6 +8,7 @@ import { BankFields } from "@/components/bank-fields";
 import { lookupInn } from "@/app/clients/actions";
 import type { Party } from "@/lib/contracts/fields";
 import { saveExecutorAction } from "./actions";
+import { PhoneInput } from "@/components/phone-input";
 
 // Логотип для шапки договора: в договоре он шириной до 215 px, храним вдвое крупнее для чёткой печати
 async function shrinkImage(file: File) {
@@ -98,7 +99,7 @@ export function ExecutorForm({ initial }: { initial: Party | null }) {
       </Field>
       <BankFields value={v} errors={err} />
       <Field label="Телефон" error={err.phone}>
-        <input name="phone" type="tel" defaultValue={v("phone")} className={inputClass} />
+        <PhoneInput defaultValue={v("phone")} className={inputClass} />
       </Field>
       <Field label="Email" error={err.email}>
         <input name="email" type="email" defaultValue={v("email")} className={inputClass} />

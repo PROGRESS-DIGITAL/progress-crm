@@ -3,13 +3,13 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { invalid, optionalEmail, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
+import { invalid, optionalEmail, optionalPhone, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 import { getOwner } from "@/lib/profile";
 
 const profileSchema = z.object({
   name: z.string().trim().min(1, "Укажите имя").max(100, "Слишком длинное имя"),
   position: optionalText,
-  phone: optionalText,
+  phone: optionalPhone,
   email: optionalEmail,
   telegram: optionalText,
   max: optionalText,

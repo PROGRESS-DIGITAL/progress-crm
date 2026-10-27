@@ -7,6 +7,7 @@ import { Field, inputClass, primaryButton } from "@/components/field";
 import { lookupInn } from "./actions";
 import { BankFields } from "@/components/bank-fields";
 import { SALES_COLUMNS } from "@/lib/sales-map";
+import { PhoneInput } from "@/components/phone-input";
 
 export type CompanyValues = {
   name: string;
@@ -138,7 +139,7 @@ export function CompanyForm({
         <input name="website" defaultValue={v("website")} className={inputClass} />
       </Field>
       <Field label="Телефон" error={err.phone}>
-        <input name="phone" type="tel" defaultValue={v("phone")} className={inputClass} />
+        <PhoneInput defaultValue={v("phone")} className={inputClass} />
       </Field>
       <Field label="Email" error={err.email}>
         <input name="email" type="email" defaultValue={v("email")} className={inputClass} />
