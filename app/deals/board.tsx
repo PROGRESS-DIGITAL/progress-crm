@@ -6,15 +6,19 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  closestCorners,
   defaultDropAnimationSideEffects,
-  useDraggable,
+  pointerWithin,
   useDroppable,
   useSensor,
   useSensors,
+  type CollisionDetection,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
   type DropAnimation,
 } from "@dnd-kit/core";
+import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Service, StageKind } from "@prisma/client";
 import { SERVICE_LABELS, formatRub } from "@/lib/format";
 import { moveDeal, quickCreateDeal } from "./actions";
@@ -71,54 +75,96 @@ export function Board({
   const [, startTransition] = useTransition();
   // Без порога перемещения клик по карточке сразу начинал бы перетаскивание
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
-  // Сделка, которую сейчас тащат: её копия едет под курсором, а на старом месте остаётся контур
-  const [dragged, setDragged] = useState<{ deal: DealCard; overdue: boolean } | null>(null);
+  // Сделка, которую сейчас тащат: её копия едет под курсором, а на старом месте остаётся контур.
+  // from — колонка и порядок до захвата, чтобы понять, изменилось ли что-то, и откатить при ошибке
+  const [dragged, setDragged] = useState<{ deal: DealCard; overdue: boolean; from: Column[] } | null>(null);
+
+  // Цель — то, что под курсором: сначала карточка, иначе колонка (так ловится и пустая колонка).
+  // Если курсор вне колонок — ближайшая по углам
+  const collision: CollisionDetection = (args) => {
+    const hits = pointerWithin(args);
+    if (!hits.length) return closestCorners(args);
+    const card = hits.find((h) => !columns.some((c) => c.id === h.id));
+    return card ? [card] : hits;
+  };
+
+  const columnOf = (cols: Column[], id: string) => cols.find((c) => c.id === id || c.deals.some((d) => d.id === id));
 
   function onDragStart(e: DragStartEvent) {
     for (const c of columns) {
       const deal = c.deals.find((d) => d.id === e.active.id);
-      if (deal) return setDragged({ deal, overdue: isOverdue(deal, c.kind) });
+      if (deal) return setDragged({ deal, overdue: isOverdue(deal, c.kind), from: columns });
     }
   }
 
+  // Над другой колонкой карточка сразу переезжает в неё, и соседи раздвигаются под место
+  function onDragOver(e: DragOverEvent) {
+    if (!e.over) return;
+    const activeId = String(e.active.id);
+    const overId = String(e.over.id);
+    setColumns((cols) => {
+      const from = columnOf(cols, activeId);
+      const to = columnOf(cols, overId);
+      if (!from || !to || from.id === to.id) return cols;
+      const deal = from.deals.find((d) => d.id === activeId)!;
+      const overIndex = to.deals.findIndex((d) => d.id === overId);
+      const index = overIndex === -1 ? to.deals.length : overIndex;
+      return cols.map((c) => {
+        if (c.id === from.id) return { ...c, deals: c.deals.filter((d) => d.id !== activeId) };
+        if (c.id === to.id) return { ...c, deals: [...c.deals.slice(0, index), deal, ...c.deals.slice(index)] };
+        return c;
+      });
+    });
+  }
+
   function onDragEnd(e: DragEndEvent) {
+    const before = dragged?.from ?? columns;
     setDragged(null);
     const dealId = String(e.active.id);
-    const toStageId = e.over ? String(e.over.id) : null;
-    if (!toStageId) return;
+    const column = columnOf(columns, dealId);
+    if (!e.over || !column) return setColumns(before);
 
-    const from = columns.find((c) => c.deals.some((d) => d.id === dealId));
-    if (!from || from.id === toStageId) return;
+    // Перестановка внутри колонки: карточка встаёт на место той, над которой её отпустили
+    const oldIndex = column.deals.findIndex((d) => d.id === dealId);
+    const overIndex = column.deals.findIndex((d) => d.id === e.over!.id);
+    const deals = overIndex === -1 || overIndex === oldIndex ? column.deals : arrayMove(column.deals, oldIndex, overIndex);
+    const order = deals.map((d) => d.id);
 
-    const deal = from.deals.find((d) => d.id === dealId)!;
-    const target = columns.find((c) => c.id === toStageId)!;
-    // Перенесённая сделка встаёт наверх колонки
-    const position = (target.deals[0]?.position ?? 1) - 1;
-    const moved = { ...deal, position };
+    const was = columnOf(before, dealId)!;
+    if (was.id === column.id && was.deals.map((d) => d.id).join() === order.join()) return;
 
-    const previous = columns;
-    setColumns((cols) =>
-      cols.map((c) => {
-        if (c.id === from.id) return { ...c, deals: c.deals.filter((d) => d.id !== dealId) };
-        if (c.id === toStageId) return { ...c, deals: [moved, ...c.deals] };
-        return c;
-      }),
-    );
+    setColumns((cols) => cols.map((c) => (c.id === column.id ? { ...c, deals } : c)));
     startTransition(async () => {
       try {
-        await moveDeal(dealId, toStageId, position);
+        await moveDeal(dealId, column.id, order);
       } catch {
-        setColumns(previous);
+        setColumns(before);
         alert("Не удалось перенести сделку, попробуйте ещё раз");
       }
     });
   }
 
   return (
-    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragged(null)}>
+    <DndContext
+      sensors={sensors}
+      collisionDetection={collision}
+      onDragStart={onDragStart}
+      onDragOver={onDragOver}
+      onDragEnd={onDragEnd}
+      onDragCancel={() => {
+        if (dragged) setColumns(dragged.from);
+        setDragged(null);
+      }}
+    >
       <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
         {columns.map((c) => (
-          <StageColumn key={c.id} column={c} avatars={avatars} />
+          <StageColumn
+            key={c.id}
+            column={c}
+            avatars={avatars}
+            // Подсветка колонки, куда переезжает карточка
+            target={!!dragged && c.deals.some((d) => d.id === dragged.deal.id) && !dragged.from.find((f) => f.id === c.id)?.deals.some((d) => d.id === dragged.deal.id)}
+          />
         ))}
       </div>
       <DragOverlay dropAnimation={DROP_ANIMATION}>
@@ -141,15 +187,16 @@ export function Board({
   );
 }
 
-function StageColumn({ column, avatars }: { column: Column; avatars: Record<string, string> }) {
-  const { setNodeRef, isOver } = useDroppable({ id: column.id });
+function StageColumn({ column, avatars, target }: { column: Column; avatars: Record<string, string>; target: boolean }) {
+  // Колонка тоже цель: в пустую колонку карточку бросают на неё саму
+  const { setNodeRef } = useDroppable({ id: column.id });
   const total = column.deals.reduce((acc, d) => acc + d.amount, 0);
 
   return (
     <section
       ref={setNodeRef}
       data-testid={`stage-${column.name}`}
-      className={`flex w-64 shrink-0 flex-col rounded-2xl border border-t-4 border-slate-200/60 bg-white/60 transition-[box-shadow,background-color] duration-200 ${KIND_ACCENT[column.kind]} ${isOver ? "bg-blue-50/60 ring-2 ring-blue-400" : "ring-0 ring-transparent"}`}
+      className={`flex w-64 shrink-0 flex-col rounded-2xl border border-t-4 border-slate-200/60 bg-white/60 transition-[box-shadow,background-color] duration-200 ${KIND_ACCENT[column.kind]} ${target ? "bg-blue-50/60 ring-2 ring-blue-400" : "ring-0 ring-transparent"}`}
     >
       <header className="px-3 pt-3 pb-2">
         <div className="flex items-baseline justify-between">
@@ -160,24 +207,27 @@ function StageColumn({ column, avatars }: { column: Column; avatars: Record<stri
       </header>
       <div className="flex min-h-24 flex-1 flex-col gap-2 px-2 pb-3">
         <QuickDeal stageId={column.id} />
-        {column.deals.map((d) => (
-          <DealItem key={d.id} deal={d} overdue={isOverdue(d, column.kind)} avatar={d.owner ? avatars[d.owner] : null} />
-        ))}
+        <SortableContext items={column.deals.map((d) => d.id)} strategy={verticalListSortingStrategy}>
+          {column.deals.map((d) => (
+            <DealItem key={d.id} deal={d} overdue={isOverdue(d, column.kind)} avatar={d.owner ? avatars[d.owner] : null} />
+          ))}
+        </SortableContext>
       </div>
     </section>
   );
 }
 
 function DealItem({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean; avatar: string | null }) {
-  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
+  const { attributes, listeners, setNodeRef, isDragging, transform, transition } = useSortable({ id: deal.id });
 
-  // Пока карточку тащат, на её месте остаётся бледный контур
+  // Пока карточку тащат, на её месте остаётся бледный контур, а соседи плавно раздвигаются
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      className={`deal-settle cursor-grab rounded-xl transition-opacity duration-200 ${isDragging ? "opacity-30" : ""}`}
+      style={{ transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, transition }}
+      className={`deal-settle cursor-grab rounded-xl ${isDragging ? "opacity-30" : ""}`}
     >
       <DealCardBody deal={deal} overdue={overdue} avatar={avatar} />
     </div>
