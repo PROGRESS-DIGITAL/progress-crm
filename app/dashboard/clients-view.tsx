@@ -113,8 +113,12 @@ export async function ClientsView() {
                 </Link>
                 <div className="flex items-center gap-2">
                   <div
-                    className={`h-5 rounded-r-[4px] transition-colors ${RANK_BAR[i] ?? REST_BAR}`}
-                    style={{ width: `${Math.max((r.ltv / max) * 100, 1)}%`, maxWidth: "calc(100% - 7rem)" }}
+                    className={`grow-x h-5 rounded-r-[4px] transition-colors ${RANK_BAR[i] ?? REST_BAR}`}
+                    style={{
+                      width: `${Math.max((r.ltv / max) * 100, 1)}%`,
+                      maxWidth: "calc(100% - 7rem)",
+                      animationDelay: `${i * 80}ms`,
+                    }}
                   />
                   <span className="shrink-0 text-sm text-slate-700 tabular-nums">{formatRub(r.ltv)}</span>
                 </div>

@@ -123,15 +123,15 @@ export async function MonthsView() {
           </ul>
         </div>
         <div className="mt-6 flex h-56 items-end gap-2" role="img" aria-label="Выручка по месяцам">
-          {rows.map((r) => (
+          {rows.map((r, i) => (
             <div key={r.key} className="group relative flex h-full flex-1 items-end justify-center gap-0.5">
               <div
-                className="w-2/5 rounded-md bg-slate-200"
-                style={{ height: `${(r.lastYear / max) * 100}%`, minHeight: r.lastYear ? 2 : 0 }}
+                className="grow-y w-2/5 rounded-md bg-slate-200"
+                style={{ height: `${(r.lastYear / max) * 100}%`, minHeight: r.lastYear ? 2 : 0, animationDelay: `${i * 30}ms` }}
               />
               <div
-                className={`w-2/5 rounded-md ${r.key === now ? "bg-blue-600" : "bg-blue-300"} group-hover:bg-blue-500`}
-                style={{ height: `${(r.revenue / max) * 100}%`, minHeight: r.revenue ? 2 : 0 }}
+                className={`grow-y w-2/5 rounded-md ${r.key === now ? "bg-blue-600" : "bg-blue-300"} group-hover:bg-blue-500`}
+                style={{ height: `${(r.revenue / max) * 100}%`, minHeight: r.revenue ? 2 : 0, animationDelay: `${i * 30}ms` }}
               />
               <div
                 role="tooltip"
