@@ -1,7 +1,7 @@
 import { getCompanyOptions, getProductOptions, getStageOptions } from "@/lib/queries";
 import { createDeal } from "../actions";
 import { DealForm } from "../deal-form";
-import { getOwner } from "@/lib/profile";
+import { getEmployeeNames, getOwner } from "@/lib/profile";
 import { SALES_STEPS, isSalesStep } from "@/lib/sales-map";
 
 export const dynamic = "force-dynamic";
@@ -12,11 +12,12 @@ export default async function NewDealPage({
   searchParams: Promise<{ companyId?: string; productId?: string; step?: string }>;
 }) {
   const { companyId, productId, step } = await searchParams;
-  const [stages, companies, products, owner] = await Promise.all([
+  const [stages, companies, products, owner, employees] = await Promise.all([
     getStageOptions(),
     getCompanyOptions(),
     getProductOptions(),
     getOwner(),
+    getEmployeeNames(),
   ]);
   // Переход из планограммы: подставляем шаг и, если есть, услугу из прайса с её ценой
   const product = products.find((p) => p.id === productId);
@@ -32,6 +33,7 @@ export default async function NewDealPage({
           stages={stages}
           companies={companies}
           products={products}
+          employees={employees}
           initial={{
             owner: owner.name,
             startDate: new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Moscow" }),
