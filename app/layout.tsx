@@ -20,17 +20,18 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   const jar = await cookies();
   const collapsed = jar.get(SIDEBAR_COOKIE)?.value === "collapsed";
   const theme = jar.get(THEME_COOKIE)?.value === "dark" ? "dark" : "light";
-  const [newLeads, chats, dueTasks] = await Promise.all([
+  const [newLeads, chats, dueTasks, unreadMail] = await Promise.all([
     db.lead.count({ where: { status: "NEW" } }),
     unreadChats(),
     db.event.count({ where: dueWhere() }),
+    db.mailMessage.count({ where: { folder: "INBOX", seen: false } }),
   ]);
   return (
     <html lang="ru" className={theme === "dark" ? "dark" : undefined}>
       <body className="min-h-screen">
         <ConfirmProvider>
           <div className="flex min-h-screen gap-3 p-2 pb-24 sm:p-3 md:pb-3">
-            <Sidebar initialCollapsed={collapsed} newLeads={newLeads} unreadChats={chats} dueTasks={dueTasks} />
+            <Sidebar initialCollapsed={collapsed} newLeads={newLeads} unreadChats={chats} dueTasks={dueTasks} unreadMail={unreadMail} />
             <div className="flex min-w-0 flex-1 flex-col gap-2 sm:gap-3">
               <TopBar newLeads={newLeads} theme={theme} />
               <main className="flex flex-1 flex-col *:w-full">{children}</main>

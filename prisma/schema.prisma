@@ -118,6 +118,7 @@ model Company {
   contacts    Contact[]
   deals       Deal[]
   chats       Conversation[]
+  mails       MailMessage[]
   documents   Document[]
   events      Event[]
   contracts   Contract[]
@@ -417,4 +418,81 @@ model Contract {
 
   @@index([dealId])
   @@index([companyId])
+}
+
+enum MailProvider {
+  GMAIL
+  YANDEX
+}
+
+enum MailFolder {
+  INBOX
+  SENT
+}
+
+// Почтовый ящик Gmail или Яндекса: подключается по IMAP и SMTP с паролем приложения
+model MailAccount {
+  id            String        @id @default(cuid())
+  provider      MailProvider
+  email         String        @unique
+  // Пароль приложения из настроек почты, не основной пароль от аккаунта
+  password      String
+  // Имя отправителя в письмах
+  name          String?
+  // Докуда забрали письма: следующая синхронизация берёт только новые.
+  // Если сервер сменил UIDVALIDITY, номера писем начинаются заново
+  inboxUid      Int           @default(0)
+  inboxValidity String?
+  sentUid       Int           @default(0)
+  sentValidity  String?
+  syncedAt      DateTime?
+  lastError     String?
+  createdAt     DateTime      @default(now())
+  messages      MailMessage[]
+}
+
+model MailMessage {
+  id          String           @id @default(cuid())
+  account     MailAccount      @relation(fields: [accountId], references: [id], onDelete: Cascade)
+  accountId   String
+  folder      MailFolder
+  // Номер письма в папке на сервере; у письма, отправленного из CRM, пуст до синхронизации
+  uid         Int?
+  // Заголовок Message-ID: склеивает отправленное из CRM с копией из папки «Отправленные»
+  messageId   String?
+  inReplyTo   String?
+  references  String?
+  fromEmail   String
+  fromName    String?
+  // Получатели как в заголовке: «Имя <a@b.ru>, c@d.ru»
+  to          String
+  cc          String?
+  subject     String
+  text        String
+  html        String?
+  snippet     String
+  date        DateTime
+  seen        Boolean          @default(false)
+  // Клиент, с которым переписка: находится по email контакта или компании
+  company     Company?         @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  companyId   String?
+  attachments MailAttachment[]
+  createdAt   DateTime         @default(now())
+
+  @@unique([accountId, folder, uid])
+  @@index([accountId, folder, date])
+  @@index([companyId, date])
+  @@index([messageId])
+}
+
+model MailAttachment {
+  id        String      @id @default(cuid())
+  message   MailMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  messageId String
+  name      String
+  mime      String
+  size      Int
+  // Картинка внутри письма (cid:…): в списке вложений её не показываем
+  cid       String?
+  data      Bytes
 }
