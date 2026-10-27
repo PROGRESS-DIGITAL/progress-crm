@@ -1,7 +1,7 @@
 // Значок вида события: задача — квадратный чекбокс, встреча — круглая точка.
 // Форма и цвет разные, чтобы задачи и встречи различались с первого взгляда
 export function KindMark({ kind, done = false, className = "" }: { kind: "MEETING" | "TASK"; done?: boolean; className?: string }) {
-  if (kind === "MEETING") return <span className={`h-2.5 w-2.5 shrink-0 rounded-full bg-blue-500 ${className}`} />;
+  if (kind === "MEETING") return <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${done ? "bg-slate-300" : "bg-blue-500"} ${className}`} />;
   return (
     <span
       className={`flex h-3 w-3 shrink-0 items-center justify-center rounded-[3px] border-[1.5px] ${

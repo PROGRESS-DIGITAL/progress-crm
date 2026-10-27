@@ -144,12 +144,10 @@ export function EventEditor({
             <input type="checkbox" checked={d.allDay} onChange={(e) => set("allDay", e.target.checked)} className="h-4 w-4 accent-blue-600" />
             Весь день
           </label>
-          {d.kind === "TASK" && (
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={d.done} onChange={(e) => set("done", e.target.checked)} className="h-4 w-4 accent-emerald-600" />
-              Выполнена
-            </label>
-          )}
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={d.done} onChange={(e) => set("done", e.target.checked)} className="h-4 w-4 accent-emerald-600" />
+            {d.kind === "TASK" ? "Выполнена" : "Состоялась"}
+          </label>
         </div>
 
         <label className={`${label} mt-4`}>
