@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/icons";
 import { useConfirm } from "@/components/confirm-dialog";
+import { TimeField } from "@/components/time-field";
 import { REMIND_OPTIONS } from "@/lib/calendar";
 import { MAX_FILE_SIZE, fileSize } from "@/lib/tasks";
 import { deleteEvent, saveEvent, type EventInput } from "@/app/calendar/actions";
@@ -208,11 +209,11 @@ export function TaskForm({
               <>
                 <label className={label}>
                   С
-                  <input type="time" step={300} value={d.startTime} onChange={(e) => set("startTime", e.target.value)} className={field} required />
+                  <TimeField label="Начало" value={d.startTime} onChange={(v) => set("startTime", v)} />
                 </label>
                 <label className={label}>
                   До
-                  <input type="time" step={300} value={d.endTime} onChange={(e) => set("endTime", e.target.value)} className={field} required />
+                  <TimeField label="Конец" value={d.endTime} onChange={(v) => set("endTime", v)} />
                 </label>
               </>
             )}

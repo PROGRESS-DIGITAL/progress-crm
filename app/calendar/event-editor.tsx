@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import { REMIND_OPTIONS } from "@/lib/calendar";
 import { useConfirm } from "@/components/confirm-dialog";
 import { KindMark } from "@/components/event-kind";
+import { TimeField } from "@/components/time-field";
 import { deleteEvent, saveEvent, type EventInput } from "./actions";
 import type { Options } from "./types";
 
@@ -130,11 +131,11 @@ export function EventEditor({
             <>
               <label className={label}>
                 Начало
-                <input type="time" step={300} value={d.startTime} onChange={(e) => set("startTime", e.target.value)} className={field} required />
+                <TimeField label="Начало" value={d.startTime} onChange={(v) => set("startTime", v)} />
               </label>
               <label className={label}>
                 Конец
-                <input type="time" step={300} value={d.endTime} onChange={(e) => set("endTime", e.target.value)} className={field} required />
+                <TimeField label="Конец" value={d.endTime} onChange={(v) => set("endTime", v)} />
               </label>
             </>
           )}

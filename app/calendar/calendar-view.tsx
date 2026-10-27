@@ -28,10 +28,10 @@ const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 const href = (view: View, date: string) => `/calendar?view=${view}&date=${date}`;
 const weekday = (key: string) => WEEKDAYS[(new Date(`${key}T00:00:00Z`).getUTCDay() + 6) % 7];
 
-// Встреча — сплошная синяя плашка, задача — светлая карточка с рамкой и чекбоксом.
+// Встреча — голубая плашка с полоской слева и иконкой людей, задача — жёлтая карточка с рамкой и чекбоксом.
 // Отмеченные «Выполнена» и «Состоялась» серые
 function tone(e: CalEvent) {
-  if (e.kind === "MEETING") return e.done ? "border-l-4 border-slate-300 bg-slate-100 text-slate-500" : "border-l-4 border-blue-700 bg-blue-500 text-white";
+  if (e.kind === "MEETING") return e.done ? "border-l-4 border-slate-300 bg-slate-100 text-slate-500" : "border-l-4 border-blue-500 bg-blue-50 text-blue-950";
   if (e.done) return "border border-l-4 border-slate-200 border-l-slate-300 bg-slate-100 text-slate-500";
   return "border border-l-4 border-amber-300 border-l-amber-500 bg-amber-50 text-amber-950";
 }
