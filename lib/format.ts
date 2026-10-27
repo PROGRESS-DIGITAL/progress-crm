@@ -72,13 +72,12 @@ export function formatChatTime(d: Date, now = new Date()) {
   return d.toLocaleDateString("ru-RU", { timeZone: TIME_ZONE, day: "numeric", month: "short" });
 }
 
-// Длительность для «Время в CRM»: «2 д 3 ч 05 мин», «3 ч 05 мин», «7 мин»
-export function formatDuration(seconds: number) {
-  const total = Math.max(0, Math.floor(seconds / 60));
-  const d = Math.floor(total / 1440);
-  const h = Math.floor((total % 1440) / 60);
-  const m = total % 60;
-  if (d) return `${d} д ${h} ч ${String(m).padStart(2, "0")} мин`;
-  if (h) return `${h} ч ${String(m).padStart(2, "0")} мин`;
-  return `${m} мин`;
+const DAY = 86_400_000;
+const MSK_OFFSET = 3 * 3_600_000; // Москва без перехода на летнее время
+
+// «Время в CRM» за сегодня часами и минутами, 12:32. Отсчёт с запуска, а в полночь по Москве сбрасывается на 00:00
+export function crmTimeToday(now: number, startedAt: number) {
+  const midnight = Math.floor((now + MSK_OFFSET) / DAY) * DAY - MSK_OFFSET;
+  const minutes = Math.max(0, Math.floor((now - Math.max(startedAt, midnight)) / 60_000));
+  return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }

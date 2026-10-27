@@ -32,8 +32,8 @@ export async function TopBar({ newLeads, theme }: { newLeads: number; theme: The
       <ThemeToggle initial={theme} />
 
       <div className="ml-auto flex shrink-0 items-center gap-5">
-        {/* os.uptime — сколько работает компьютер, на котором запущена CRM */}
-        <HeaderClock serverNow={Date.now()} uptime={Math.round(os.uptime())} />
+        {/* os.uptime — сколько работает компьютер, на котором запущена CRM: отсюда момент его включения */}
+        <HeaderClock serverNow={Date.now()} startedAt={Date.now() - os.uptime() * 1000} />
         <Suspense>
           <HeaderSearch />
         </Suspense>
