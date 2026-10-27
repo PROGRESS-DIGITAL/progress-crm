@@ -4,12 +4,16 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   DndContext,
+  DragOverlay,
   PointerSensor,
+  defaultDropAnimationSideEffects,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
   type DragEndEvent,
+  type DragStartEvent,
+  type DropAnimation,
 } from "@dnd-kit/core";
 import type { Service, StageKind } from "@prisma/client";
 import { SERVICE_LABELS, formatRub } from "@/lib/format";
@@ -45,6 +49,13 @@ const KIND_ACCENT: Record<StageKind, string> = {
   LOST: "border-t-rose-400",
 };
 
+// Карточка плавно опускается на новое место, а место в колонке проявляется под ней
+const DROP_ANIMATION: DropAnimation = {
+  duration: 320,
+  easing: "cubic-bezier(0.22, 1, 0.36, 1)",
+  sideEffects: defaultDropAnimationSideEffects({ styles: { active: { opacity: "0" } } }),
+};
+
 export function Board({
   stages,
   clientNames,
@@ -60,8 +71,18 @@ export function Board({
   const [, startTransition] = useTransition();
   // Без порога перемещения клик по карточке сразу начинал бы перетаскивание
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // Сделка, которую сейчас тащат: её копия едет под курсором, а на старом месте остаётся контур
+  const [dragged, setDragged] = useState<{ deal: DealCard; overdue: boolean } | null>(null);
+
+  function onDragStart(e: DragStartEvent) {
+    for (const c of columns) {
+      const deal = c.deals.find((d) => d.id === e.active.id);
+      if (deal) return setDragged({ deal, overdue: isOverdue(deal, c.kind) });
+    }
+  }
 
   function onDragEnd(e: DragEndEvent) {
+    setDragged(null);
     const dealId = String(e.active.id);
     const toStageId = e.over ? String(e.over.id) : null;
     if (!toStageId) return;
@@ -94,12 +115,23 @@ export function Board({
   }
 
   return (
-    <DndContext sensors={sensors} onDragEnd={onDragEnd}>
+    <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setDragged(null)}>
       <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
         {columns.map((c) => (
           <StageColumn key={c.id} column={c} avatars={avatars} />
         ))}
       </div>
+      <DragOverlay dropAnimation={DROP_ANIMATION}>
+        {dragged && (
+          <div className="deal-lift cursor-grabbing">
+            <DealCardBody
+              deal={dragged.deal}
+              overdue={dragged.overdue}
+              avatar={dragged.deal.owner ? avatars[dragged.deal.owner] : null}
+            />
+          </div>
+        )}
+      </DragOverlay>
       <datalist id="client-names">
         {clientNames.map((n) => (
           <option key={n} value={n} />
@@ -117,7 +149,7 @@ function StageColumn({ column, avatars }: { column: Column; avatars: Record<stri
     <section
       ref={setNodeRef}
       data-testid={`stage-${column.name}`}
-      className={`flex w-64 shrink-0 flex-col rounded-2xl border border-t-4 border-slate-200/60 bg-white/60 ${KIND_ACCENT[column.kind]} ${isOver ? "ring-2 ring-blue-400" : ""}`}
+      className={`flex w-64 shrink-0 flex-col rounded-2xl border border-t-4 border-slate-200/60 bg-white/60 transition-[box-shadow,background-color] duration-200 ${KIND_ACCENT[column.kind]} ${isOver ? "bg-blue-50/60 ring-2 ring-blue-400" : "ring-0 ring-transparent"}`}
     >
       <header className="px-3 pt-3 pb-2">
         <div className="flex items-baseline justify-between">
@@ -137,16 +169,25 @@ function StageColumn({ column, avatars }: { column: Column; avatars: Record<stri
 }
 
 function DealItem({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean; avatar: string | null }) {
-  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: deal.id });
-  const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined;
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: deal.id });
 
+  // Пока карточку тащат, на её месте остаётся бледный контур
   return (
     <div
       ref={setNodeRef}
-      style={style}
       {...listeners}
       {...attributes}
-      className={`cursor-grab rounded-xl border bg-white p-3 shadow-card ${overdue ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200/70"} ${isDragging ? "z-10 opacity-80 shadow-lg" : ""}`}
+      className={`deal-settle cursor-grab rounded-xl transition-opacity duration-200 ${isDragging ? "opacity-30" : ""}`}
+    >
+      <DealCardBody deal={deal} overdue={overdue} avatar={avatar} />
+    </div>
+  );
+}
+
+function DealCardBody({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean; avatar: string | null }) {
+  return (
+    <div
+      className={`rounded-xl border bg-white p-3 shadow-card ${overdue ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200/70"}`}
     >
       <Link href={`/deals/${deal.id}`} className="block text-sm font-medium hover:text-blue-700">
         {deal.title}
