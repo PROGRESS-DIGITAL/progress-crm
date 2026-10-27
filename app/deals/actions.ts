@@ -164,9 +164,14 @@ export async function quickCreateDeal(
   return {};
 }
 
-export async function moveDeal(id: string, stageId: string, position: number) {
-  const current = await db.deal.findUnique({ where: { id }, select: { closedAt: true, stage: { select: { kind: true } } } });
-  const closedAt = await closedAtFor(stageId, current && { closedAt: current.closedAt, kind: current.stage.kind });
-  const deal = await db.deal.update({ where: { id }, data: { stageId, position, closedAt } });
+// Перенос сделки в колонку или на новое место внутри колонки.
+// order — id сделок колонки сверху вниз уже с перенесённой: позиции пересчитываются по нему
+export async function moveDeal(id: string, stageId: string, order: string[]) {
+  const current = await db.deal.findUnique({ where: { id }, select: { closedAt: true, stageId: true, stage: { select: { kind: true } } } });
+  if (!current) return;
+  const closedAt =
+    current.stageId === stageId ? current.closedAt : await closedAtFor(stageId, { closedAt: current.closedAt, kind: current.stage.kind });
+  const deal = await db.deal.update({ where: { id }, data: { stageId, closedAt } });
+  await db.$transaction(order.map((dealId, position) => db.deal.updateMany({ where: { id: dealId, stageId }, data: { position } })));
   revalidateDeal(deal.companyId);
 }

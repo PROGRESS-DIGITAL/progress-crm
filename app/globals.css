@@ -179,3 +179,30 @@ html.dark .tile-glow .text-\[26px\] {
     break-before: page;
   }
 }
+
+/* Перетаскивание сделок: карточка плавно приподнимается при захвате и мягко встаёт в новую колонку */
+@keyframes deal-lift {
+  to {
+    transform: scale(1.04) rotate(1.5deg);
+    box-shadow: 0 22px 44px -16px rgb(15 23 42 / 0.35);
+  }
+}
+.deal-lift {
+  border-radius: 0.75rem;
+  animation: deal-lift 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+@keyframes deal-settle {
+  from {
+    transform: scale(0.97);
+    opacity: 0.6;
+  }
+}
+.deal-settle {
+  animation: deal-settle 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+}
+@media (prefers-reduced-motion: reduce) {
+  .deal-lift,
+  .deal-settle {
+    animation: none;
+  }
+}
