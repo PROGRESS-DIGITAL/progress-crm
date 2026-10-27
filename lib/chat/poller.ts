@@ -64,7 +64,7 @@ export async function pollVkOnce() {
   return true;
 }
 
-// Фоновая задача раз в period: напоминания, оплаты из Точки, клиенты из Диадока
+// Фоновая задача раз в period: напоминания, оплаты из Точки, почта, клиенты из Диадока
 function every(name: string, periodMs: number, task: () => Promise<unknown>) {
   void (async () => {
     await sleep(30_000); // даём серверу спокойно запуститься
@@ -104,6 +104,10 @@ export function startPolling() {
   every("Точка", 15 * 60_000, async () => {
     const { syncPayments } = await import("@/lib/finance/documents");
     await syncPayments(14);
+  });
+  every("Почта", 2 * 60_000, async () => {
+    const { syncAllMail } = await import("@/lib/mail/sync");
+    await syncAllMail();
   });
   every("Диадок", 24 * 60 * 60_000, async () => {
     const { getDiadoc, importCounteragents } = await import("@/lib/finance/diadoc-service");

@@ -9,7 +9,7 @@ import { SIDEBAR_COOKIE } from "@/components/sidebar-cookie";
 type Item = { href: string; label: string; icon: IconName; badge?: number };
 type Group = { title: string; items: Item[] };
 
-function menu(newLeads: number, unreadChats: number, dueTasks: number): Group[] {
+function menu(newLeads: number, unreadChats: number, dueTasks: number, unreadMail: number): Group[] {
   return [
     {
       title: "Главное",
@@ -21,6 +21,7 @@ function menu(newLeads: number, unreadChats: number, dueTasks: number): Group[] 
         { href: "/tasks", label: "Задачи", icon: "tasks", badge: dueTasks },
         { href: "/clients", label: "Клиенты", icon: "clients" },
         { href: "/chats", label: "Чаты", icon: "chat", badge: unreadChats },
+        { href: "/mail", label: "Почта", icon: "mail", badge: unreadMail },
       ],
     },
     {
@@ -124,16 +125,18 @@ export function Sidebar({
   newLeads,
   unreadChats,
   dueTasks,
+  unreadMail,
 }: {
   initialCollapsed: boolean;
   newLeads: number;
   unreadChats: number;
   dueTasks: number;
+  unreadMail: number;
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [drawer, setDrawer] = useState(false);
   const pathname = usePathname();
-  const groups = menu(newLeads, unreadChats, dueTasks);
+  const groups = menu(newLeads, unreadChats, dueTasks, unreadMail);
 
   // Переход по ссылке закрывает мобильное меню
   useEffect(() => setDrawer(false), [pathname]);
@@ -144,9 +147,10 @@ export function Sidebar({
     document.cookie = `${SIDEBAR_COOKIE}=${next ? "collapsed" : "expanded"}; path=/; max-age=31536000; samesite=lax`;
   }
 
-  // Снизу на телефоне помещается пять кнопок: дашборд и задачи остаются в «Меню»
-  const tabs = groups[0].items.filter((t) => t.href !== "/dashboard" && t.href !== "/tasks");
+  // Снизу на телефоне помещается пять кнопок: дашборд, задачи и почта остаются в «Меню»
+  const tabs = groups[0].items.filter((t) => !["/dashboard", "/tasks", "/mail"].includes(t.href));
   const inTabs = tabs.some((t) => isActive(pathname, t.href));
+  const hiddenBadge = groups[0].items.some((t) => !tabs.includes(t) && t.badge);
 
   return (
     <>
@@ -189,9 +193,10 @@ export function Sidebar({
         <button
           type="button"
           onClick={() => setDrawer(true)}
-          className={`flex flex-1 flex-col items-center gap-0.5 py-1 text-[11px] ${!inTabs ? "font-medium text-blue-600" : "text-slate-500"}`}
+          className={`relative flex flex-1 flex-col items-center gap-0.5 py-1 text-[11px] ${!inTabs ? "font-medium text-blue-600" : "text-slate-500"}`}
         >
           <Icon name="menu" size={22} />
+          {hiddenBadge && <span className="absolute top-0.5 left-1/2 ml-2.5 h-2 w-2 rounded-full bg-rose-500" />}
           Меню
         </button>
       </nav>

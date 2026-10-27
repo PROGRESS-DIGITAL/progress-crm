@@ -12,7 +12,7 @@ import { getTochka } from "@/lib/finance/documents";
 export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage() {
-  const [tilda, lastTilda, dadataKey, telegramBot, maxBot, vkGroup, tochka, diadocRefresh, diadocOrg] = await Promise.all([
+  const [tilda, lastTilda, dadataKey, telegramBot, maxBot, vkGroup, tochka, diadocRefresh, diadocOrg, mailboxes] = await Promise.all([
     getTildaSettings(),
     db.webhookLog.findFirst({ where: { source: "tilda", status: "ok" }, orderBy: { createdAt: "desc" } }),
     getDadataKey(),
@@ -22,7 +22,14 @@ export default async function IntegrationsPage() {
     getTochka(),
     getSetting(DIADOC_REFRESH_SETTING),
     getSetting(DIADOC_ORG_SETTING),
+    db.mailAccount.findMany({ select: { email: true }, orderBy: { createdAt: "asc" } }),
   ]);
+  const mail = {
+    href: "/integrations/mail",
+    title: "Почта",
+    status: mailboxes.map((m) => m.email).join(", "),
+    text: "Gmail и Яндекс Почта: входящие и отправленные в разделе «Почта», ответы прямо из CRM.",
+  };
   const finance = [
     {
       href: "/integrations/tochka",
@@ -87,7 +94,7 @@ export default async function IntegrationsPage() {
           </div>
           <p className="mt-2 text-sm text-slate-600">Реквизиты клиента по ИНН: название, КПП, ОГРН, адрес, руководитель.</p>
         </Link>
-        {[...finance, ...messengers.map((m) => ({ ...m, text: `${m.text} Сообщения приходят в «Чаты».` }))].map((m) => (
+        {[mail, ...finance, ...messengers.map((m) => ({ ...m, text: `${m.text} Сообщения приходят в «Чаты».` }))].map((m) => (
           <Link
             key={m.href}
             href={m.href}
