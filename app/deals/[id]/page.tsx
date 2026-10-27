@@ -36,7 +36,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
         </div>
         <ConfirmDeleteButton
           action={deleteDeal.bind(null, deal.id)}
-          message="Удалить сделку? Это действие нельзя отменить."
+          what={`сделку «${deal.title}»`}
+          message="Это действие нельзя отменить."
         />
       </div>
       <div className="rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">

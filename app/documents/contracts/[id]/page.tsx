@@ -41,7 +41,11 @@ export default async function ContractPage({
             {contract.title}
           </p>
         </div>
-        <ConfirmDeleteButton action={deleteContract.bind(null, contract.id)} message="Удалить договор? Это действие нельзя отменить." />
+        <ConfirmDeleteButton
+          action={deleteContract.bind(null, contract.id)}
+          what={`договор № ${contract.number}`}
+          message="Это действие нельзя отменить."
+        />
       </div>
       {gaps.length > 0 && (
         <div className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900 print:hidden">

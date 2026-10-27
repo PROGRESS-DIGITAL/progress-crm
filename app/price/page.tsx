@@ -77,7 +77,8 @@ export default async function PricePage() {
                       <PriceEditor id={p.id} price={p.price} unit={p.unit} />
                       <ConfirmDeleteButton
                         action={deleteProduct.bind(null, p.id)}
-                        message={`Удалить «${p.name}» из прайса? Сделки с этой услугой сохранятся.`}
+                        what={`«${p.name}» из прайса`}
+                        message="Сделки с этой услугой сохранятся."
                         label={`Удалить «${p.name}»`}
                         icon
                       />

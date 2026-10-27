@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useRef } from "react";
+import { useConfirm } from "@/components/confirm-dialog";
 
 export type ActionResult = { error?: string; ok?: string } | undefined;
 
@@ -19,11 +20,24 @@ export function ActionButton({
   confirmText?: string;
 }) {
   const [state, formAction, pending] = useActionState(async () => action(), undefined);
+  const confirm = useConfirm();
+  const form = useRef<HTMLFormElement>(null);
+  const approved = useRef(false);
   return (
     <form
+      ref={form}
       action={formAction}
       onSubmit={(e) => {
-        if (confirmText && !confirm(confirmText)) e.preventDefault();
+        if (!confirmText || approved.current) {
+          approved.current = false;
+          return;
+        }
+        e.preventDefault();
+        confirm({ title: confirmText, ok: label }).then((ok) => {
+          if (!ok) return;
+          approved.current = true;
+          form.current?.requestSubmit();
+        });
       }}
       className="flex flex-wrap items-center gap-2"
     >

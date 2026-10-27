@@ -1,24 +1,47 @@
 "use client";
 
+import { useRef } from "react";
 import { Icon } from "@/components/icons";
+import { useConfirm } from "@/components/confirm-dialog";
 
-// Кнопка удаления с подтверждением; icon — компактная корзина для строк таблиц
+// Кнопка удаления с подтверждением во всплывающем окне.
+// what — что удаляем («сделку «Сайт»»): заголовок будет «Вы точно хотите удалить …?».
+// title — свой вопрос для действий, которые не удаление («Отключить …?»). message — пояснение под вопросом.
+// icon — компактная корзина для строк таблиц
 export function ConfirmDeleteButton({
   action,
+  what,
+  title,
   message,
   label = "Удалить",
   icon = false,
 }: {
   action: () => Promise<void>;
-  message: string;
+  what?: string;
+  title?: string;
+  message?: string;
   label?: string;
   icon?: boolean;
 }) {
+  const confirm = useConfirm();
+  const form = useRef<HTMLFormElement>(null);
+  const approved = useRef(false);
+
   return (
     <form
+      ref={form}
       action={action}
       onSubmit={(e) => {
-        if (!confirm(message)) e.preventDefault();
+        if (approved.current) {
+          approved.current = false;
+          return;
+        }
+        e.preventDefault();
+        confirm({ title: title ?? `Вы точно хотите удалить ${what ?? "это"}?`, text: message }).then((ok) => {
+          if (!ok) return;
+          approved.current = true;
+          form.current?.requestSubmit();
+        });
       }}
     >
       {icon ? (

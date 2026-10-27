@@ -29,7 +29,8 @@ export default async function DadataPage() {
               </span>
               <ConfirmDeleteButton
                 action={deleteDadataKey}
-                message="Удалить ключ DaData? Заполнение по ИНН перестанет работать."
+                what="ключ DaData"
+                message="Заполнение по ИНН перестанет работать."
                 label="Удалить ключ"
               />
             </div>
