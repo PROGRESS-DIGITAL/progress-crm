@@ -71,3 +71,14 @@ export function formatChatTime(d: Date, now = new Date()) {
   }
   return d.toLocaleDateString("ru-RU", { timeZone: TIME_ZONE, day: "numeric", month: "short" });
 }
+
+// Длительность для «Время в CRM»: «2 д 3 ч 05 мин», «3 ч 05 мин», «7 мин»
+export function formatDuration(seconds: number) {
+  const total = Math.max(0, Math.floor(seconds / 60));
+  const d = Math.floor(total / 1440);
+  const h = Math.floor((total % 1440) / 60);
+  const m = total % 60;
+  if (d) return `${d} д ${h} ч ${String(m).padStart(2, "0")} мин`;
+  if (h) return `${h} ч ${String(m).padStart(2, "0")} мин`;
+  return `${m} мин`;
+}

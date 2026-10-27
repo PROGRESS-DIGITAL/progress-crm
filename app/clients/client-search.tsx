@@ -11,8 +11,14 @@ export function ClientSearch({ initial }: { initial: string }) {
   const [value, setValue] = useState(initial);
   const [pending, startTransition] = useTransition();
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => () => clearTimeout(timer.current), []);
+
+  // Искали из шапки — поле на странице показывает тот же запрос
+  useEffect(() => {
+    if (document.activeElement !== input.current) setValue(initial);
+  }, [initial]);
 
   function search(q: string) {
     setValue(q);
@@ -26,6 +32,7 @@ export function ClientSearch({ initial }: { initial: string }) {
   return (
     <form role="search" onSubmit={(e) => e.preventDefault()} className="relative min-w-0 flex-1 sm:w-72 sm:flex-none">
       <input
+        ref={input}
         type="search"
         name="q"
         aria-label="Поиск клиентов"

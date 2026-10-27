@@ -1,8 +1,12 @@
+import os from "node:os";
+import { Suspense } from "react";
 import Link from "next/link";
 import { getOwner } from "@/lib/profile";
 import { Avatar } from "@/components/avatar";
 import { Icon } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { HeaderClock } from "@/components/header-clock";
+import { HeaderSearch } from "@/components/header-search";
 import type { Theme } from "@/components/theme-cookie";
 
 function greeting(now: Date) {
@@ -13,7 +17,7 @@ function greeting(now: Date) {
   return "Добрый вечер";
 }
 
-// Верхняя панель: приветствие, поиск клиентов, новые лиды и карточка владельца
+// Верхняя панель: приветствие, часы, поиск клиентов, новые лиды и карточка владельца
 export async function TopBar({ newLeads, theme }: { newLeads: number; theme: Theme }) {
   const owner = await getOwner();
   const firstName = owner.name.split(/\s+/)[0];
@@ -23,21 +27,19 @@ export async function TopBar({ newLeads, theme }: { newLeads: number; theme: The
         <p className="truncate text-base font-semibold tracking-tight sm:text-lg">
           {greeting(new Date())}, {firstName}!
         </p>
-        <p className="hidden text-xs text-slate-500 sm:block">Сделки, клиенты и выручка PROGRESS Digital</p>
+        <p className="hidden truncate text-xs text-slate-500 sm:block">Сделки, клиенты и выручка PROGRESS Digital</p>
       </div>
       <ThemeToggle initial={theme} />
 
-      <form action="/clients" className="relative ml-auto hidden w-full max-w-sm md:block" role="search">
-        <Icon name="search" size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-400" />
-        <input
-          name="q"
-          type="search"
-          placeholder="Найти клиента по названию, ИНН, телефону"
-          className="h-11 w-full rounded-2xl border border-transparent bg-slate-100 pr-4 pl-10 text-sm outline-none placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
-        />
-      </form>
+      <div className="ml-auto flex shrink-0 items-center gap-5">
+        {/* os.uptime — сколько работает компьютер, на котором запущена CRM */}
+        <HeaderClock serverNow={Date.now()} uptime={Math.round(os.uptime())} />
+        <Suspense>
+          <HeaderSearch />
+        </Suspense>
+      </div>
 
-      <div className="ml-auto flex shrink-0 items-center gap-2 md:ml-0">
+      <div className="flex shrink-0 items-center gap-2">
         <Link
           href="/leads"
           title={newLeads ? `Новых лидов: ${newLeads}` : "Лиды"}
