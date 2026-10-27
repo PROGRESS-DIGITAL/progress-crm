@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { REMIND_OPTIONS } from "@/lib/calendar";
 import { useConfirm } from "@/components/confirm-dialog";
+import { KindMark } from "@/components/event-kind";
 import { deleteEvent, saveEvent, type EventInput } from "./actions";
 import type { Options } from "./types";
 
@@ -83,13 +84,14 @@ export function EventEditor({
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex rounded-xl bg-slate-100 p-1 text-sm">
-            {(["MEETING", "TASK"] as const).map((k) => (
+            {(["TASK", "MEETING"] as const).map((k) => (
               <button
                 key={k}
                 type="button"
                 onClick={() => set("kind", k)}
-                className={`rounded-lg px-3 py-1.5 font-medium ${d.kind === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-medium ${d.kind === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
               >
+                <KindMark kind={k} />
                 {k === "MEETING" ? "Встреча" : "Задача"}
               </button>
             ))}

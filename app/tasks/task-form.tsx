@@ -187,7 +187,8 @@ export function TaskForm({
             Выполнена
           </label>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          {/* Поля друг под другом: колонка справа узкая, рядом время не помещается */}
+          <div className="mt-4 grid gap-3">
             <label className={label}>
               {d.allDay ? "Начало" : "Дата"}
               <input
@@ -204,16 +205,16 @@ export function TaskForm({
                 <input type="date" value={d.endDate} min={d.date} onChange={(e) => set("endDate", e.target.value)} className={field} required />
               </label>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
+              <>
                 <label className={label}>
                   С
-                  <input type="time" step={300} value={d.startTime} onChange={(e) => set("startTime", e.target.value)} className={`${field} px-2`} required />
+                  <input type="time" step={300} value={d.startTime} onChange={(e) => set("startTime", e.target.value)} className={field} required />
                 </label>
                 <label className={label}>
                   До
-                  <input type="time" step={300} value={d.endTime} onChange={(e) => set("endTime", e.target.value)} className={`${field} px-2`} required />
+                  <input type="time" step={300} value={d.endTime} onChange={(e) => set("endTime", e.target.value)} className={field} required />
                 </label>
-              </div>
+              </>
             )}
           </div>
           <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
