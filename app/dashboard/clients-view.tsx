@@ -43,9 +43,12 @@ function Tile({
   tone: string;
 }) {
   return (
-    <div className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card">
+    <div
+      className="tile-glow rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card"
+      style={{ "--glow": `var(--color-${tone.slice(3)})` } as React.CSSProperties}
+    >
       <div className="flex items-center gap-3">
-        <span className={`flex h-10 w-10 items-center justify-center rounded-full text-white ${tone}`}>
+        <span className={`tile-icon flex h-10 w-10 items-center justify-center rounded-full text-white ${tone}`}>
           <Icon name={icon} size={18} />
         </span>
         <p className="text-sm font-medium text-slate-700">{label}</p>

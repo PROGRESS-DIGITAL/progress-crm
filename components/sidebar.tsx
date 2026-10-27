@@ -50,7 +50,7 @@ function isActive(pathname: string, href: string) {
 function Logo({ withName, onClick, title }: { withName: boolean; onClick?: () => void; title?: string }) {
   return (
     <button type="button" onClick={onClick} className="flex items-center gap-2.5" title={title} aria-label={title ?? "PROGRESSCRM"}>
-      <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
+      <span className="flex h-10 w-10 items-center justify-center logo-mark rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-sm">
         <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="5.4" strokeLinecap="square" strokeLinejoin="miter" aria-hidden>
           <path d="M8.5 5l7 7-7 7" />
         </svg>

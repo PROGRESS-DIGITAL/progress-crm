@@ -88,6 +88,18 @@ export async function updateProduct(id: string, _prev: FormState, formData: Form
   return { saved: true };
 }
 
+// Новый порядок услуг в разделе после перетаскивания
+export async function reorderProducts(category: string, ids: string[]): Promise<{ error?: string }> {
+  const current = await db.product.findMany({ where: { category }, select: { id: true } });
+  const known = new Set(current.map((p) => p.id));
+  if (ids.length !== known.size || new Set(ids).size !== ids.length || ids.some((id) => !known.has(id))) {
+    return { error: "Прайс изменился, обновите страницу" };
+  }
+  await db.$transaction(ids.map((id, i) => db.product.update({ where: { id }, data: { sortOrder: (i + 1) * 10 } })));
+  revalidatePrice();
+  return {};
+}
+
 // Сделки с этой услугой остаются: у них сохраняются сумма и направление
 export async function deleteProduct(id: string) {
   await db.product.delete({ where: { id } });
