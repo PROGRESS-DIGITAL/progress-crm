@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { netFetch } from "@/lib/net";
+import { normalizePhone } from "./phone";
 
 // Поиск компании по ИНН через DaData: https://dadata.ru/api/find-party/
 const FIND_PARTY_URL =
@@ -56,7 +57,7 @@ export function partyFromSuggestion(s: Suggestion): PartyInfo | null {
     ogrn: d.ogrn || null,
     address: d.address?.value || d.address?.unrestricted_value || null,
     director,
-    phone: d.phones?.[0]?.value || null,
+    phone: d.phones?.[0]?.value ? normalizePhone(d.phones[0].value) || null : null,
     email: d.emails?.[0]?.value || null,
     inactive: !!d.state?.status && d.state.status !== "ACTIVE",
     individual: d.type === "INDIVIDUAL",

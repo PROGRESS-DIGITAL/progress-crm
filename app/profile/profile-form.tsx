@@ -6,6 +6,7 @@ import { AvatarCropper } from "@/components/avatar-cropper";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { saveProfile } from "./actions";
+import { PhoneInput } from "@/components/phone-input";
 
 export const MESSENGERS = [
   { name: "telegram", label: "Telegram", placeholder: "@username" },
@@ -123,7 +124,7 @@ export function ProfileForm({ initial }: { initial: Profile }) {
         <input name="position" defaultValue={v("position")} className={inputClass} />
       </Field>
       <Field label="Телефон" error={err.phone}>
-        <input name="phone" type="tel" defaultValue={v("phone")} className={inputClass} />
+        <PhoneInput defaultValue={v("phone")} className={inputClass} />
       </Field>
       <Field label="Email" error={err.email}>
         <input name="email" type="email" defaultValue={v("email")} className={inputClass} />

@@ -32,7 +32,7 @@ test("разбирает стандартные поля формы", () => {
 test("понимает русские названия полей и форму без имени", () => {
   const lead = parseTildaLead({ "Имя": "Анна", "Телефон": "89001112233", formid: "form7" });
   assert.equal(lead.name, "Анна");
-  assert.equal(lead.phone, "89001112233");
+  assert.equal(lead.phone, "+7 (900) 111-22-33");
   assert.equal(lead.formName, "form7");
 });
 

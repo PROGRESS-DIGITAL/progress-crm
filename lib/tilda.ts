@@ -1,4 +1,5 @@
 import type { Prisma } from "@prisma/client";
+import { normalizePhone } from "./phone";
 
 // Поля лида, которые заполняются из формы Тильды. Поля формы называются так, как их назвали
 // в редакторе, поэтому для каждого поля CRM хранится список подходящих названий
@@ -101,7 +102,7 @@ export function parseTildaLead(fields: Record<string, string>, fieldMap: TildaFi
 
   const lead: TildaLead = {
     name: pick(lower, fieldMap.name),
-    phone: pick(lower, fieldMap.phone),
+    phone: normalizePhone(pick(lower, fieldMap.phone) ?? "") || null,
     email: pick(lower, fieldMap.email),
     companyName: pick(lower, fieldMap.companyName),
     message: pick(lower, fieldMap.message),

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizePhone } from "./phone";
 
 export type FormState =
   | {
@@ -17,6 +18,9 @@ export const optionalText = z
   .trim()
   .transform((v) => (v === "" ? null : v))
   .nullable();
+
+// Телефон сохраняется в едином виде +7 (968) 111-11-11, даже если пришёл без маски
+export const optionalPhone = optionalText.transform((v) => (v ? normalizePhone(v) : null));
 
 export const optionalEmail = optionalText.refine(
   (v) => v === null || z.string().email().safeParse(v).success,

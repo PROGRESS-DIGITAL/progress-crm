@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { findBankByBic, findPartyByInn, getDadataKey, type BankInfo, type PartyInfo } from "@/lib/dadata";
-import { invalid, optionalEmail, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
+import { invalid, optionalEmail, optionalPhone, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 import { isSituation } from "@/lib/sales-map";
 import { findDuplicate, mergeCompanies, mergeFields } from "@/lib/company-merge";
 
@@ -22,7 +22,7 @@ const companySchema = z.object({
   ogrn: optionalText.refine((v) => v === null || /^\d{13}(\d{2})?$/.test(v), "ОГРН — 13 или 15 цифр"),
   director: optionalText,
   website: optionalText,
-  phone: optionalText,
+  phone: optionalPhone,
   email: optionalEmail,
   address: optionalText,
   bankAccount: digits(20, "Расчётный счёт — 20 цифр"),
@@ -54,7 +54,7 @@ export async function lookupBic(bic: string): Promise<{ bank?: BankInfo; error?:
 const contactSchema = z.object({
   fullName: z.string().trim().min(1, "Укажите имя"),
   position: optionalText,
-  phone: optionalText,
+  phone: optionalPhone,
   email: optionalEmail,
   notes: optionalText,
 });
