@@ -92,6 +92,15 @@ export async function deleteContract(id: string) {
   redirect("/documents");
 }
 
+// Удаление из списка договоров: страница остаётся на месте
+export async function deleteContractFromList(id: string) {
+  const contract = await db.contract.findUnique({ where: { id }, select: { dealId: true } });
+  if (!contract) return;
+  await db.contract.delete({ where: { id } });
+  revalidatePath("/documents");
+  if (contract.dealId) revalidatePath(`/deals/${contract.dealId}`);
+}
+
 const digits = (n: number, message: string) =>
   optionalText
     .transform((v) => v?.replace(/\s/g, "") || null)

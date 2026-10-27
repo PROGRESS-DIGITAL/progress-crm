@@ -3,8 +3,9 @@
 import { useState } from "react";
 import { ProductForm, type ProductValues } from "./product-form";
 import { updateProduct } from "./actions";
+import { useSortHandle } from "./sortable";
 
-// Строка прайса: карандаш открывает правку всей услуги на месте строки
+// Строка прайса: ручка меняет порядок, карандаш открывает правку всей услуги на месте строки
 export function ProductRow({
   id,
   name,
@@ -19,10 +20,11 @@ export function ProductRow({
   children: React.ReactNode;
 }) {
   const [editing, setEditing] = useState(false);
+  const sort = useSortHandle(id);
 
   if (editing) {
     return (
-      <li data-testid={`product-${name}`} className="bg-blue-50/40 px-4 py-4">
+      <div data-testid={`product-${name}`} className="bg-blue-50/40 px-4 py-4">
         <ProductForm
           categories={categories}
           action={updateProduct.bind(null, id)}
@@ -30,11 +32,30 @@ export function ProductRow({
           submitLabel="Сохранить"
           onDone={() => setEditing(false)}
         />
-      </li>
+      </div>
     );
   }
   return (
-    <li data-testid={`product-${name}`} className="flex items-center gap-4 px-4 py-3">
+    <div data-testid={`product-${name}`} className="flex items-center gap-2 px-4 py-3 sm:gap-4">
+      {sort && (
+        <button
+          type="button"
+          onPointerDown={sort.onPointerDown}
+          onKeyDown={sort.onKeyDown}
+          title="Перетащите, чтобы поменять порядок (или стрелки ↑↓)"
+          aria-label={`Переместить «${name}»`}
+          className={`shrink-0 touch-none rounded-md p-1 text-slate-400 hover:bg-slate-100 hover:text-blue-700 ${sort.dragging ? "cursor-grabbing text-blue-700" : "cursor-grab"}`}
+        >
+          <svg viewBox="0 0 20 20" fill="currentColor" className="h-4 w-4" aria-hidden>
+            <circle cx="7" cy="4.5" r="1.5" />
+            <circle cx="13" cy="4.5" r="1.5" />
+            <circle cx="7" cy="10" r="1.5" />
+            <circle cx="13" cy="10" r="1.5" />
+            <circle cx="7" cy="15.5" r="1.5" />
+            <circle cx="13" cy="15.5" r="1.5" />
+          </svg>
+        </button>
+      )}
       <button
         type="button"
         onClick={() => setEditing(true)}
@@ -47,6 +68,6 @@ export function ProductRow({
         </svg>
       </button>
       {children}
-    </li>
+    </div>
   );
 }

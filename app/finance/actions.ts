@@ -33,6 +33,14 @@ export async function issueDocumentAction(dealId: string, kind: DocumentKind): P
   }
 }
 
+// Удаляет счёт или акт только из CRM: в Точке и Диадоке документ остаётся. Поступления по счёту сохраняются без привязки
+export async function deleteDocumentAction(id: string) {
+  const doc = await db.document.findUnique({ where: { id }, select: { dealId: true } });
+  if (!doc) return;
+  await db.document.delete({ where: { id } });
+  revalidateFinance(doc.dealId);
+}
+
 export async function syncPaymentsAction(): Promise<ActionResult> {
   try {
     const r = await syncPayments(30);

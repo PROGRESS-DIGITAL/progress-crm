@@ -2,6 +2,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { ensureDefaultTemplate, getExecutor } from "@/lib/contracts/store";
 import { shortDate } from "@/lib/contracts/fields";
+import { ConfirmDeleteButton } from "@/components/confirm-delete";
+import { deleteContractFromList } from "./actions";
 import { NewTemplateForm } from "./new-template-form";
 import { ExecutorForm } from "./executor-form";
 
@@ -83,6 +85,9 @@ async function Contracts() {
             <th className="px-4 py-3 font-medium">Клиент</th>
             <th className="px-4 py-3 font-medium">Сделка</th>
             <th className="px-4 py-3 font-medium">Шаблон</th>
+            <th className="w-12 px-2 py-3">
+              <span className="sr-only">Удалить</span>
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -112,6 +117,14 @@ async function Contracts() {
                 )}
               </td>
               <td className="px-4 py-3 text-slate-600">{c.title}</td>
+              <td className="px-2 py-1.5">
+                <ConfirmDeleteButton
+                  icon
+                  action={deleteContractFromList.bind(null, c.id)}
+                  label={`Удалить договор № ${c.number}`}
+                  message={`Удалить договор № ${c.number} от ${shortDate(c.date)}? Это нельзя отменить.`}
+                />
+              </td>
             </tr>
           ))}
         </tbody>

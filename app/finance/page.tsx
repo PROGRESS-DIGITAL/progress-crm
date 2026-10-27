@@ -4,7 +4,8 @@ import { STATUS_BADGE } from "@/components/deal-documents";
 import { db } from "@/lib/db";
 import { docTitle, getTochka } from "@/lib/finance/documents";
 import { formatDateTime, formatRub } from "@/lib/format";
-import { syncPaymentsAction } from "./actions";
+import { ConfirmDeleteButton } from "@/components/confirm-delete";
+import { deleteDocumentAction, syncPaymentsAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
@@ -90,6 +91,9 @@ async function Documents({ kind }: { kind: "INVOICE" | "ACT" }) {
             <th className="px-4 py-3 font-medium">Сделка</th>
             <th className="px-4 py-3 text-right font-medium">Сумма</th>
             <th className="px-4 py-3 font-medium">{kind === "INVOICE" ? "Оплата" : "Диадок"}</th>
+            <th className="w-12 px-2 py-3">
+              <span className="sr-only">Удалить</span>
+            </th>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-100">
@@ -120,6 +124,14 @@ async function Documents({ kind }: { kind: "INVOICE" | "ACT" }) {
                 ) : (
                   <span className="text-slate-600">{d.diadocAt ? `Черновик с ${formatDateTime(d.diadocAt)}` : "—"}</span>
                 )}
+              </td>
+              <td className="px-2 py-1.5">
+                <ConfirmDeleteButton
+                  icon
+                  action={deleteDocumentAction.bind(null, d.id)}
+                  label={`Удалить ${docTitle(d).toLowerCase()}`}
+                  message={`Удалить ${docTitle(d).toLowerCase()} из CRM? В Точке${kind === "ACT" ? " и Диадоке" : ""} он останется.`}
+                />
               </td>
             </tr>
           ))}
