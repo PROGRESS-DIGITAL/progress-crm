@@ -28,7 +28,7 @@ const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 const href = (view: View, date: string) => `/calendar?view=${view}&date=${date}`;
 const weekday = (key: string) => WEEKDAYS[(new Date(`${key}T00:00:00Z`).getUTCDay() + 6) % 7];
 
-// Встреча — голубая плашка с полоской слева и иконкой людей, задача — жёлтая карточка с рамкой и чекбоксом.
+// Встреча — голубая плашка с полоской слева и иконкой людей, задача — жёлтая карточка с рамкой и кружком-чекбоксом.
 // Отмеченные «Выполнена» и «Состоялась» серые
 function tone(e: CalEvent) {
   if (e.kind === "MEETING") return e.done ? "border-l-4 border-slate-300 bg-slate-100 text-slate-500" : "border-l-4 border-blue-500 bg-blue-50 text-blue-950";
@@ -397,7 +397,7 @@ function TimeGrid({
                                 ev.stopPropagation();
                                 onToggle(e.id);
                               }}
-                              className={`mt-px flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-[4px] border-[1.5px] ${
+                              className={`mt-px flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-[1.5px] ${
                                 e.done ? "border-slate-400 bg-slate-400 text-white" : "border-amber-500 bg-white hover:bg-amber-100"
                               }`}
                             >
