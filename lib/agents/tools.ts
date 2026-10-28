@@ -37,14 +37,14 @@ function range(input: { from?: string; to?: string }) {
 const STATUS_KIND: Record<string, StageKind> = { open: "OPEN", won: "WON", lost: "LOST" };
 const KIND_LABEL: Record<StageKind, string> = { OPEN: "в работе", WON: "оплачена", LOST: "проиграна" };
 
-type Tool = {
+export type Tool = {
   name: string;
   description: string;
   schema: z.ZodObject;
   run: (input: never) => Promise<unknown>;
 };
 
-function tool<S extends z.ZodObject>(t: { name: string; description: string; schema: S; run: (input: z.output<S>) => Promise<unknown> }): Tool {
+export function tool<S extends z.ZodObject>(t: { name: string; description: string; schema: S; run: (input: z.output<S>) => Promise<unknown> }): Tool {
   return t as unknown as Tool;
 }
 
@@ -624,7 +624,7 @@ const getFinmodel = tool({
   },
 });
 
-const priceList = tool({
+export const priceList = tool({
   name: "price_list",
   description: "Прайс студии: услуги с ценами и категориями. Можно искать по названию.",
   schema: z.object({ query: z.string().max(100).optional() }),

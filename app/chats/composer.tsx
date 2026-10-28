@@ -1,14 +1,16 @@
 "use client";
 
-import { useActionState, useEffect, useRef } from "react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/icons";
 import { useEnterToSend } from "@/components/enter-to-send";
-import { sendChatMessage } from "./actions";
+import { draftChatReply, sendChatMessage } from "./actions";
 
-export function Composer({ conversationId, disabled }: { conversationId: string; disabled?: string }) {
+export function Composer({ conversationId, disabled, aiDraft }: { conversationId: string; disabled?: string; aiDraft?: boolean }) {
   const [state, formAction, pending] = useActionState(sendChatMessage.bind(null, conversationId), undefined);
   const formRef = useRef<HTMLFormElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
+  const [drafting, startDraft] = useTransition();
+  const [draftError, setDraftError] = useState<string | null>(null);
   const enter = useEnterToSend(textRef, () => {
     if (textRef.current?.value.trim()) formRef.current?.requestSubmit();
   });
@@ -20,10 +22,40 @@ export function Composer({ conversationId, disabled }: { conversationId: string;
     }
   }, [state?.sentAt]);
 
+  // Черновик от AI агента: подставляется в поле, менеджер правит и отправляет сам
+  function draft() {
+    setDraftError(null);
+    startDraft(async () => {
+      const r = await draftChatReply(conversationId);
+      if (!r.ok) return setDraftError(r.error);
+      const field = textRef.current;
+      if (!field) return;
+      field.value = r.text;
+      field.focus();
+      field.setSelectionRange(r.text.length, r.text.length);
+      if (r.handoff) setDraftError(`Агент считает, что нужен менеджер: ${r.handoff}`);
+    });
+  }
+
+  const error = state?.error || disabled || draftError;
+
   return (
     <form ref={formRef} action={formAction} className="border-t border-slate-100 p-3">
-      {(state?.error || disabled) && <p className="mb-2 text-xs text-rose-600">{state?.error || disabled}</p>}
+      {error && <p className="mb-2 text-xs text-rose-600">{error}</p>}
       <div className="flex items-end gap-2">
+        {aiDraft && !disabled && (
+          <button
+            type="button"
+            onClick={draft}
+            disabled={drafting}
+            aria-label="Ответ AI"
+            title="Черновик ответа от AI агента"
+            className="flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+          >
+            <Icon name="bot" size={18} className={drafting ? "animate-pulse" : ""} />
+            <span className="hidden sm:inline">{drafting ? "Пишу…" : "Ответ AI"}</span>
+          </button>
+        )}
         <textarea
           ref={textRef}
           name="text"

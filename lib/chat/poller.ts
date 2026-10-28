@@ -101,6 +101,10 @@ export function startPolling() {
   loop("Max", pollMaxOnce);
   loop("VK", pollVkOnce);
   every("Напоминания", 60_000, sendDueReminders);
+  every("AI в чатах", 10_000, async () => {
+    const { answerPendingChats } = await import("@/lib/agents/client-chat");
+    await answerPendingChats();
+  });
   every("Точка", 15 * 60_000, async () => {
     const { loadPaymentHistory, syncPayments } = await import("@/lib/finance/documents");
     await syncPayments(14);

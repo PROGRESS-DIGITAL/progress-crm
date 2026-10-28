@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import type { Agent } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
-import { ALL_SCOPES, SCOPES, runTool, scopeOfTool, toolDefinition, toolsFor } from "@/lib/agents/tools";
+import { ALL_SCOPES, SCOPES, runTool, scopeOfTool, toolDefinition, toolsFor, type Tool } from "@/lib/agents/tools";
 
 export const CLAUDE_KEY_SETTING = "claude.apiKey";
 export const CLAUDE_URL_SETTING = "claude.baseUrl";
@@ -72,63 +72,89 @@ const textOf = (content: Anthropic.Beta.BetaContentBlock[]) =>
     .join("\n\n")
     .trim();
 
-// Один вопрос владельца: модель ходит за данными, пока не соберёт ответ. История передаётся как есть,
-// без правок, а новые шаги возвращаются целиком: их сохраняют только если ответ получен
+type Loop = {
+  system: string;
+  tools: Tool[];
+  messages: Anthropic.Beta.BetaMessageParam[];
+  effort: "low" | "medium";
+  maxSteps: number;
+};
+
+type LoopResult = { steps: Omit<Step, "text" | "sources">[]; final: Anthropic.Beta.BetaMessage; used: Set<string> };
+
+// Цикл tool use: модель запрашивает данные, пока не соберёт ответ. На последнем шаге инструменты
+// больше не даются, и модель отвечает тем, что уже собрала. Ошибки API пробрасываются наверх
+export async function runAgentLoop(client: Anthropic, loop: Loop): Promise<LoopResult> {
+  const messages = [...loop.messages];
+  const steps: LoopResult["steps"] = [];
+  const used = new Set<string>();
+  for (let step = 0; ; step++) {
+    const response = await client.beta.messages.create({
+      model: CLAUDE_MODEL,
+      max_tokens: 16000,
+      betas: ["server-side-fallback-2026-07-01"],
+      fallbacks: "default",
+      thinking: { type: "adaptive" },
+      output_config: { effort: loop.effort },
+      cache_control: { type: "ephemeral" },
+      system: [
+        { type: "text", text: loop.system },
+        { type: "text", text: nowLine() },
+      ],
+      tools: loop.tools.map(toolDefinition),
+      ...(step >= loop.maxSteps ? { tool_choice: { type: "none" as const } } : {}),
+      messages,
+    });
+
+    const toolUses = response.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
+    messages.push({ role: "assistant", content: response.content });
+    steps.push({ role: "assistant", content: response.content });
+    if (response.stop_reason !== "tool_use" || !toolUses.length) return { steps, final: response, used };
+
+    const results = await Promise.all(
+      toolUses.map(async (b) => {
+        const r = await runTool(loop.tools, b.name, b.input);
+        const scope = scopeOfTool(b.name);
+        if (r.ok && scope) used.add(scope);
+        return { type: "tool_result" as const, tool_use_id: b.id, content: r.content, ...(r.ok ? {} : { is_error: true }) };
+      }),
+    );
+    // Все результаты одним сообщением: так модель продолжает запрашивать данные параллельно
+    messages.push({ role: "user", content: results });
+    steps.push({ role: "user", content: results });
+  }
+}
+
+export function finalText(m: Anthropic.Beta.BetaMessage) {
+  return m.stop_reason === "refusal" ? null : textOf(m.content) || null;
+}
+
+// Один вопрос владельца. История передаётся как есть, без правок, а новые шаги возвращаются целиком:
+// их сохраняют только если ответ получен
 export async function askAgent(agent: Agent, history: Anthropic.Beta.BetaMessageParam[], question: string): Promise<AskResult> {
   const client = await getClaude();
   if (!client) return { ok: false, error: "Не подключён Claude: добавьте ключ в «Интеграциях»." };
 
-  const tools = toolsFor(agent.scopes);
-  const steps: Step[] = [{ role: "user", content: [{ type: "text", text: question }], text: question, sources: [] }];
-  const used = new Set<string>();
-  const messages: Anthropic.Beta.BetaMessageParam[] = [...history, { role: "user", content: [{ type: "text", text: question }] }];
-
+  const asked: Anthropic.Beta.BetaMessageParam = { role: "user", content: [{ type: "text", text: question }] };
   try {
-    for (let step = 0; ; step++) {
-      const last = step >= MAX_STEPS;
-      const response = await client.beta.messages.create({
-        model: CLAUDE_MODEL,
-        max_tokens: 16000,
-        betas: ["server-side-fallback-2026-07-01"],
-        fallbacks: "default",
-        thinking: { type: "adaptive" },
-        output_config: { effort: "medium" },
-        cache_control: { type: "ephemeral" },
-        system: [
-          { type: "text", text: systemPrompt(agent) },
-          { type: "text", text: nowLine() },
-        ],
-        tools: tools.map(toolDefinition),
-        // На последнем шаге данные больше не запрашиваются: агент отвечает тем, что уже собрал
-        ...(last ? { tool_choice: { type: "none" as const } } : {}),
-        messages,
-      });
-
-      const toolUses = response.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
-      messages.push({ role: "assistant", content: response.content });
-
-      if (response.stop_reason !== "tool_use" || !toolUses.length) {
-        const text =
-          response.stop_reason === "refusal"
-            ? "На этот вопрос я ответить не могу. Попробуйте переформулировать."
-            : textOf(response.content) || "Не получилось собрать ответ. Попробуйте уточнить вопрос.";
-        steps.push({ role: "assistant", content: response.content, text, sources: [...used] });
-        return { ok: true, steps };
-      }
-
-      steps.push({ role: "assistant", content: response.content, text: null, sources: [] });
-      const results = await Promise.all(
-        toolUses.map(async (b) => {
-          const r = await runTool(tools, b.name, b.input);
-          const scope = scopeOfTool(b.name);
-          if (r.ok && scope) used.add(scope);
-          return { type: "tool_result" as const, tool_use_id: b.id, content: r.content, ...(r.ok ? {} : { is_error: true }) };
-        }),
-      );
-      // Все результаты одним сообщением: так модель продолжает запрашивать данные параллельно
-      messages.push({ role: "user", content: results });
-      steps.push({ role: "user", content: results, text: null, sources: [] });
-    }
+    const r = await runAgentLoop(client, {
+      system: systemPrompt(agent),
+      tools: toolsFor(agent.scopes),
+      messages: [...history, asked],
+      effort: "medium",
+      maxSteps: MAX_STEPS,
+    });
+    const text =
+      r.final.stop_reason === "refusal"
+        ? "На этот вопрос я ответить не могу. Попробуйте переформулировать."
+        : (finalText(r.final) ?? "Не получилось собрать ответ. Попробуйте уточнить вопрос.");
+    const steps: Step[] = [
+      { role: "user", content: asked.content as Anthropic.Beta.BetaContentBlockParam[], text: question, sources: [] },
+      ...r.steps.map((s, i) =>
+        i === r.steps.length - 1 ? { ...s, text, sources: [...r.used] } : { ...s, text: null, sources: [] },
+      ),
+    ];
+    return { ok: true, steps };
   } catch (e) {
     return { ok: false, error: describeError(e) };
   }

@@ -1,6 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseMarkdown } from "../components/markdown-lite";
+import { aiOn, plainText } from "../lib/agents/client-chat";
 import { ALL_SCOPES, runTool, scopeOfTool, toolDefinition, toolsFor } from "../lib/agents/tools";
 
 test("агент получает инструменты только открытых разделов", () => {
@@ -46,4 +47,19 @@ test("markdown ответа: абзацы, списки и таблица", () =
   const table = blocks[2] as { head: string[]; rows: string[][] };
   assert.deepEqual(table.head, ["Месяц", "Банк"]);
   assert.deepEqual(table.rows[1], ["Октябрь", "1 240 000 ₽"]);
+});
+
+test("AI в чатах: включён в переписке, если выбран агент и нет ручного запрета", () => {
+  const on = { agentId: "a1", defaultOn: true };
+  const off = { agentId: "a1", defaultOn: false };
+  assert.equal(aiOn({ aiEnabled: null }, on), true);
+  assert.equal(aiOn({ aiEnabled: null }, off), false);
+  assert.equal(aiOn({ aiEnabled: true }, off), true);
+  assert.equal(aiOn({ aiEnabled: false }, on), false);
+  assert.equal(aiOn({ aiEnabled: true }, { agentId: null, defaultOn: true }), false);
+});
+
+test("AI в чатах: в мессенджер уходит текст без markdown", () => {
+  assert.equal(plainText("## Цены\nСайт стоит **от 90 000 ₽**.  "), "Цены\nСайт стоит от 90 000 ₽.");
+  assert.equal(plainText("x".repeat(5000)).length, 4000);
 });
