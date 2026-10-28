@@ -35,7 +35,7 @@ export default async function EditAgentPage({ params }: { params: Promise<{ id: 
       <AgentForm
         id={agent.id}
         isDefault={agent.isDefault}
-        initial={{ name: agent.name, description: agent.description ?? "", instructions: agent.instructions, scopes: agent.scopes }}
+        initial={{ name: agent.name, description: agent.description ?? "", website: agent.website ?? "", instructions: agent.instructions, scopes: agent.scopes }}
         scopes={SCOPES.map(({ key, label, hint }) => ({ key, label, hint }))}
       />
     </div>

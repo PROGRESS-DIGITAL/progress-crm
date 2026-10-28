@@ -515,8 +515,10 @@ model Agent {
   id           String      @id @default(cuid())
   name         String
   description  String?
+  // Сайт, который агент открывает по своим инструкциям или по вопросу
+  website      String?
   instructions String      @default("")
-  // Ключи разделов из lib/agents/tools.ts: money, sales, clients, work, comms, plan
+  // Ключи разделов из lib/agents/tools.ts: money, sales, clients, work, comms, plan, edit
   scopes       String[]
   isDefault    Boolean     @default(false)
   chats        AgentChat[]

@@ -6,7 +6,7 @@ import { Field, inputClass, primaryButton } from "@/components/field";
 import { saveAgent } from "./actions";
 
 type Scope = { key: string; label: string; hint: string };
-type Values = { name: string; description: string; instructions: string; scopes: string[] };
+type Values = { name: string; description: string; website: string; instructions: string; scopes: string[] };
 
 // Заготовки, с которых удобно начать: дальше всё правится
 const TEMPLATES: (Values & { title: string })[] = [
@@ -14,6 +14,7 @@ const TEMPLATES: (Values & { title: string })[] = [
     title: "Финансовый аналитик",
     name: "Финансовый аналитик",
     description: "Следит за выручкой и планом",
+    website: "",
     instructions:
       "Сравнивай факт с финмоделью: какой сценарий месяца уже взят и сколько не хватает до следующего. " +
       "Показывай динамику к прошлому месяцу и году. Обращай внимание на неоплаченные счета и поступления без счёта.",
@@ -23,6 +24,7 @@ const TEMPLATES: (Values & { title: string })[] = [
     title: "Менеджер по продажам",
     name: "Менеджер по продажам",
     description: "Помогает вести сделки и не терять клиентов",
+    website: "",
     instructions:
       "Помогай вести воронку: какие сделки зависли, у каких прошла ожидаемая дата оплаты, кому стоит написать или позвонить. " +
       "Предлагай следующий шаг по каждой сделке. Учитывай задачи и последнюю переписку с клиентом.",
@@ -32,6 +34,7 @@ const TEMPLATES: (Values & { title: string })[] = [
     title: "Сводка по клиенту",
     name: "Сводка по клиенту",
     description: "Собирает всё о клиенте перед встречей",
+    website: "",
     instructions:
       "Когда называют клиента, собери короткую сводку: кто это, какие были сделки и на какую сумму, что оплачено и что нет, " +
       "о чём последняя переписка и какие открыты задачи. В конце предложи, что обсудить на встрече.",
@@ -55,7 +58,7 @@ export function AgentForm({ id, initial, scopes, isDefault }: { id: string | nul
               <button
                 key={title}
                 type="button"
-                onClick={() => setValues(t)}
+                onClick={() => setValues({ ...t, website: values.website })}
                 className={`rounded-xl border px-3 py-2.5 text-left text-sm ${
                   values.name === t.name ? "border-blue-500 bg-blue-50 text-blue-800" : "border-slate-200 hover:border-blue-300"
                 }`}
@@ -69,7 +72,7 @@ export function AgentForm({ id, initial, scopes, isDefault }: { id: string | nul
       )}
 
       <section className="flex flex-col gap-4 rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Название">
             <input name="name" value={values.name} onChange={(e) => set({ name: e.target.value })} maxLength={60} required className={inputClass} />
           </Field>
@@ -83,7 +86,26 @@ export function AgentForm({ id, initial, scopes, isDefault }: { id: string | nul
               className={inputClass}
             />
           </Field>
+          <Field label="Сайт">
+            <input
+              name="website"
+              type="text"
+              inputMode="url"
+              autoCapitalize="none"
+              autoCorrect="off"
+              spellCheck={false}
+              value={values.website}
+              onChange={(e) => set({ website: e.target.value })}
+              maxLength={300}
+              placeholder="progrs.ru"
+              className={inputClass}
+            />
+          </Field>
         </div>
+        <p className="-mt-2 text-xs text-slate-500">
+          Агент откроет этот сайт и его страницы, когда это нужно по инструкциям или по вопросу. Например: «Проверь цены на сайте и сравни с
+          прайсом в CRM».
+        </p>
         <Field label="Инструкции">
           <textarea
             name="instructions"
@@ -97,7 +119,7 @@ export function AgentForm({ id, initial, scopes, isDefault }: { id: string | nul
         </Field>
         <fieldset>
           <legend className="text-sm font-medium text-slate-700">Что агенту можно смотреть в CRM</legend>
-          <p className="mt-0.5 mb-2 text-xs text-slate-500">Агент только читает данные и ничего не меняет</p>
+          <p className="mt-0.5 mb-2 text-xs text-slate-500">Агент только читает отмеченные разделы. Менять данные он может, только если отмечены «Изменения в CRM»</p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {scopes.map((s) => {
               const checked = values.scopes.includes(s.key);

@@ -8,6 +8,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { askAgent, chatTitle } from "@/lib/agents/agent";
 import { isScope } from "@/lib/agents/tools";
+import { normalizeWebsite } from "@/lib/agents/website";
 
 export type AskState = { ok: true; chatId: string } | { ok: false; error: string };
 
@@ -70,7 +71,10 @@ export async function saveAgent(id: string | null, _prev: AgentFormState, formDa
   const scopes = formData.getAll("scopes").map(String).filter(isScope);
   if (!scopes.length) return { error: "Отметьте хотя бы один раздел, иначе агенту не с чем работать" };
 
-  const data = { ...parsed.data, description: parsed.data.description || null, scopes };
+  const website = normalizeWebsite(String(formData.get("website") ?? ""));
+  if (website === undefined) return { error: "Проверьте адрес сайта: например, progrs.ru или https://progrs.ru/uslugi" };
+
+  const data = { ...parsed.data, description: parsed.data.description || null, website, scopes };
   const agent = id ? await db.agent.update({ where: { id }, data }) : await db.agent.create({ data });
   revalidatePath("/agents", "layout");
   redirect(`/agents/${agent.id}`);

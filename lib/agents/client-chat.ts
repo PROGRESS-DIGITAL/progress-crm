@@ -8,7 +8,8 @@ import { recordOutgoing } from "@/lib/chat/inbox";
 import { connectedChannels, sendToChannel, sendTyping } from "@/lib/chat/send";
 import { sendTelegram, TELEGRAM_TOKEN_SETTING } from "@/lib/chat/telegram";
 import { getRemindChat } from "@/lib/reminders";
-import { describeError, finalText, getClaude, runAgentLoop } from "@/lib/agents/agent";
+import { describeError, finalText, getClaude, runAgentLoop, websiteRule } from "@/lib/agents/agent";
+import { websiteTool } from "@/lib/agents/website";
 import { priceList, tool, type Tool } from "@/lib/agents/tools";
 
 // AI агент в «Чатах»: отвечает клиентам в Telegram, Max и VK от имени студии.
@@ -61,6 +62,7 @@ function clientPrompt(agent: Agent, c: Conversation & { company: { name: string 
     `Канал: ${CHANNEL_LABELS[c.channel]}. Собеседник: ${c.name}.${c.company ? ` Это клиент «${c.company.name}».` : ""}`,
   ];
   if (agent.instructions.trim()) parts.push(`Инструкции владельца студии:\n${agent.instructions.trim()}`);
+  if (agent.website) parts.push(websiteRule(agent.website));
   return parts.join("\n\n");
 }
 
@@ -223,7 +225,7 @@ export async function draftClientReply(conversationId: string, { save = false } 
   try {
     const r = await runAgentLoop(client, {
       system: clientPrompt(agent, conversation, canSave),
-      tools: clientTools(conversation, handoff, canSave),
+      tools: [...clientTools(conversation, handoff, canSave), ...(agent.website ? [websiteTool(agent.website)] : [])],
       messages,
       effort: "low",
       maxSteps: 4,
