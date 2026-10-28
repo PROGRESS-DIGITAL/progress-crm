@@ -27,6 +27,9 @@ test("платёж находит свой счёт", () => {
   assert.equal(matchInvoice({ amount: 1000, payerInn: "1234567890", purpose: "счет № 5" }, open), null);
   // Сумма не совпала — не угадываем
   assert.equal(matchInvoice({ amount: 45000, payerInn: "7701234567", purpose: null }, open), null);
+  // Старый платёж из выписки не закрывает счёт, выставленный позже
+  assert.equal(matchInvoice({ amount: 90000, payerInn: "500100732259", purpose: null, date: new Date("2026-09-01") }, open), null);
+  assert.equal(matchInvoice({ amount: 90000, payerInn: "500100732259", purpose: null, date: new Date("2026-10-06T12:00:00+03:00") }, open), "c");
 });
 
 test("НДС внутри суммы", () => {

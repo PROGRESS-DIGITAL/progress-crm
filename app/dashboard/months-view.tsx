@@ -33,7 +33,7 @@ function Delta({
   );
 }
 
-function CompareTile({
+export function CompareTile({
   label,
   current,
   prev,

@@ -1,6 +1,6 @@
 import type { DocumentKind } from "@prisma/client";
 import { db } from "@/lib/db";
-import { getSetting } from "@/lib/settings";
+import { getSetting, setSetting } from "@/lib/settings";
 import { matchInvoice } from "./matching";
 import {
   createAct,
@@ -114,6 +114,14 @@ async function openInvoices() {
     include: { company: { select: { inn: true } } },
   });
   return docs.map((d) => ({ id: d.id, seq: d.seq, amount: d.amount, inn: d.company.inn, date: d.date, tochkaId: d.tochkaId }));
+}
+
+// История поступлений за год для дашборда: один раз после подключения Точки
+const BANK_HISTORY_SETTING = "bank.historyLoaded";
+export async function loadPaymentHistory() {
+  if (!(await getTochka()) || (await getSetting(BANK_HISTORY_SETTING))) return;
+  await syncPayments(400);
+  await setSetting(BANK_HISTORY_SETTING, new Date().toISOString());
 }
 
 // Подтянуть поступления за последние дни и разнести их по счетам

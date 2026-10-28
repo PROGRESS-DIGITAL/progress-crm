@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { BankView } from "./bank-view";
 import { ClientsView } from "./clients-view";
 import { MonthsView } from "./months-view";
 
@@ -7,10 +8,12 @@ export const dynamic = "force-dynamic";
 const TABS = [
   { view: "months", label: "По месяцам" },
   { view: "clients", label: "По клиентам" },
+  { view: "bank", label: "По банку" },
 ] as const;
 
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
-  const view = (await searchParams).view === "clients" ? "clients" : "months";
+  const requested = (await searchParams).view;
+  const view = TABS.find((t) => t.view === requested)?.view ?? "months";
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
@@ -28,7 +31,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           ))}
         </nav>
       </div>
-      {view === "months" ? <MonthsView /> : <ClientsView />}
+      {view === "months" ? <MonthsView /> : view === "clients" ? <ClientsView /> : <BankView />}
     </div>
   );
 }

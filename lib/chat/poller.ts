@@ -102,8 +102,9 @@ export function startPolling() {
   loop("VK", pollVkOnce);
   every("Напоминания", 60_000, sendDueReminders);
   every("Точка", 15 * 60_000, async () => {
-    const { syncPayments } = await import("@/lib/finance/documents");
+    const { loadPaymentHistory, syncPayments } = await import("@/lib/finance/documents");
     await syncPayments(14);
+    await loadPaymentHistory();
   });
   every("Почта", 2 * 60_000, async () => {
     const { syncAllMail } = await import("@/lib/mail/sync");
