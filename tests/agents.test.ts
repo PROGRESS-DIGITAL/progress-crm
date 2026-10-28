@@ -71,7 +71,7 @@ test("AI в чатах: в мессенджер уходит текст без m
 
 test("раздел «Изменения в CRM» даёт агенту инструменты, которые меняют данные", () => {
   const edit = toolsFor(["edit"]).map((t) => t.name);
-  assert.deepEqual(edit, ["create_lead", "create_client", "create_deal", "move_deal", "create_event"]);
+  assert.deepEqual(edit, ["create_lead", "create_client", "create_deal", "move_deal", "create_event", "update_event"]);
   assert.equal(scopeOfTool("move_deal"), "Изменения в CRM");
   assert.ok(!toolsFor(["money", "sales"]).some((t) => t.name.startsWith("create_")), "без раздела агент ничего не меняет");
   for (const t of toolsFor(["edit"])) assert.equal(toolDefinition(t).input_schema.type, "object");
