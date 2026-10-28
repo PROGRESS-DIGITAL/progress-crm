@@ -32,7 +32,10 @@ export default function PageError({ error, reset }: { error: Error & { digest?: 
       >
         {pending ? "Загружаю…" : "Повторить"}
       </button>
-      {error.digest && <p className="text-xs text-slate-400">Код ошибки: {error.digest}</p>}
+      {/* Текст ошибки нужен, чтобы по скриншоту было понятно, что именно упало */}
+      <p className="max-w-md text-xs break-words text-slate-400">
+        {error.digest ? `Код ошибки: ${error.digest}` : error.message || error.name}
+      </p>
     </div>
   );
 }
