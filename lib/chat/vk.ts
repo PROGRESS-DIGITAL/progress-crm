@@ -75,3 +75,8 @@ export async function sendVk(token: string, peerId: string, text: string) {
   });
   return String(id);
 }
+
+// «Печатает…» у собеседника: VK показывает его около 10 секунд или до нашего сообщения
+export async function sendVkTyping(token: string, peerId: string) {
+  await vkCall<number>(token, "messages.setActivity", { peer_id: peerId, type: "typing" });
+}

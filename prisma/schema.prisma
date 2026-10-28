@@ -32,6 +32,8 @@ enum LeadStatus {
 enum LeadSource {
   TILDA
   MANUAL
+  // Записал AI агент из переписки в «Чатах»
+  CHAT
 }
 
 model Lead {
@@ -263,6 +265,8 @@ model Conversation {
   aiHandoffAt   DateTime?
   aiHandoff     String?
   aiError       String?
+  // Агент сейчас пишет ответ: в CRM и у клиента в мессенджере видно «печатает…»
+  aiTypingAt    DateTime?
   lastText      String?
   lastMessageAt DateTime      @default(now())
   messages      ChatMessage[]
@@ -511,8 +515,10 @@ model Agent {
   id           String      @id @default(cuid())
   name         String
   description  String?
+  // Сайт, который агент открывает по своим инструкциям или по вопросу
+  website      String?
   instructions String      @default("")
-  // Ключи разделов из lib/agents/tools.ts: money, sales, clients, work, comms, plan
+  // Ключи разделов из lib/agents/tools.ts: money, sales, clients, work, comms, plan, edit
   scopes       String[]
   isDefault    Boolean     @default(false)
   chats        AgentChat[]

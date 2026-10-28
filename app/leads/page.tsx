@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { LeadStatus } from "@prisma/client";
 import { db } from "@/lib/db";
-import { LEAD_STATUS_BADGE, LEAD_STATUS_LABELS, formatDateTime } from "@/lib/format";
+import { LEAD_SOURCE_LABELS, LEAD_STATUS_BADGE, LEAD_STATUS_LABELS, formatDateTime } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
 
@@ -27,7 +27,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Лиды</h1>
-          <p className="mt-1 text-sm text-slate-600">Заявки с сайта и добавленные вручную</p>
+          <p className="mt-1 text-sm text-slate-600">Заявки с сайта, из чатов и добавленные вручную</p>
         </div>
         <Link
           href="/leads/new"
@@ -78,7 +78,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                   </td>
                   <td className="px-4 py-3 text-slate-600">{[l.phone, l.email].filter(Boolean).join(" · ") || "—"}</td>
                   <td className="px-4 py-3 text-slate-600">
-                    {l.source === "TILDA" ? `Тильда${l.formName ? ` · ${l.formName}` : ""}` : "Вручную"}
+                    {`${LEAD_SOURCE_LABELS[l.source]}${l.source !== "MANUAL" && l.formName ? ` · ${l.formName}` : ""}`}
                     {l.utmSource && <span className="block text-xs text-slate-500">{[l.utmSource, l.utmMedium].filter(Boolean).join(" / ")}</span>}
                   </td>
                   <td className="px-4 py-3">

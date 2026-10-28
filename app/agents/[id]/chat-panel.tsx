@@ -178,7 +178,7 @@ function Bubble({ mine, time, sources, children }: { mine?: boolean; time?: stri
       {children}
       {(time || sources?.length) && (
         <p className={`mt-1 text-[11px] ${mine ? "text-right text-blue-100" : "text-slate-400"}`}>
-          {sources?.length ? `Смотрел: ${sources.join(", ")}` : ""}
+          {sources?.length ? `Разделы: ${sources.join(", ")}` : ""}
           {sources?.length && time ? " · " : ""}
           {time}
         </p>

@@ -10,6 +10,8 @@ import { getSetting } from "@/lib/settings";
 import { getRemindChat } from "@/lib/reminders";
 import { CLAUDE_KEY_SETTING } from "@/lib/agents/agent";
 import { clearHandoff, linkCompany, saveChatAi, setConversationAi } from "./actions";
+import { chatVersion } from "@/lib/chat/version";
+import { isTyping } from "@/lib/agents/client-chat";
 import { AutoRefresh } from "./auto-refresh";
 import { Composer } from "./composer";
 import { Messages } from "./messages";
@@ -20,7 +22,7 @@ const MESSAGES_SHOWN = 300;
 
 export default async function ChatsPage({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
   const { c } = await searchParams;
-  const [conversations, connected, ai, agents, claudeKey, remind] = await Promise.all([
+  const [conversations, connected, ai, agents, claudeKey, remind, version] = await Promise.all([
     db.conversation.findMany({
       orderBy: { lastMessageAt: "desc" },
       include: { company: { select: { name: true } } },
@@ -30,6 +32,7 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
     db.agent.findMany({ orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }], select: { id: true, name: true } }),
     getSetting(CLAUDE_KEY_SETTING),
     getRemindChat(),
+    chatVersion(),
   ]);
   const aiAgent = agents.find((a) => a.id === ai.agentId) ?? null;
   const aiReady = !!aiAgent && !!claudeKey;
@@ -54,7 +57,7 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
 
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
-      <AutoRefresh />
+      <AutoRefresh version={version} />
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Чаты</h1>
@@ -78,7 +81,7 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
               <p className="text-xs text-slate-500">
                 Отвечает клиентам в Telegram, Max и VK через 15 секунд после их последнего сообщения. Видит только прайс и заказы самого
                 клиента, если переписка привязана к нему. Если клиент просит человека или вопрос сложный, агент передаёт переписку вам и
-                выключается в ней.
+                выключается в ней. Если агенту разрешены «Изменения в CRM», он записывает заявку клиента в «Лиды».
               </p>
               <label className="flex flex-col gap-1">
                 <span className="font-medium text-slate-700">Кто отвечает</span>
@@ -169,7 +172,11 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
                         <span className="shrink-0 text-xs text-slate-400">{formatChatTime(x.lastMessageAt)}</span>
                       </span>
                       <span className="flex items-center justify-between gap-2">
-                        <span className="truncate text-sm text-slate-500">{x.lastText ?? "—"}</span>
+                        {isTyping(x) ? (
+                          <span className="truncate text-sm text-blue-600">{aiAgent?.name ?? "AI"} печатает…</span>
+                        ) : (
+                          <span className="truncate text-sm text-slate-500">{x.lastText ?? "—"}</span>
+                        )}
                         {x.unread > 0 && (
                           <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-blue-600 px-1.5 text-[11px] font-semibold text-white">
                             {x.unread}
@@ -270,8 +277,10 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
                 author: m.author,
                 time: formatChatTime(m.createdAt),
               }))}
+              typing={isTyping(current) ? (aiAgent?.name ?? "AI агент") : null}
             />
             <Composer
+              key={current.id}
               conversationId={current.id}
               aiDraft={aiReady}
               disabled={

@@ -1,4 +1,4 @@
-import type { LeadStatus, Service } from "@prisma/client";
+import type { LeadSource, LeadStatus, Service } from "@prisma/client";
 
 export const SERVICE_LABELS: Record<Service, string> = {
   WEBSITE: "Сайт",
@@ -24,6 +24,12 @@ export const LEAD_STATUS_LABELS: Record<LeadStatus, string> = {
   IN_PROGRESS: "В работе",
   CONVERTED: "Сделка",
   REJECTED: "Отклонён",
+};
+
+export const LEAD_SOURCE_LABELS: Record<LeadSource, string> = {
+  TILDA: "Тильда",
+  MANUAL: "Вручную",
+  CHAT: "Из чата",
 };
 
 export const LEAD_STATUS_BADGE: Record<LeadStatus, string> = {

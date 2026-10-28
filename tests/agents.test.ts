@@ -1,7 +1,8 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseMarkdown } from "../components/markdown-lite";
-import { aiOn, plainText } from "../lib/agents/client-chat";
+import { normalizeWebsite, pageText } from "../lib/agents/website";
+import { aiOn, isTyping, plainText } from "../lib/agents/client-chat";
 import { ALL_SCOPES, runTool, scopeOfTool, toolDefinition, toolsFor } from "../lib/agents/tools";
 
 test("агент получает инструменты только открытых разделов", () => {
@@ -66,4 +67,38 @@ test("AI в чатах: включён в переписке, если выбр�
 test("AI в чатах: в мессенджер уходит текст без markdown", () => {
   assert.equal(plainText("## Цены\nСайт стоит **от 90 000 ₽**.  "), "Цены\nСайт стоит от 90 000 ₽.");
   assert.equal(plainText("x".repeat(5000)).length, 4000);
+});
+
+test("раздел «Изменения в CRM» даёт агенту инструменты, которые меняют данные", () => {
+  const edit = toolsFor(["edit"]).map((t) => t.name);
+  assert.deepEqual(edit, ["create_lead", "create_client", "create_deal", "move_deal", "create_event"]);
+  assert.equal(scopeOfTool("move_deal"), "Изменения в CRM");
+  assert.ok(!toolsFor(["money", "sales"]).some((t) => t.name.startsWith("create_")), "без раздела агент ничего не меняет");
+  for (const t of toolsFor(["edit"])) assert.equal(toolDefinition(t).input_schema.type, "object");
+});
+
+test("«печатает…» гаснет, если ответ так и не пришёл", () => {
+  const now = Date.now();
+  assert.equal(isTyping({ aiTypingAt: null }, now), false);
+  assert.equal(isTyping({ aiTypingAt: new Date(now - 5_000) }, now), true);
+  assert.equal(isTyping({ aiTypingAt: new Date(now - 5 * 60_000) }, now), false);
+});
+
+test("сайт агента: адрес из формы приводится к https и проверяется", () => {
+  assert.equal(normalizeWebsite("progrs.ru"), "https://progrs.ru/");
+  assert.equal(normalizeWebsite(" https://progrs.ru/uslugi#top "), "https://progrs.ru/uslugi");
+  assert.equal(normalizeWebsite(""), null);
+  assert.equal(normalizeWebsite("ftp://progrs.ru"), undefined);
+  assert.equal(normalizeWebsite("просто текст"), undefined);
+});
+
+test("сайт агента: из страницы остаются текст и ссылки только этого сайта", () => {
+  const html = `<html><head><title>Студия &laquo;Прогресс&raquo;</title><meta name="description" content="Сайты и SEO"><style>.a{}</style></head>
+    <body><script>alert(1)</script><h1>Услуги</h1><p>Лендинг&nbsp;от 150 000 ₽</p>
+    <a href="/uslugi">Услуги</a><a href="https://www.progrs.ru/kejsy#x">Кейсы</a><a href="https://evil.example/">Чужой</a></body></html>`;
+  const page = pageText(html, new URL("https://progrs.ru/"));
+  assert.equal(page.title, "Студия «Прогресс»");
+  assert.equal(page.description, "Сайты и SEO");
+  assert.equal(page.text, "Услуги\nЛендинг от 150 000 ₽\nУслуги Кейсы Чужой");
+  assert.deepEqual(page.links, ["/uslugi", "/kejsy"]);
 });

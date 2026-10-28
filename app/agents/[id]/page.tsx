@@ -15,23 +15,28 @@ export const dynamic = "force-dynamic";
 
 const CHATS_SHOWN = 50;
 
-// Подсказки для пустого чата: по разделам, которые открыты агенту
-function suggestions(scopes: string[]) {
+// Подсказки для пустого чата: по разделам, которые открыты агенту, и по его сайту
+function suggestions(scopes: string[], website: string | null) {
   const month = monthLabel(monthKey(new Date())).split(" ")[0].toLowerCase();
   const all: [string, string][] = [
     ["money", `Сколько выручка за ${month} на сегодня?`],
     ["sales", "Какие сделки зависли больше двух недель?"],
     ["money", "Какие счета ещё не оплачены?"],
+    ["edit", "Поставь задачу на завтра в 11:00: позвонить новому клиенту"],
     ["plan", "Насколько мы отстаём от финмодели в этом месяце?"],
     ["clients", "Кто топ-5 клиентов по LTV?"],
     ["work", "Какие задачи просрочены?"],
     ["sales", "Сколько заявок пришло в этом месяце и откуда?"],
     ["comms", "Что последнее писали клиенты?"],
   ];
-  return all
-    .filter(([s]) => scopes.includes(s))
-    .map(([, q]) => q)
-    .slice(0, 4);
+  const site = website ? [`Открой ${new URL(website).hostname} и сделай, что сказано в инструкциях`] : [];
+  return [
+    ...site,
+    ...all
+      .filter(([s]) => scopes.includes(s))
+      .map(([, q]) => q)
+      .slice(0, 4 - site.length),
+  ];
 }
 
 export default async function AgentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ chat?: string }> }) {
@@ -68,7 +73,7 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
       <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4 sm:items-end">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">AI агенты</h1>
-          <p className="mt-1 hidden text-sm text-slate-600 sm:block">Помощники, которые знают цифры CRM и отвечают на вопросы</p>
+          <p className="mt-1 hidden text-sm text-slate-600 sm:block">Помощники, которые знают цифры CRM, отвечают на вопросы и заводят карточки</p>
         </div>
         <Link
           href="/agents/new"
@@ -134,6 +139,7 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
               <p className="hidden truncate font-semibold md:block">{current?.title ?? agent.name}</p>
               <p className="hidden truncate text-xs text-slate-500 md:block">
                 {current ? agent.name : (agent.description ?? "Задайте вопрос по данным CRM")}
+                {agent.website && ` · ${new URL(agent.website).hostname}`}
               </p>
             </div>
             {/* На телефоне новый чат и удаление спрятаны в «Историю», чтобы шапка помещалась в одну строку */}
@@ -189,7 +195,7 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
             agentName={agent.name}
             chatId={current?.id ?? null}
             hasKey={!!key}
-            suggestions={suggestions(agent.scopes)}
+            suggestions={suggestions(agent.scopes, agent.website)}
             messages={messages.map((m) => ({
               id: m.id,
               role: m.role as "user" | "assistant",

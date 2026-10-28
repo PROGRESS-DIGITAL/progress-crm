@@ -5,10 +5,10 @@ import { useEffect, useRef } from "react";
 type Message = { id: string; direction: "IN" | "OUT"; text: string; time: string; author: string | null };
 
 // Лента сообщений; при новом сообщении прокручивается вниз
-export function Messages({ messages }: { messages: Message[] }) {
+export function Messages({ messages, typing }: { messages: Message[]; typing?: string | null }) {
   const endRef = useRef<HTMLDivElement>(null);
   const last = messages.at(-1)?.id;
-  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [last]);
+  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [last, typing]);
 
   return (
     <div className="flex flex-1 flex-col gap-2 overflow-y-auto bg-slate-50/60 px-3 py-4 sm:px-5">
@@ -27,6 +27,16 @@ export function Messages({ messages }: { messages: Message[] }) {
           </p>
         </div>
       ))}
+      {typing && (
+        <div className="flex items-center gap-2 self-end rounded-2xl rounded-br-md bg-blue-50 px-3.5 py-2 text-sm text-blue-700" aria-live="polite">
+          <span className="flex gap-1" aria-hidden>
+            {[0, 150, 300].map((d) => (
+              <span key={d} className="h-1.5 w-1.5 animate-bounce rounded-full bg-blue-500" style={{ animationDelay: `${d}ms` }} />
+            ))}
+          </span>
+          {typing} печатает…
+        </div>
+      )}
       <div ref={endRef} />
     </div>
   );
