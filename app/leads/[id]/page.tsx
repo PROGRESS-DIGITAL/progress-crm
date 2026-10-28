@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
-import { LEAD_STATUS_BADGE, LEAD_STATUS_LABELS, formatDateTime } from "@/lib/format";
+import { LEAD_SOURCE_LABELS, LEAD_STATUS_BADGE, LEAD_STATUS_LABELS, formatDateTime } from "@/lib/format";
 import { getProductOptions } from "@/lib/queries";
 import { convertLead, rejectLead, setLeadStatus } from "../actions";
 import { ConvertForm, RejectForm } from "./lead-actions";
@@ -48,7 +48,7 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
           {LEAD_STATUS_LABELS[lead.status]}
         </span>
         <span className="text-sm text-slate-500">
-          {lead.source === "TILDA" ? "Тильда" : "Вручную"} · {formatDateTime(lead.createdAt)}
+          {LEAD_SOURCE_LABELS[lead.source]} · {formatDateTime(lead.createdAt)}
         </span>
       </div>
 

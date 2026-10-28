@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { parseMarkdown } from "../components/markdown-lite";
-import { aiOn, plainText } from "../lib/agents/client-chat";
+import { aiOn, isTyping, plainText } from "../lib/agents/client-chat";
 import { ALL_SCOPES, runTool, scopeOfTool, toolDefinition, toolsFor } from "../lib/agents/tools";
 
 test("агент получает инструменты только открытых разделов", () => {
@@ -66,4 +66,19 @@ test("AI в чатах: включён в переписке, если выбр�
 test("AI в чатах: в мессенджер уходит текст без markdown", () => {
   assert.equal(plainText("## Цены\nСайт стоит **от 90 000 ₽**.  "), "Цены\nСайт стоит от 90 000 ₽.");
   assert.equal(plainText("x".repeat(5000)).length, 4000);
+});
+
+test("раздел «Изменения в CRM» даёт агенту инструменты, которые меняют данные", () => {
+  const edit = toolsFor(["edit"]).map((t) => t.name);
+  assert.deepEqual(edit, ["create_lead", "create_client", "create_deal", "move_deal", "create_event"]);
+  assert.equal(scopeOfTool("move_deal"), "Изменения в CRM");
+  assert.ok(!toolsFor(["money", "sales"]).some((t) => t.name.startsWith("create_")), "без раздела агент ничего не меняет");
+  for (const t of toolsFor(["edit"])) assert.equal(toolDefinition(t).input_schema.type, "object");
+});
+
+test("«печатает…» гаснет, если ответ так и не пришёл", () => {
+  const now = Date.now();
+  assert.equal(isTyping({ aiTypingAt: null }, now), false);
+  assert.equal(isTyping({ aiTypingAt: new Date(now - 5_000) }, now), true);
+  assert.equal(isTyping({ aiTypingAt: new Date(now - 5 * 60_000) }, now), false);
 });

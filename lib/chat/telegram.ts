@@ -99,3 +99,8 @@ export async function sendTelegram(token: string, chatId: string, text: string) 
   const m = await call<{ message_id: number }>(token, "sendMessage", { chat_id: chatId, text });
   return String(m.message_id);
 }
+
+// «Печатает…» у собеседника: Telegram показывает его около 5 секунд или до нашего сообщения
+export async function sendTelegramTyping(token: string, chatId: string) {
+  await call<boolean>(token, "sendChatAction", { chat_id: chatId, action: "typing" });
+}

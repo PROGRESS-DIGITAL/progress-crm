@@ -2,15 +2,17 @@ import { z } from "zod/v4";
 import type { Prisma, StageKind } from "@prisma/client";
 import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
-import { SERVICE_LABELS, LEAD_STATUS_LABELS } from "@/lib/format";
+import { SERVICE_LABELS, LEAD_STATUS_LABELS, LEAD_SOURCE_LABELS } from "@/lib/format";
 import { monthKey, monthlyStats, shiftMonth, emptyMonth } from "@/lib/monthly";
 import { bankMonthlyStats, emptyBankMonth, topPayers } from "@/lib/bank-stats";
 import { computeFinModel, FINMODEL_SETTING, parseFinModel } from "@/lib/finmodel";
 import { clientLtv } from "@/lib/ltv";
+import { tool, type Tool } from "@/lib/agents/tool";
+import { editTools } from "@/lib/agents/crm-actions";
 
 // Данные CRM, которые агент читает через инструменты. Инструменты сгруппированы по разделам:
 // в настройках агента владелец отмечает разделы, и агент получает только их инструменты.
-// Все инструменты только читают: агент ничего не меняет в CRM
+// Инструменты здесь только читают; изменения в CRM — отдельный раздел в crm-actions.ts
 
 const TZ = "Europe/Moscow";
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
@@ -37,16 +39,7 @@ function range(input: { from?: string; to?: string }) {
 const STATUS_KIND: Record<string, StageKind> = { open: "OPEN", won: "WON", lost: "LOST" };
 const KIND_LABEL: Record<StageKind, string> = { OPEN: "в работе", WON: "оплачена", LOST: "проиграна" };
 
-export type Tool = {
-  name: string;
-  description: string;
-  schema: z.ZodObject;
-  run: (input: never) => Promise<unknown>;
-};
-
-export function tool<S extends z.ZodObject>(t: { name: string; description: string; schema: S; run: (input: z.output<S>) => Promise<unknown> }): Tool {
-  return t as unknown as Tool;
-}
+export { tool, type Tool } from "@/lib/agents/tool";
 
 // ── Деньги ─────────────────────────────────────────────────────────────
 
@@ -358,9 +351,10 @@ const listLeads = tool({
       period: { from, to },
       count: rows.length,
       by_status: countBy((l) => LEAD_STATUS_LABELS[l.status]),
-      by_source: countBy((l) => (l.source === "TILDA" ? "сайт (Тильда)" : "вручную")),
+      by_source: countBy((l) => LEAD_SOURCE_LABELS[l.source]),
       by_utm_source: countBy((l) => l.utmSource),
       leads: rows.slice(0, input.limit).map((l) => ({
+        id: l.id,
         date: day(l.createdAt),
         name: l.name,
         company: l.companyName,
@@ -645,6 +639,12 @@ export const SCOPES = [
   { key: "work", label: "Задачи и календарь", hint: "Задачи, встречи, просрочки", tools: [listEvents] },
   { key: "comms", label: "Почта и чаты", hint: "Письма и сообщения клиентов", tools: [searchMessages] },
   { key: "plan", label: "Финмодель и прайс", hint: "План по сценариям, цены услуг", tools: [getFinmodel, priceList] },
+  {
+    key: "edit",
+    label: "Изменения в CRM",
+    hint: "Создаёт лиды, клиентов, сделки, встречи и задачи, двигает сделки по воронке. Ничего не удаляет",
+    tools: editTools,
+  },
 ] as const;
 
 export type ScopeKey = (typeof SCOPES)[number]["key"];
@@ -678,6 +678,6 @@ export async function runTool(tools: Tool[], name: string, input: unknown): Prom
   try {
     return { ok: true, content: JSON.stringify(await t.run(parsed.data as never)) };
   } catch (e) {
-    return { ok: false, content: `Ошибка при чтении данных: ${e instanceof Error ? e.message : String(e)}` };
+    return { ok: false, content: `Ошибка: ${e instanceof Error ? e.message : String(e)}` };
   }
 }

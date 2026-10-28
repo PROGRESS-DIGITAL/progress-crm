@@ -32,6 +32,8 @@ enum LeadStatus {
 enum LeadSource {
   TILDA
   MANUAL
+  // Записал AI агент из переписки в «Чатах»
+  CHAT
 }
 
 model Lead {
@@ -263,6 +265,8 @@ model Conversation {
   aiHandoffAt   DateTime?
   aiHandoff     String?
   aiError       String?
+  // Агент сейчас пишет ответ: в CRM и у клиента в мессенджере видно «печатает…»
+  aiTypingAt    DateTime?
   lastText      String?
   lastMessageAt DateTime      @default(now())
   messages      ChatMessage[]

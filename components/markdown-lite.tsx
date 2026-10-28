@@ -1,7 +1,9 @@
+import Link from "next/link";
 import { Fragment } from "react";
 
-// Небольшой разбор markdown для ответов AI-агента: абзацы, **жирный**, списки и таблицы.
-// Текст выводится как текст React, без HTML: ответ модели не может вставить разметку в страницу
+// Небольшой разбор markdown для ответов AI-агента: абзацы, **жирный**, списки, таблицы и ссылки.
+// Текст выводится как текст React, без HTML: ответ модели не может вставить разметку в страницу.
+// Ссылки — только на страницы самой CRM (путь с «/»), внешние остаются текстом
 
 type Block =
   | { kind: "p"; lines: string[] }
@@ -52,13 +54,19 @@ export function parseMarkdown(text: string): Block[] {
   return blocks;
 }
 
-// **жирный** и `код`; остальное как есть
+const LINK = /^\[([^\]]+)\]\((\/(?!\/)[^)\s]*)\)$/;
+
+// **жирный**, `код` и [ссылка](/путь); остальное как есть
 function Inline({ text }: { text: string }) {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(\/(?!\/)[^)\s]*\))/g);
   return (
     <>
       {parts.map((p, i) =>
-        p.startsWith("**") && p.endsWith("**") && p.length > 4 ? (
+        LINK.test(p) ? (
+          <Link key={i} href={p.match(LINK)![2]} className="font-medium text-blue-700 underline underline-offset-2 hover:text-blue-800">
+            {p.match(LINK)![1]}
+          </Link>
+        ) : p.startsWith("**") && p.endsWith("**") && p.length > 4 ? (
           <strong key={i} className="font-semibold">
             {p.slice(2, -2)}
           </strong>

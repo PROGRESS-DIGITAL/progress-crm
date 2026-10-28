@@ -12,7 +12,7 @@ export default function NewAgentPage() {
       <p className="mt-1 mb-6 text-sm text-slate-600">Задайте роль, инструкции и разделы CRM, с которыми агент будет работать</p>
       <AgentForm
         id={null}
-        initial={{ name: "", description: "", instructions: "", scopes: ALL_SCOPES }}
+        initial={{ name: "", description: "", instructions: "", scopes: ALL_SCOPES.filter((s) => s !== "edit") }}
         scopes={SCOPES.map(({ key, label, hint }) => ({ key, label, hint }))}
       />
     </div>

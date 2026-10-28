@@ -22,6 +22,7 @@ function suggestions(scopes: string[]) {
     ["money", `Сколько выручка за ${month} на сегодня?`],
     ["sales", "Какие сделки зависли больше двух недель?"],
     ["money", "Какие счета ещё не оплачены?"],
+    ["edit", "Поставь задачу на завтра в 11:00: позвонить новому клиенту"],
     ["plan", "Насколько мы отстаём от финмодели в этом месяце?"],
     ["clients", "Кто топ-5 клиентов по LTV?"],
     ["work", "Какие задачи просрочены?"],
@@ -68,7 +69,7 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
       <div className="mb-3 flex items-center justify-between gap-3 sm:mb-4 sm:items-end">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">AI агенты</h1>
-          <p className="mt-1 hidden text-sm text-slate-600 sm:block">Помощники, которые знают цифры CRM и отвечают на вопросы</p>
+          <p className="mt-1 hidden text-sm text-slate-600 sm:block">Помощники, которые знают цифры CRM, отвечают на вопросы и заводят карточки</p>
         </div>
         <Link
           href="/agents/new"
