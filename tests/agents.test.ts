@@ -52,11 +52,15 @@ test("markdown ответа: абзацы, списки и таблица", () =
 test("AI в чатах: включён в переписке, если выбран агент и нет ручного запрета", () => {
   const on = { agentId: "a1", defaultOn: true };
   const off = { agentId: "a1", defaultOn: false };
-  assert.equal(aiOn({ aiEnabled: null }, on), true);
-  assert.equal(aiOn({ aiEnabled: null }, off), false);
-  assert.equal(aiOn({ aiEnabled: true }, off), true);
-  assert.equal(aiOn({ aiEnabled: false }, on), false);
-  assert.equal(aiOn({ aiEnabled: true }, { agentId: null, defaultOn: true }), false);
+  const chat = (aiEnabled: boolean | null) => ({ aiEnabled, channel: "TELEGRAM" as const, externalId: "42" });
+  assert.equal(aiOn(chat(null), on), true);
+  assert.equal(aiOn(chat(null), off), false);
+  assert.equal(aiOn(chat(true), off), true);
+  assert.equal(aiOn(chat(false), on), false);
+  assert.equal(aiOn(chat(true), { agentId: null, defaultOn: true }), false);
+  // Свой чат с ботом напоминаний: «во всех переписках» его не включает, ручной переключатель включает
+  assert.equal(aiOn(chat(null), on, "42"), false);
+  assert.equal(aiOn(chat(true), on, "42"), true);
 });
 
 test("AI в чатах: в мессенджер уходит текст без markdown", () => {

@@ -7,6 +7,7 @@ import { connectedChannels } from "@/lib/chat/send";
 import { formatChatTime } from "@/lib/format";
 import { aiOn, getChatAi } from "@/lib/agents/client-chat";
 import { getSetting } from "@/lib/settings";
+import { getRemindChat } from "@/lib/reminders";
 import { CLAUDE_KEY_SETTING } from "@/lib/agents/agent";
 import { clearHandoff, linkCompany, saveChatAi, setConversationAi } from "./actions";
 import { AutoRefresh } from "./auto-refresh";
@@ -19,7 +20,7 @@ const MESSAGES_SHOWN = 300;
 
 export default async function ChatsPage({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
   const { c } = await searchParams;
-  const [conversations, connected, ai, agents, claudeKey] = await Promise.all([
+  const [conversations, connected, ai, agents, claudeKey, remind] = await Promise.all([
     db.conversation.findMany({
       orderBy: { lastMessageAt: "desc" },
       include: { company: { select: { name: true } } },
@@ -28,11 +29,13 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
     getChatAi(),
     db.agent.findMany({ orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }], select: { id: true, name: true } }),
     getSetting(CLAUDE_KEY_SETTING),
+    getRemindChat(),
   ]);
   const aiAgent = agents.find((a) => a.id === ai.agentId) ?? null;
   const aiReady = !!aiAgent && !!claudeKey;
 
   const current = c ? conversations.find((x) => x.id === c) : undefined;
+  const currentAi = !!current && aiOn(current, ai, remind?.chatId);
   const [messages, companies] = current
     ? await Promise.all([
         db.chatMessage.findMany({
@@ -177,7 +180,7 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
                       {x.aiHandoffAt ? (
                         <span className="block truncate text-xs font-medium text-amber-700">AI передал вам: нужен менеджер</span>
                       ) : (
-                        aiOn(x, ai) && <span className="block text-xs text-slate-400">Отвечает AI</span>
+                        aiOn(x, ai, remind?.chatId) && <span className="block text-xs text-slate-400">Отвечает AI</span>
                       )}
                     </span>
                   </Link>
@@ -202,21 +205,21 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
                 </p>
               </div>
               {aiAgent && (
-                <form action={setConversationAi.bind(null, current.id, !aiOn(current, ai))}>
+                <form action={setConversationAi.bind(null, current.id, !currentAi)}>
                   <button
                     type="submit"
                     role="switch"
-                    aria-checked={aiOn(current, ai)}
-                    title={aiOn(current, ai) ? "AI отвечает в этой переписке. Нажмите, чтобы выключить" : "Включить AI в этой переписке"}
+                    aria-checked={currentAi}
+                    title={currentAi ? "AI отвечает в этой переписке. Нажмите, чтобы выключить" : "Включить AI в этой переписке"}
                     className={`flex h-9 items-center gap-2 rounded-xl border px-3 text-sm ${
-                      aiOn(current, ai) ? "border-blue-200 bg-blue-50 text-blue-800" : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                      currentAi ? "border-blue-200 bg-blue-50 text-blue-800" : "border-slate-200 text-slate-600 hover:bg-slate-50"
                     }`}
                   >
                     <span
-                      className={`relative h-4 w-7 rounded-full transition-colors ${aiOn(current, ai) ? "bg-blue-600" : "bg-slate-300"}`}
+                      className={`relative h-4 w-7 rounded-full transition-colors ${currentAi ? "bg-blue-600" : "bg-slate-300"}`}
                     >
                       <span
-                        className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${aiOn(current, ai) ? "left-3.5" : "left-0.5"}`}
+                        className={`absolute top-0.5 h-3 w-3 rounded-full bg-white transition-all ${currentAi ? "left-3.5" : "left-0.5"}`}
                       />
                     </span>
                     AI
