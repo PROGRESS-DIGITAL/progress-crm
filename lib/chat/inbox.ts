@@ -41,12 +41,13 @@ export async function receiveIncoming(channel: Channel, m: Incoming) {
   return conversation;
 }
 
-export async function recordOutgoing(conversationId: string, text: string, externalId: string, author: string) {
+// Ответ менеджера сбрасывает непрочитанные; ответ AI агента — нет: менеджер всё равно должен увидеть, что писал клиент
+export async function recordOutgoing(conversationId: string, text: string, externalId: string, author: string, opts: { keepUnread?: boolean } = {}) {
   await db.$transaction([
     db.chatMessage.create({ data: { conversationId, direction: "OUT", text, externalId, author } }),
     db.conversation.update({
       where: { id: conversationId },
-      data: { lastText: preview(text), lastMessageAt: new Date(), unread: 0 },
+      data: { lastText: preview(text), lastMessageAt: new Date(), ...(opts.keepUnread ? {} : { unread: 0 }) },
     }),
   ]);
 }

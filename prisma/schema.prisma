@@ -255,6 +255,14 @@ model Conversation {
   company       Company?      @relation(fields: [companyId], references: [id], onDelete: SetNull)
   companyId     String?
   unread        Int           @default(0)
+  // AI агент отвечает в этой переписке; пусто — как задано для всех в «Чатах»
+  aiEnabled     Boolean?
+  // До какого входящего сообщения агент уже отвечал или пытался: не отвечает дважды на одно и то же
+  aiCheckedAt   DateTime?
+  // Агент попросил подключить менеджера и выключился в этой переписке
+  aiHandoffAt   DateTime?
+  aiHandoff     String?
+  aiError       String?
   lastText      String?
   lastMessageAt DateTime      @default(now())
   messages      ChatMessage[]
