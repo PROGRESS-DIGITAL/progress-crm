@@ -496,3 +496,47 @@ model MailAttachment {
   cid       String?
   data      Bytes
 }
+
+// AI-агент: роль и инструкции владельца плюс разделы CRM, которые агенту можно читать.
+// Постоянный агент (isDefault) создаётся сам и видит всё
+model Agent {
+  id           String      @id @default(cuid())
+  name         String
+  description  String?
+  instructions String      @default("")
+  // Ключи разделов из lib/agents/tools.ts: money, sales, clients, work, comms, plan
+  scopes       String[]
+  isDefault    Boolean     @default(false)
+  chats        AgentChat[]
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+}
+
+model AgentChat {
+  id        String         @id @default(cuid())
+  agent     Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId   String
+  title     String
+  messages  AgentMessage[]
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([agentId, updatedAt])
+}
+
+// Сообщение в формате API Claude как есть: история отправляется модели без изменений.
+// text — что показать в чате; у служебных шагов (запросы к данным и их результаты) он пуст
+model AgentMessage {
+  id        String    @id @default(cuid())
+  seq       Int       @default(autoincrement())
+  chat      AgentChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  chatId    String
+  role      String
+  content   Json
+  text      String?
+  // Какие разделы агент смотрел, чтобы ответить: показываются под ответом
+  sources   String[]
+  createdAt DateTime  @default(now())
+
+  @@index([chatId, seq])
+}

@@ -22,6 +22,7 @@ function menu(newLeads: number, unreadChats: number, dueTasks: number, unreadMai
         { href: "/clients", label: "Клиенты", icon: "clients" },
         { href: "/chats", label: "Чаты", icon: "chat", badge: unreadChats },
         { href: "/mail", label: "Почта", icon: "mail", badge: unreadMail },
+        { href: "/agents", label: "AI агенты", icon: "bot" },
       ],
     },
     {
@@ -147,8 +148,8 @@ export function Sidebar({
     document.cookie = `${SIDEBAR_COOKIE}=${next ? "collapsed" : "expanded"}; path=/; max-age=31536000; samesite=lax`;
   }
 
-  // Снизу на телефоне помещается пять кнопок: дашборд, задачи и почта остаются в «Меню»
-  const tabs = groups[0].items.filter((t) => !["/dashboard", "/tasks", "/mail"].includes(t.href));
+  // Снизу на телефоне помещается пять кнопок: дашборд, задачи, почта и агенты остаются в «Меню»
+  const tabs = groups[0].items.filter((t) => !["/dashboard", "/tasks", "/mail", "/agents"].includes(t.href));
   const inTabs = tabs.some((t) => isActive(pathname, t.href));
   const hiddenBadge = groups[0].items.some((t) => !tabs.includes(t) && t.badge);
 
