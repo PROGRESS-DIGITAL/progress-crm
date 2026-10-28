@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/icons";
 import { MarkdownLite } from "@/components/markdown-lite";
+import { useEnterToSend } from "@/components/enter-to-send";
 import { askAgentAction } from "../actions";
 
 type Message = { id: string; role: "user" | "assistant"; text: string; sources: string[]; time: string };
@@ -59,6 +60,7 @@ export function ChatPanel({
     });
   }
 
+  const enter = useEnterToSend(textRef, () => ask(draft));
   const empty = messages.length === 0 && !asked;
 
   return (
@@ -148,13 +150,7 @@ export function ChatPanel({
             placeholder={hasKey ? "Спросите агента" : "Агент не подключён"}
             aria-label="Вопрос агенту"
             disabled={!hasKey}
-            onKeyDown={(e) => {
-              // Enter отправляет, Shift+Enter — новая строка
-              if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
-                e.preventDefault();
-                ask(draft);
-              }
-            }}
+            {...enter}
             className="max-h-40 min-h-11 w-full min-w-0 flex-1 resize-none rounded-2xl border border-transparent bg-slate-100 px-4 py-2.5 text-base outline-none [field-sizing:content] focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100 disabled:opacity-60 sm:text-sm"
           />
           <button
@@ -164,7 +160,7 @@ export function ChatPanel({
             title="Отправить (Enter)"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-blue-600 text-white shadow-sm shadow-blue-600/30 hover:bg-blue-700 disabled:opacity-60"
           >
-            <Icon name="send" size={18} />
+            <Icon name="arrowRight" size={20} />
           </button>
         </div>
       </form>
