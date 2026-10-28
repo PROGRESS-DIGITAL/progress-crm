@@ -2,12 +2,12 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod/v4";
 import type { StageKind } from "@prisma/client";
 import { db } from "@/lib/db";
-import { addDays, fromKey, isDayKey, REMIND_OPTIONS } from "@/lib/calendar";
+import { addDays, dayKey, fromKey, isDayKey, minutesOfDay, REMIND_OPTIONS } from "@/lib/calendar";
 import { getOwner } from "@/lib/profile";
 import { tool } from "@/lib/agents/tool";
 
-// Инструменты, которые меняют CRM: создают лиды, клиентов, сделки, встречи и задачи и двигают
-// сделки по воронке. Удалять агент не умеет. Каждый ответ содержит ссылку на созданную карточку,
+// Инструменты, которые меняют CRM: создают лиды, клиентов, сделки, встречи и задачи, меняют
+// встречи и задачи и двигают сделки по воронке. Удалять агент не умеет. Каждый ответ содержит ссылку на созданную карточку,
 // чтобы агент дал её владельцу
 
 const text = (max: number) => z.string().trim().min(1).max(max);
@@ -201,6 +201,36 @@ const moveDeal = tool({
   },
 });
 
+const clock = z
+  .string()
+  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Время в формате ЧЧ:ММ")
+  .describe("Начало по Москве, ЧЧ:ММ");
+const remind = z
+  .number()
+  .int()
+  .refine((v) => REMIND_OPTIONS.some((o) => o.value === v), `Одно из: ${REMIND_OPTIONS.map((o) => o.value).join(", ")}`);
+const minutes = (time: string) => Number(time.slice(0, 2)) * 60 + Number(time.slice(3));
+
+// Клиент и сделка события: сделка всегда принадлежит своему клиенту, событие привязывается к нему же
+async function eventLinks(input: { client_id?: string; client_name?: string; deal_id?: string }) {
+  if (input.deal_id) {
+    const deal = await db.deal.findUnique({ where: { id: input.deal_id }, select: { id: true, companyId: true } });
+    if (!deal) throw new Error("Сделка не найдена. Найдите её через search_deals");
+    return { companyId: deal.companyId, dealId: deal.id };
+  }
+  const company = await findCompany(input);
+  if (!company) throw new Error("Клиент не найден. Найдите его через search_clients или создайте через create_client");
+  return { companyId: company.id, dealId: null };
+}
+
+function eventLink(e: { id: string; kind: string; start: Date }) {
+  return e.kind === "TASK" ? `/tasks/${e.id}` : `/calendar?date=${dayKey(e.start)}&open=${e.id}`;
+}
+
+function refreshEvent(...links: { companyId: string | null; dealId: string | null }[]) {
+  refresh("/calendar", "/tasks", ...links.flatMap((l) => [...(l.companyId ? [`/clients/${l.companyId}`] : []), ...(l.dealId ? [`/deals/${l.dealId}`] : [])]));
+}
+
 const createEvent = tool({
   name: "create_event",
   description:
@@ -210,37 +240,17 @@ const createEvent = tool({
     kind: z.enum(["meeting", "task"]),
     title: text(200),
     date,
-    time: z
-      .string()
-      .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Время в формате ЧЧ:ММ")
-      .optional()
-      .describe("Начало по Москве, ЧЧ:ММ"),
+    time: clock.optional(),
     duration_minutes: z.number().int().min(5).max(24 * 60).default(60),
     client_id: z.string().optional(),
     client_name: optional(200),
     deal_id: z.string().optional(),
     notes: optional(5000),
-    remind_minutes: z
-      .number()
-      .int()
-      .refine((v) => REMIND_OPTIONS.some((o) => o.value === v), `Одно из: ${REMIND_OPTIONS.map((o) => o.value).join(", ")}`)
-      .optional()
-      .describe("За сколько минут напомнить в Telegram"),
+    remind_minutes: remind.optional().describe(`За сколько минут напомнить в Telegram: ${REMIND_OPTIONS.map((o) => o.value).join(", ")}`),
   }),
   async run(input) {
-    let companyId: string | null = null;
-    let dealId: string | null = null;
-    if (input.deal_id) {
-      const deal = await db.deal.findUnique({ where: { id: input.deal_id }, select: { id: true, companyId: true } });
-      if (!deal) throw new Error("Сделка не найдена. Найдите её через search_deals");
-      dealId = deal.id;
-      companyId = deal.companyId;
-    } else if (input.client_id || input.client_name) {
-      const company = await findCompany(input);
-      if (!company) throw new Error("Клиент не найден. Найдите его через search_clients или создайте через create_client");
-      companyId = company.id;
-    }
-    const start = input.time ? fromKey(input.date, Number(input.time.slice(0, 2)) * 60 + Number(input.time.slice(3))) : fromKey(input.date);
+    const links = input.deal_id || input.client_id || input.client_name ? await eventLinks(input) : { companyId: null, dealId: null };
+    const start = input.time ? fromKey(input.date, minutes(input.time)) : fromKey(input.date);
     const end = input.time ? new Date(start.getTime() + input.duration_minutes * 60_000) : fromKey(addDays(input.date, 1));
     const event = await db.event.create({
       data: {
@@ -250,18 +260,88 @@ const createEvent = tool({
         start,
         end,
         allDay: !input.time,
-        companyId,
-        dealId,
+        ...links,
         remindMinutes: input.remind_minutes ?? null,
       },
     });
-    refresh("/calendar", "/tasks", ...(companyId ? [`/clients/${companyId}`] : []), ...(dealId ? [`/deals/${dealId}`] : []));
+    refreshEvent(links);
+    return { created: true, id: event.id, link: eventLink(event) };
+  },
+});
+
+const updateEvent = tool({
+  name: "update_event",
+  description:
+    "Изменить встречу или задачу: перенести на другую дату или время, поменять название, заметки, длительность, " +
+    "включить или выключить напоминание в Telegram, отметить задачу выполненной, привязать к клиенту или сделке. " +
+    "Id события — из list_events или create_event. Передавай только то, что меняется.",
+  schema: z.object({
+    event_id: z.string().min(1),
+    title: text(200).optional(),
+    date: date.optional(),
+    time: clock.optional(),
+    all_day: z.boolean().optional().describe("true — на весь день, без времени"),
+    duration_minutes: z.number().int().min(5).max(24 * 60).optional(),
+    notes: z.string().trim().max(5000).optional().describe("Новые заметки целиком; пустая строка стирает их"),
+    remind_minutes: remind
+      .nullable()
+      .optional()
+      .describe(`За сколько минут напомнить в Telegram: ${REMIND_OPTIONS.map((o) => o.value).join(", ")}; null — не напоминать`),
+    done: z.boolean().optional().describe("Для задач: выполнена или нет"),
+    client_id: z.string().optional(),
+    client_name: optional(200),
+    deal_id: z.string().optional(),
+  }),
+  async run(input) {
+    const event = await db.event.findUnique({ where: { id: input.event_id } });
+    if (!event) throw new Error("Событие не найдено. Найдите его через list_events");
+    if (input.done !== undefined && event.kind !== "TASK") throw new Error("Выполненной можно отметить только задачу");
+    if (input.time && input.all_day) throw new Error("Укажите либо время, либо «на весь день»");
+
+    // Новое время собирается из прежнего: что не передано, остаётся как было
+    const day = input.date ?? dayKey(event.start);
+    const allDay = input.time ? false : (input.all_day ?? event.allDay);
+    const length = event.allDay ? 60 : Math.max(5, Math.round((event.end.getTime() - event.start.getTime()) / 60_000));
+    let start: Date;
+    let end: Date;
+    if (allDay) {
+      const days = event.allDay ? Math.max(1, Math.round((event.end.getTime() - event.start.getTime()) / 86_400_000)) : 1;
+      start = fromKey(day);
+      end = fromKey(addDays(day, days));
+    } else {
+      start = fromKey(day, input.time ? minutes(input.time) : event.allDay ? 10 * 60 : minutesOfDay(event.start));
+      end = new Date(start.getTime() + (input.duration_minutes ?? length) * 60_000);
+    }
+    const links = input.deal_id || input.client_id || input.client_name ? await eventLinks(input) : null;
+    const remindMinutes = input.remind_minutes === undefined ? event.remindMinutes : input.remind_minutes;
+    // Перенесли событие или поменяли напоминание — напомнить заново, как при правке в календаре
+    const remindAgain = start.getTime() !== event.start.getTime() || remindMinutes !== event.remindMinutes;
+
+    const saved = await db.event.update({
+      where: { id: event.id },
+      data: {
+        ...(input.title && { title: input.title }),
+        ...(input.notes !== undefined && { notes: input.notes || null }),
+        start,
+        end,
+        allDay,
+        remindMinutes,
+        ...(input.done !== undefined && { done: input.done }),
+        ...(links ?? {}),
+        ...(remindAgain && { remindedAt: null }),
+      },
+    });
+    refreshEvent(event, saved);
     return {
-      created: true,
-      id: event.id,
-      link: input.kind === "task" ? `/tasks/${event.id}` : `/calendar?date=${input.date}&open=${event.id}`,
+      updated: true,
+      id: saved.id,
+      title: saved.title,
+      start: saved.start.toLocaleString("ru-RU", { timeZone: "Europe/Moscow", dateStyle: "short", timeStyle: saved.allDay ? undefined : "short" }),
+      remind_minutes: saved.remindMinutes,
+      ...(saved.kind === "TASK" && { done: saved.done }),
+      link: eventLink(saved),
     };
   },
 });
 
-export const editTools = [createLead, createClient, createDeal, moveDeal, createEvent];
+export const editTools = [createLead, createClient, createDeal, moveDeal, createEvent, updateEvent];
