@@ -35,8 +35,12 @@ export async function getChatAi(): Promise<ChatAi> {
   }
 }
 
-export function aiOn(c: Pick<Conversation, "aiEnabled">, settings: ChatAi) {
-  return !!settings.agentId && (c.aiEnabled ?? settings.defaultOn);
+// Переписка владельца с ботом напоминаний — не клиент: «во всех переписках» её не включает,
+// но переключатель «AI» в ней работает, чтобы владелец мог проверить агента на себе
+export function aiOn(c: Pick<Conversation, "aiEnabled" | "channel" | "externalId">, settings: ChatAi, remindChatId?: string | null) {
+  if (!settings.agentId) return false;
+  if (c.aiEnabled !== null) return c.aiEnabled;
+  return settings.defaultOn && !(c.channel === "TELEGRAM" && c.externalId === remindChatId);
 }
 
 const CLIENT_PROMPT = `Ты отвечаешь клиенту веб-студии PROGRESS Digital (progrs.ru) в мессенджере от имени студии. Студия делает сайты, SEO, брендинг и рекламу в Яндекс Директе.
@@ -224,9 +228,7 @@ export async function answerPendingChats(now = new Date()) {
     const last = c.messages[0];
     if (!last || last.direction !== "IN") continue;
     if (c.aiCheckedAt && c.aiCheckedAt >= last.createdAt) continue;
-    if (!connected.has(c.channel)) continue;
-    // Переписка владельца с ботом для напоминаний — не клиент
-    if (c.channel === "TELEGRAM" && remind?.chatId === c.externalId) continue;
+    if (!connected.has(c.channel) || !aiOn(c, settings, remind?.chatId)) continue;
 
     // Отмечаем сразу: если ответ не получится, агент не будет пробовать снова каждые 10 секунд
     await db.conversation.update({
