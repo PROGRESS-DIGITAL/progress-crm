@@ -102,6 +102,56 @@ const quoteDate = new Intl.DateTimeFormat("ru-RU", {
   timeZone: "Europe/Moscow",
 });
 
+const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+
+const QUOTE_STYLE = "margin:0 0 0 .8ex;border-left:2px solid #cbd5e1;padding-left:1ex;color:#475569";
+
+// Черновик из текста для редактора: переносы строк, цитата «> » становится отчёркнутым блоком, как в почте
+export function textToHtml(text: string) {
+  const out: string[] = [];
+  let quote: string[] = [];
+  const flush = () => {
+    if (quote.length) out.push(`<blockquote style="${QUOTE_STYLE}">${quote.join("<br>")}</blockquote>`);
+    quote = [];
+  };
+  for (const line of text.split("\n")) {
+    if (/^>/.test(line)) quote.push(escapeHtml(line.replace(/^> ?/, "")) || "<br>");
+    else {
+      flush();
+      out.push(escapeHtml(line) || "<br>");
+    }
+  }
+  flush();
+  return out.map((l) => (l.startsWith("<blockquote") ? l : `<div>${l}</div>`)).join("");
+}
+
+// Из редактора приходит HTML: убираем то, что не должно уйти в письме (скрипты, обработчики, javascript:-ссылки)
+export function cleanEditorHtml(html: string) {
+  return html
+    .replace(/<(script|style|iframe|object|embed|head)[\s\S]*?<\/\1>/gi, "")
+    .replace(/<(script|iframe|object|embed|meta|link)[^>]*>/gi, "")
+    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+    .replace(/href\s*=\s*(["'])\s*javascript:[^"']*\1/gi, 'href="#"')
+    .trim();
+}
+
+// Текстовая версия письма для программ без HTML: ссылки пишем рядом с текстом, цитату снова через «> »
+export function editorText(html: string) {
+  const withLinks = html
+    .replace(/<a\s[^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/gi, (_, href: string, inner: string) => {
+      const label = htmlToText(inner);
+      const url = href.replace(/&amp;/g, "&");
+      return label && label !== url && `mailto:${label}` !== url ? `${inner} (${url})` : inner;
+    })
+    .replace(/<blockquote[^>]*>([\s\S]*?)<\/blockquote>/gi, (_, inner: string) =>
+      `<div>${htmlToText(inner)
+        .split("\n")
+        .map((l) => escapeHtml(`> ${l}`.trimEnd()))
+        .join("<br>")}</div>`,
+    );
+  return htmlToText(withLinks);
+}
+
 // Подпись встаёт под место для текста, над цитатой; «-- » почтовые программы узнают как начало подписи
 export function withSignature(text: string, signature: string | null | undefined) {
   if (!signature?.trim()) return text;

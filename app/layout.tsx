@@ -11,7 +11,7 @@ import { dueWhere } from "@/lib/tasks";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "PROGRESSCRM",
+  title: "PROSTO CRM",
   description: "CRM агентства PROGRESS Digital",
 };
 

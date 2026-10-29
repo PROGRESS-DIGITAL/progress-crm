@@ -1,6 +1,6 @@
 {
   // GitHub Codespaces: CRM с PostgreSQL и демо-данными для проверки, не для работы с реальными клиентами
-  "name": "PROGRESS CRM",
+  "name": "PROSTO CRM",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",

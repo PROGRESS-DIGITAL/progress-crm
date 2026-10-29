@@ -1,4 +1,4 @@
-# PROGRESS CRM
+# PROSTO CRM
 
 Собственная CRM агентства PROGRESS Digital.
 

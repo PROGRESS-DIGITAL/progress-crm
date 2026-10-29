@@ -38,8 +38,10 @@ export async function sendViaSmtp(
   mail: {
     to: string[];
     cc: string[];
+    bcc?: string[];
     subject: string;
     text: string;
+    html?: string | null;
     inReplyTo?: string | null;
     references?: string | null;
     attachments: { filename: string; content: Buffer; contentType: string }[];
@@ -49,8 +51,10 @@ export async function sendViaSmtp(
     from: a.name ? { name: a.name, address: a.email } : a.email,
     to: mail.to,
     cc: mail.cc.length ? mail.cc : undefined,
+    bcc: mail.bcc?.length ? mail.bcc : undefined,
     subject: mail.subject,
     text: mail.text,
+    html: mail.html || undefined,
     inReplyTo: mail.inReplyTo ? `<${mail.inReplyTo}>` : undefined,
     references: mail.references || undefined,
     attachments: mail.attachments,

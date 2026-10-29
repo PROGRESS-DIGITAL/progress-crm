@@ -11,6 +11,9 @@ import {
   quoteText,
   replySubject,
   withSignature,
+  textToHtml,
+  editorText,
+  cleanEditorHtml,
 } from "../lib/mail/core";
 
 test("detectProvider: Gmail и Яндекс по домену", () => {
@@ -46,4 +49,15 @@ test("подпись: в конце нового письма и над цита
   assert.equal(withSignature("\n\n> старое", "Иван"), "\n\n-- \nИван\n\n> старое");
   assert.equal(withSignature("текст", "  "), "текст");
   assert.equal(withSignature("текст", null), "текст");
+});
+
+test("редактор письма: черновик в HTML и обратно в текст", () => {
+  const html = textToHtml("Привет <друг>\n\n> цитата\n> вторая");
+  assert.equal(html, '<div>Привет &lt;друг&gt;</div><div><br></div><blockquote style="margin:0 0 0 .8ex;border-left:2px solid #cbd5e1;padding-left:1ex;color:#475569">цитата<br>вторая</blockquote>');
+  assert.equal(editorText(html), "Привет <друг>\n\n> цитата\n> вторая");
+  assert.equal(editorText('<div><b>Сайт</b>: <a href="https://a.ru">тут</a>, <a href="mailto:b@c.ru">b@c.ru</a></div>'), "Сайт: тут (https://a.ru), b@c.ru");
+});
+
+test("редактор письма: опасное из HTML убирается", () => {
+  assert.equal(cleanEditorHtml('<b onclick="x()">a</b><script>alert(1)</script><a href="javascript:alert(1)">l</a>'), '<b>a</b><a href="#">l</a>');
 });
