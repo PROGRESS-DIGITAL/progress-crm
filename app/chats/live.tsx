@@ -1,9 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { Avatar } from "@/components/avatar";
 import { Icon } from "@/components/icons";
+import { LoadingBar } from "@/components/loading-bar";
 import { CHANNEL_COLORS, CHANNEL_LABELS } from "@/lib/chat/channels";
 import type { ChatsView } from "@/lib/chat/view";
 import { clearHandoff, linkCompany, setConversationAi } from "./actions";
@@ -13,15 +15,19 @@ import { Messages } from "./messages";
 // Новые сообщения и «печатает…» подтягиваются раз в 2 секунды без перерисовки всей страницы:
 // если сервер не ответил, на экране остаётся то, что было, и следующий опрос пробует снова
 function useLiveView(initial: ChatsView) {
+  const router = useRouter();
   const [view, setView] = useState(initial);
   const [shown, setShown] = useState(initial);
+  // Переписка, которая открывается прямо сейчас: её данные ещё в пути
+  const [opening, setOpening] = useState<string | null>(null);
   if (shown !== initial) {
-    // Страница пришла заново: переход в другую переписку или своё действие (отправка, AI, привязка)
+    // Страница пришла заново: своё действие (отправка, AI, привязка) или переход «назад» в браузере
     setShown(initial);
     setView(initial);
+    setOpening(null);
   }
-  const latest = useRef(view);
-  latest.current = view;
+  const latest = useRef({ view, opening });
+  latest.current = { view, opening };
   const generation = useRef(0);
   useEffect(() => {
     generation.current++;
@@ -30,16 +36,17 @@ function useLiveView(initial: ChatsView) {
   useEffect(() => {
     let busy = false;
     const id = setInterval(async () => {
-      if (busy || document.visibilityState !== "visible") return;
+      if (busy || latest.current.opening || document.visibilityState !== "visible") return;
       busy = true;
       const gen = generation.current;
-      const { version, current } = latest.current;
+      const { version, current } = latest.current.view;
       try {
         const r = await fetch(`/api/chats/view?c=${current?.id ?? ""}&v=${version}`, { cache: "no-store" });
         if (!r.ok) return;
         const data = (await r.json()) as { view?: ChatsView };
         // Пока ждали ответ, страница могла смениться: старые данные поверх новых не кладём
-        if (data.view && gen === generation.current && data.view.current?.id === latest.current.current?.id) setView(data.view);
+        const now = latest.current;
+        if (data.view && gen === generation.current && !now.opening && data.view.current?.id === now.view.current?.id) setView(data.view);
       } catch {
         // Сервер занят или пропала сеть: попробуем на следующем шаге
       } finally {
@@ -48,15 +55,54 @@ function useLiveView(initial: ChatsView) {
     }, 2000);
     return () => clearInterval(id);
   }, []);
-  return view;
+
+  // Переписка открывается без перезагрузки страницы: адрес меняется сразу, данные подтягиваются
+  // отдельным запросом, а пока они идут, справа бежит полоса загрузки
+  async function open(id: string | null) {
+    const url = id ? `/chats?c=${id}` : "/chats";
+    window.history.pushState(null, "", url);
+    if (!id) {
+      setOpening(null);
+      setView((v) => ({ ...v, current: null }));
+      return;
+    }
+    setOpening(id);
+    for (let attempt = 0; attempt < 3; attempt++) {
+      try {
+        const r = await fetch(`/api/chats/view?c=${id}`, { cache: "no-store" });
+        const data = r.ok ? ((await r.json()) as { view?: ChatsView }) : null;
+        if (latest.current.opening !== id) return;
+        if (data?.view) {
+          setView(data.view);
+          setOpening(null);
+          return;
+        }
+      } catch {}
+      await new Promise((ok) => setTimeout(ok, 1000));
+      if (latest.current.opening !== id) return;
+    }
+    // Сервер так и не ответил: открываем переписку обычным переходом
+    router.push(url);
+  }
+
+  return { view, opening, open };
+}
+
+// Обычный щелчок открывает переписку на месте; с Cmd или Ctrl — как обычная ссылка, в новой вкладке
+function openHere(e: React.MouseEvent, run: () => void) {
+  if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+  e.preventDefault();
+  run();
 }
 
 export function ChatsLive({ initial, companies }: { initial: ChatsView; companies: { id: string; name: string }[] }) {
-  const { list, current, agentName, aiReady, connected } = useLiveView(initial);
+  const { view, opening, open } = useLiveView(initial);
+  const { list, current, agentName, aiReady, connected } = view;
+  const selected = opening ?? current?.id;
 
   return (
     <div className="grid h-[calc(100dvh-15rem)] min-h-[300px] md:min-h-[420px] grid-cols-1 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-card md:h-[calc(100dvh-12.5rem)] md:grid-cols-[320px_minmax(0,1fr)]">
-      <aside className={`flex-col overflow-y-auto border-slate-100 md:flex md:border-r ${current ? "hidden" : "flex"}`}>
+      <aside className={`flex-col overflow-y-auto border-slate-100 md:flex md:border-r ${selected ? "hidden" : "flex"}`}>
         {list.length === 0 ? (
           <p className="m-auto max-w-60 p-6 text-center text-sm text-slate-500">
             {connected
@@ -70,8 +116,9 @@ export function ChatsLive({ initial, companies }: { initial: ChatsView; companie
                 <Link
                   href={`/chats?c=${x.id}`}
                   prefetch={false}
-                  aria-current={x.id === current?.id ? "page" : undefined}
-                  className={`flex items-center gap-3 px-4 py-3 ${x.id === current?.id ? "bg-blue-50" : "hover:bg-slate-50"}`}
+                  onClick={(e) => openHere(e, () => open(x.id))}
+                  aria-current={x.id === selected ? "page" : undefined}
+                  className={`flex items-center gap-3 px-4 py-3 ${x.id === selected ? "bg-blue-50" : "hover:bg-slate-50"}`}
                 >
                   <span className="relative">
                     <Avatar name={x.name} size={44} />
@@ -111,10 +158,19 @@ export function ChatsLive({ initial, companies }: { initial: ChatsView; companie
         )}
       </aside>
 
-      {current ? (
+      {opening ? (
+        <section className="flex min-h-0 min-w-0 flex-col">
+          <LoadingBar className="flex-1" />
+        </section>
+      ) : current ? (
         <section className="flex min-h-0 min-w-0 flex-col">
           <header className="flex flex-wrap items-center gap-3 border-b border-slate-100 px-3 py-2.5 sm:px-5">
-            <Link href="/chats" aria-label="Все чаты" className="-ml-1 rounded-lg p-1 text-slate-500 hover:bg-slate-100 md:hidden">
+            <Link
+              href="/chats"
+              onClick={(e) => openHere(e, () => open(null))}
+              aria-label="Все чаты"
+              className="-ml-1 rounded-lg p-1 text-slate-500 hover:bg-slate-100 md:hidden"
+            >
               <Icon name="back" />
             </Link>
             <Avatar name={current.name} size={40} />

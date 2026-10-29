@@ -22,7 +22,8 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
     getSetting(CLAUDE_KEY_SETTING),
   ]);
   const aiAgent = agents.find((a) => a.id === ai.agentId) ?? null;
-  const companies = view.current ? await db.company.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }) : [];
+  // Список клиентов нужен и тогда, когда переписку откроют уже на странице
+  const companies = await db.company.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } });
 
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
