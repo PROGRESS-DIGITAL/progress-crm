@@ -39,3 +39,10 @@ test("текст письма: превью, HTML и цитата", () => {
   assert.equal(htmlToText("<style>p{}</style><p>Привет&nbsp;&amp; пока</p><br>Ок"), "Привет & пока\n\nОк");
   assert.equal(quoteText("строка 1\nстрока 2", "Иван <ivan@a.ru>", new Date("2026-10-27T09:30:00Z")), "\n\n27 октября 2026 г. в 12:30, Иван <ivan@a.ru>:\n> строка 1\n> строка 2");
 });
+
+test("ошибка входа Яндекса не сваливается на выключенный IMAP", async () => {
+  const { mailError } = await import("../lib/mail/imap");
+  const yandex = { authenticationFailed: true, responseText: "[AUTHENTICATIONFAILED] LOGIN Invalid credentials or IMAP is disabled sc=abc" };
+  assert.match(mailError(yandex, "YANDEX"), /и на неподходящий пароль, и на выключенный IMAP/);
+  assert.match(mailError({ authenticationFailed: true, responseText: "[AUTHENTICATIONFAILED] Invalid credentials (Failure)" }, "GMAIL"), /не приняла пароль/);
+});

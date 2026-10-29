@@ -27,6 +27,9 @@ function client(a: Login) {
 export function mailError(e: unknown, provider: MailProvider) {
   const err = e as { authenticationFailed?: boolean; responseText?: string; message?: string };
   const text = `${err.responseText ?? ""} ${err.message ?? ""}`;
+  // Яндекс на неверный пароль и на выключенный IMAP отвечает одной фразой, причину он не различает
+  if (/invalid credentials or imap is disabled/i.test(text))
+    return "Яндекс не пустил в ящик: так он отвечает и на неподходящий пароль, и на выключенный IMAP. Проверьте, что в почте включено «С сервера imap.yandex.ru по протоколу IMAP», а пароль приложения с типом «Почта» создан под этим же адресом (в Яндекс ID, где вы вошли как этот ящик) и вставлен целиком";
   if (/imap.*(disabled|выключен|отключен)/i.test(text))
     return `В настройках ${PROVIDERS[provider].label} выключен доступ по IMAP: включите его и попробуйте снова`;
   if (err.authenticationFailed || /AUTHENTICATIONFAILED|invalid credentials|authentication failed/i.test(text))
