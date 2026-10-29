@@ -67,6 +67,8 @@ test("AI в чатах: включён в переписке, если выбр�
 test("AI в чатах: в мессенджер уходит текст без markdown", () => {
   assert.equal(plainText("## Цены\nСайт стоит **от 90 000 ₽**.  "), "Цены\nСайт стоит от 90 000 ₽.");
   assert.equal(plainText("x".repeat(5000)).length, 4000);
+  assert.equal(plainText("Примеры: [портфолио](https://progrs.ru/cases). Пишите на [почту](mailto:a@b.ru)"), "Примеры: портфолио: https://progrs.ru/cases. Пишите на почту: a@b.ru");
+  assert.equal(plainText("[https://progrs.ru](https://progrs.ru)"), "https://progrs.ru");
 });
 
 test("раздел «Изменения в CRM» даёт агенту инструменты, которые меняют данные", () => {
@@ -101,4 +103,18 @@ test("сайт агента: из страницы остаются текст �
   assert.equal(page.description, "Сайты и SEO");
   assert.equal(page.text, "Услуги\nЛендинг от 150 000 ₽\nУслуги Кейсы Чужой");
   assert.deepEqual(page.links, ["/uslugi", "/kejsy"]);
+});
+
+test("ссылки в тексте сообщений: адрес без точки в конце, почта и www", async () => {
+  const { splitLinks } = await import("../components/linkify");
+  assert.deepEqual(splitLinks("Смотрите https://progrs.ru/cases. Или www.ya.ru, пишите a@b.ru!"), [
+    { text: "Смотрите " },
+    { text: "https://progrs.ru/cases", href: "https://progrs.ru/cases" },
+    { text: ". Или " },
+    { text: "www.ya.ru", href: "https://www.ya.ru" },
+    { text: ", пишите " },
+    { text: "a@b.ru", href: "mailto:a@b.ru" },
+    { text: "!" },
+  ]);
+  assert.deepEqual(splitLinks("без ссылок"), [{ text: "без ссылок" }]);
 });

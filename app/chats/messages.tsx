@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { Linkify } from "@/components/linkify";
 
 type Message = { id: string; direction: "IN" | "OUT"; text: string; time: string; author: string | null };
 
@@ -24,7 +25,12 @@ export function Messages({ messages, typing }: { messages: Message[]; typing?: s
             m.direction === "OUT" ? "self-end rounded-br-md bg-blue-600 text-white" : "self-start rounded-bl-md bg-white text-slate-900"
           }`}
         >
-          <p className="break-words whitespace-pre-wrap">{m.text}</p>
+          <p className="break-words whitespace-pre-wrap">
+            <Linkify
+              text={m.text}
+              className={`underline underline-offset-2 ${m.direction === "OUT" ? "text-white" : "text-blue-700 hover:text-blue-800"}`}
+            />
+          </p>
           <p className={`mt-0.5 text-right text-[11px] ${m.direction === "OUT" ? "text-blue-100" : "text-slate-400"}`}>
             {m.direction === "OUT" && m.author ? `${m.author} · ` : ""}
             {m.time}

@@ -1,9 +1,10 @@
 import Link from "next/link";
 import { Fragment } from "react";
+import { Linkify } from "@/components/linkify";
 
 // Небольшой разбор markdown для ответов AI-агента: абзацы, **жирный**, списки, таблицы и ссылки.
 // Текст выводится как текст React, без HTML: ответ модели не может вставить разметку в страницу.
-// Ссылки — только на страницы самой CRM (путь с «/»), внешние остаются текстом
+// Ссылки на страницы CRM (путь с «/») открываются здесь же, внешние (http, https, почта) — в новой вкладке
 
 type Block =
   | { kind: "p"; lines: string[] }
@@ -55,17 +56,23 @@ export function parseMarkdown(text: string): Block[] {
 }
 
 const LINK = /^\[([^\]]+)\]\((\/(?!\/)[^)\s]*)\)$/;
+const EXTERNAL = /^\[([^\]]+)\]\(((?:https?:\/\/|mailto:)[^)\s]+)\)$/i;
+const LINK_CLASS = "font-medium text-blue-700 underline underline-offset-2 hover:text-blue-800";
 
-// **жирный**, `код` и [ссылка](/путь); остальное как есть
+// **жирный**, `код`, [ссылка](/путь), [ссылка](https://…) и голые адреса; остальное как есть
 function Inline({ text }: { text: string }) {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(\/(?!\/)[^)\s]*\))/g);
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\((?:\/(?!\/)|https?:\/\/|mailto:)[^)\s]*\))/gi);
   return (
     <>
       {parts.map((p, i) =>
         LINK.test(p) ? (
-          <Link key={i} href={p.match(LINK)![2]} className="font-medium text-blue-700 underline underline-offset-2 hover:text-blue-800">
+          <Link key={i} href={p.match(LINK)![2]} className={LINK_CLASS}>
             {p.match(LINK)![1]}
           </Link>
+        ) : EXTERNAL.test(p) ? (
+          <a key={i} href={p.match(EXTERNAL)![2]} {...(/^mailto:/i.test(p.match(EXTERNAL)![2]) ? {} : { target: "_blank", rel: "noopener noreferrer" })} className={LINK_CLASS}>
+            {p.match(EXTERNAL)![1]}
+          </a>
         ) : p.startsWith("**") && p.endsWith("**") && p.length > 4 ? (
           <strong key={i} className="font-semibold">
             {p.slice(2, -2)}
@@ -75,7 +82,7 @@ function Inline({ text }: { text: string }) {
             {p.slice(1, -1)}
           </code>
         ) : (
-          <Fragment key={i}>{p}</Fragment>
+          <Linkify key={i} text={p} className={LINK_CLASS} />
         ),
       )}
     </>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/icons";
+import { Linkify } from "@/components/linkify";
 import { MarkdownLite } from "@/components/markdown-lite";
 import { useEnterToSend } from "@/components/enter-to-send";
 import { askAgentAction } from "../actions";
@@ -94,7 +95,9 @@ export function ChatPanel({
         {messages.map((m) =>
           m.role === "user" ? (
             <Bubble key={m.id} mine time={m.time}>
-              <p className="break-words whitespace-pre-wrap">{m.text}</p>
+              <p className="break-words whitespace-pre-wrap">
+                <Linkify text={m.text} />
+              </p>
             </Bubble>
           ) : (
             <Bubble key={m.id} time={m.time} sources={m.sources}>
