@@ -21,6 +21,7 @@ import {
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Service, StageKind } from "@prisma/client";
 import { SERVICE_LABELS, formatRub } from "@/lib/format";
+import { burstConfetti } from "@/components/confetti";
 import { moveDeal, quickCreateDeal } from "./actions";
 import { Avatar } from "@/components/avatar";
 
@@ -134,6 +135,11 @@ export function Board({
     if (was.id === column.id && was.deals.map((d) => d.id).join() === order.join()) return;
 
     setColumns((cols) => cols.map((c) => (c.id === column.id ? { ...c, deals } : c)));
+    // Сделка оплачена: конфетти вокруг карточки там, где её отпустили
+    if (column.kind === "WON" && was.kind !== "WON") {
+      const r = e.active.rect.current.translated;
+      if (r) burstConfetti(r.left + r.width / 2, r.top + r.height / 2);
+    }
     startTransition(async () => {
       try {
         await moveDeal(dealId, column.id, order);
