@@ -17,7 +17,7 @@ export function proxy(req: NextRequest) {
   }
   return new NextResponse("Нужен логин и пароль", {
     status: 401,
-    headers: { "WWW-Authenticate": 'Basic realm="LUMA CRM", charset="UTF-8"' },
+    headers: { "WWW-Authenticate": 'Basic realm="PROGRESS CRM", charset="UTF-8"' },
   });
 }
 
