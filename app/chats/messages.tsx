@@ -8,7 +8,11 @@ type Message = { id: string; direction: "IN" | "OUT"; text: string; time: string
 export function Messages({ messages, typing }: { messages: Message[]; typing?: string | null }) {
   const endRef = useRef<HTMLDivElement>(null);
   const last = messages.at(-1)?.id;
-  useEffect(() => endRef.current?.scrollIntoView({ block: "end" }), [last, typing]);
+  // Фигурные скобки нужны: в новых Chrome scrollIntoView возвращает Promise, и React принял бы его
+  // за функцию очистки эффекта и упал с «is not a function» при смене переписки
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ block: "end" });
+  }, [last, typing]);
 
   return (
     <div className="flex flex-1 flex-col gap-2 overflow-y-auto bg-slate-50/60 px-3 py-4 sm:px-5">
