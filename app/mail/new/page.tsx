@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { Icon } from "@/components/icons";
-import { formatAddresses, forwardSubject, forwardText, parseAddresses, quoteText, replySubject } from "@/lib/mail/core";
+import { formatAddresses, forwardSubject, forwardText, parseAddresses, quoteText, replySubject, withSignature } from "@/lib/mail/core";
 import { ComposeForm, type ComposeDraft } from "./compose-form";
 
 export const dynamic = "force-dynamic";
@@ -11,7 +11,7 @@ type Search = { reply?: string; all?: string; fwd?: string; to?: string };
 
 export default async function NewMailPage({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams;
-  const accounts = await db.mailAccount.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, email: true } });
+  const accounts = await db.mailAccount.findMany({ orderBy: { createdAt: "asc" }, select: { id: true, email: true, signature: true } });
   if (!accounts.length) redirect("/integrations/mail");
 
   const sourceId = sp.reply ?? sp.fwd;
@@ -53,6 +53,8 @@ export default async function NewMailPage({ searchParams }: { searchParams: Prom
     }
   }
 
+  draft.text = withSignature(draft.text, accounts.find((a) => a.id === draft.accountId)?.signature);
+
   const back = source ? `/mail?f=${source.folder === "SENT" ? "sent" : "inbox"}&m=${source.id}` : "/mail";
 
   return (
@@ -63,7 +65,7 @@ export default async function NewMailPage({ searchParams }: { searchParams: Prom
       </Link>
       <h1 className="mb-4 text-2xl font-semibold tracking-tight">{title}</h1>
       <div className="rounded-2xl bg-white p-4 shadow-card sm:p-6">
-        <ComposeForm accounts={accounts} draft={draft} />
+        <ComposeForm accounts={accounts.map((a) => ({ id: a.id, email: a.email }))} draft={draft} />
       </div>
     </div>
   );

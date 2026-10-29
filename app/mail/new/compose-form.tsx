@@ -3,6 +3,7 @@
 import { startTransition, useActionState, useEffect, useRef, useState } from "react";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { Icon } from "@/components/icons";
+import { MAIL_MAX_TOTAL } from "@/lib/mail/core";
 import { MAX_FILE_SIZE, fileSize } from "@/lib/tasks";
 import { sendMail } from "../actions";
 
@@ -19,6 +20,7 @@ export type ComposeDraft = {
 export function ComposeForm({ accounts, draft }: { accounts: { id: string; email: string }[]; draft: ComposeDraft }) {
   const [state, formAction, pending] = useActionState(sendMail, undefined);
   const [files, setFiles] = useState<File[]>([]);
+  const [tooBig, setTooBig] = useState<string | null>(null);
   const picker = useRef<HTMLInputElement>(null);
   const body = useRef<HTMLTextAreaElement>(null);
 
@@ -104,12 +106,27 @@ export function ComposeForm({ accounts, draft }: { accounts: { id: string; email
             hidden
             onChange={(e) => {
               const picked = Array.from(e.target.files ?? []);
-              setFiles((list) => [...list, ...picked]);
               e.target.value = "";
+              // Большой файл почта всё равно не пропустит: говорим сразу, а не после долгой отправки
+              const big = picked.find((f) => f.size > MAX_FILE_SIZE);
+              const kept = draft.attachments.reduce((sum, a) => sum + a.size, 0);
+              const total = [...files, ...picked].reduce((sum, f) => sum + f.size, kept);
+              if (big) setTooBig(`Файл «${big.name}» весит ${fileSize(big.size)}, а в письмо можно не больше ${fileSize(MAX_FILE_SIZE)}. Большой файл лучше отправить ссылкой на облако`);
+              else if (total > MAIL_MAX_TOTAL) setTooBig(`Вместе файлы весят ${fileSize(total)}, а в одно письмо помещается до ${fileSize(MAIL_MAX_TOTAL)}. Разделите их на несколько писем или отправьте ссылкой на облако`);
+              else {
+                setTooBig(null);
+                setFiles((list) => [...list, ...picked]);
+              }
             }}
           />
         </div>
-        <p className="mt-1.5 text-xs text-slate-500">До {fileSize(MAX_FILE_SIZE)} каждый файл</p>
+        {tooBig ? (
+          <p className="mt-1.5 text-xs text-rose-600">{tooBig}</p>
+        ) : (
+          <p className="mt-1.5 text-xs text-slate-500">
+            До {fileSize(MAX_FILE_SIZE)} каждый файл и до {fileSize(MAIL_MAX_TOTAL)} все вместе
+          </p>
+        )}
       </div>
       {state?.error && <p className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700">{state.error}</p>}
       <div>

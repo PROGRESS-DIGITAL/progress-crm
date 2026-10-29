@@ -10,6 +10,7 @@ import {
   parseAddresses,
   quoteText,
   replySubject,
+  withSignature,
 } from "../lib/mail/core";
 
 test("detectProvider: Gmail и Яндекс по домену", () => {
@@ -38,4 +39,11 @@ test("текст письма: превью, HTML и цитата", () => {
   assert.equal(makeSnippet("а".repeat(200)).length, 158);
   assert.equal(htmlToText("<style>p{}</style><p>Привет&nbsp;&amp; пока</p><br>Ок"), "Привет & пока\n\nОк");
   assert.equal(quoteText("строка 1\nстрока 2", "Иван <ivan@a.ru>", new Date("2026-10-27T09:30:00Z")), "\n\n27 октября 2026 г. в 12:30, Иван <ivan@a.ru>:\n> строка 1\n> строка 2");
+});
+
+test("подпись: в конце нового письма и над цитатой ответа", () => {
+  assert.equal(withSignature("", "Иван\n+7 900"), "\n\n-- \nИван\n+7 900");
+  assert.equal(withSignature("\n\n> старое", "Иван"), "\n\n-- \nИван\n\n> старое");
+  assert.equal(withSignature("текст", "  "), "текст");
+  assert.equal(withSignature("текст", null), "текст");
 });

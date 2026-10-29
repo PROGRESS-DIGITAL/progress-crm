@@ -1,11 +1,14 @@
 import { db } from "@/lib/db";
 import { mailError, syncAccount } from "./imap";
 
-// Одна синхронизация за раз: фоновая и кнопка «Обновить» не забирают одни письма дважды
-let running: Promise<void> | null = null;
+// Одна синхронизация за раз: фоновая и кнопка «Обновить» не забирают одни письма дважды.
+// Замок лежит в globalThis: фоновые задачи и страницы сервер может собрать в разные модули
+const g = globalThis as { __mailSync?: Promise<void> | null };
+
+export const mailSyncing = () => !!g.__mailSync;
 
 export function syncAllMail() {
-  running ??= (async () => {
+  g.__mailSync ??= (async () => {
     try {
       for (const account of await db.mailAccount.findMany()) {
         try {
@@ -16,8 +19,8 @@ export function syncAllMail() {
         }
       }
     } finally {
-      running = null;
+      g.__mailSync = null;
     }
   })();
-  return running;
+  return g.__mailSync;
 }

@@ -4,14 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { MAX_FILE_SIZE, fileSize } from "@/lib/tasks";
-import { parseAddresses } from "@/lib/mail/core";
+import { MAIL_MAX_TOTAL, parseAddresses } from "@/lib/mail/core";
 import { cleanMessageId, companyByEmails, trashOnServer } from "@/lib/mail/imap";
 import { sendViaSmtp, smtpError } from "@/lib/mail/send";
 import { syncAllMail } from "@/lib/mail/sync";
 import { makeSnippet } from "@/lib/mail/core";
 
+// Кнопка «Обновить» ждёт почту не дольше 15 секунд: большой ящик докачается в фоне, а страница
+// обновляется сама. Иначе, пока идёт долгая загрузка, браузер держит в очереди и «Отправить»
 export async function refreshMail() {
-  await syncAllMail();
+  await Promise.race([syncAllMail().catch(() => {}), new Promise((ok) => setTimeout(ok, 15_000))]);
   revalidatePath("/mail");
 }
 
@@ -55,6 +57,8 @@ export async function sendMail(_prev: SendState, formData: FormData): Promise<Se
       files.map(async (f) => ({ filename: f.name, content: Buffer.from(await f.arrayBuffer()), contentType: f.type || "application/octet-stream" })),
     )),
   ];
+  const total = attachments.reduce((sum, a) => sum + a.content.length, 0);
+  if (total > MAIL_MAX_TOTAL) return { error: `Вместе файлы весят ${fileSize(total)}, а в одно письмо помещается до ${fileSize(MAIL_MAX_TOTAL)}` };
 
   // Ответ продолжает переписку: почтовые программы клиента покажут его в той же цепочке
   const original = formData.get("replyTo") ? await db.mailMessage.findUnique({ where: { id: String(formData.get("replyTo")) } }) : null;

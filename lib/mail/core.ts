@@ -30,6 +30,9 @@ export function detectProvider(email: string): MailProvider | null {
   return null;
 }
 
+// Все вложения письма вместе: в пути они вырастают на треть, а Яндекс и Gmail принимают письма до 25–30 МБ
+export const MAIL_MAX_TOTAL = 20 * 1024 * 1024;
+
 export type Address = { name?: string | null; address?: string | null };
 
 // Список адресатов строкой, как в заголовке письма: «Иван <ivan@a.ru>, b@c.ru»
@@ -98,6 +101,12 @@ const quoteDate = new Intl.DateTimeFormat("ru-RU", {
   minute: "2-digit",
   timeZone: "Europe/Moscow",
 });
+
+// Подпись встаёт под место для текста, над цитатой; «-- » почтовые программы узнают как начало подписи
+export function withSignature(text: string, signature: string | null | undefined) {
+  if (!signature?.trim()) return text;
+  return `\n\n-- \n${signature.trim()}${text ? `\n\n${text.replace(/^\n+/, "")}` : ""}`;
+}
 
 // Цитата исходного письма под ответом, как в почтовых программах
 export function quoteText(text: string, from: string, date: Date) {
