@@ -1,4 +1,4 @@
-# PROSTO CRM
+# LUMA CRM
 
 Собственная CRM агентства PROGRESS Digital.
 
