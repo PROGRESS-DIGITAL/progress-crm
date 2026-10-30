@@ -7,6 +7,8 @@ import { getSetting } from "@/lib/settings";
 import { formatChatTime } from "@/lib/format";
 import { monthLabel, monthKey } from "@/lib/monthly";
 import { CLAUDE_KEY_SETTING, ensureDefaultAgent } from "@/lib/agents/agent";
+import { requireUser } from "@/lib/auth/session";
+import { agentScopesFor } from "@/lib/agents/tools";
 import { deleteAgentChat } from "../actions";
 import { AgentSwitcher } from "../agent-switcher";
 import { ChatPanel } from "./chat-panel";
@@ -42,9 +44,11 @@ function suggestions(scopes: string[], website: string | null) {
 export default async function AgentPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ chat?: string }> }) {
   const [{ id }, { chat: chatId }] = await Promise.all([params, searchParams]);
   await ensureDefaultAgent();
+  const user = await requireUser();
+  const own = user.isOwner ? { OR: [{ employeeId: user.id }, { employeeId: null }] } : { employeeId: user.id };
   const [agents, agent, key] = await Promise.all([
     db.agent.findMany({ orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }], select: { id: true, name: true, description: true } }),
-    db.agent.findUnique({ where: { id }, include: { chats: { orderBy: { updatedAt: "desc" }, take: CHATS_SHOWN } } }),
+    db.agent.findUnique({ where: { id }, include: { chats: { where: own, orderBy: { updatedAt: "desc" }, take: CHATS_SHOWN } } }),
     getSetting(CLAUDE_KEY_SETTING),
   ]);
   if (!agent) notFound();
@@ -75,12 +79,14 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
           <h1 className="text-2xl font-semibold tracking-tight">AI агенты</h1>
           <p className="mt-1 hidden text-sm text-slate-600 sm:block">Помощники, которые знают цифры CRM, отвечают на вопросы и заводят карточки</p>
         </div>
-        <Link
-          href="/agents/new"
-          className="shrink-0 rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm shadow-blue-600/25 hover:bg-blue-700 sm:px-4"
-        >
-          + Новый агент
-        </Link>
+        {user.isOwner && (
+          <Link
+            href="/agents/new"
+            className="shrink-0 rounded-xl bg-blue-600 px-3 py-2 text-sm font-medium text-white shadow-sm shadow-blue-600/25 hover:bg-blue-700 sm:px-4"
+          >
+            + Новый агент
+          </Link>
+        )}
       </div>
 
       <div className="grid h-[calc(100dvh-14rem)] min-h-[400px] grid-cols-1 grid-rows-[minmax(0,1fr)] overflow-hidden rounded-2xl border border-slate-200/60 bg-white shadow-card md:h-[calc(100dvh-12.5rem)] md:grid-cols-[280px_minmax(0,1fr)]">
@@ -179,15 +185,17 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
                 <ConfirmDeleteButton action={deleteAgentChat.bind(null, current.id)} what={`чат «${current.title}»`} label="Удалить чат" icon />
               </div>
             )}
-            <Link
-              href={`/agents/${agent.id}/edit`}
-              title="Настроить агента"
-              aria-label="Настроить агента"
-              className="flex h-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 px-2.5 text-sm text-slate-700 hover:bg-slate-50 sm:px-3"
-            >
-              <Icon name="settings" size={18} className="sm:hidden" />
-              <span className="hidden sm:inline">Настроить</span>
-            </Link>
+            {user.isOwner && (
+              <Link
+                href={`/agents/${agent.id}/edit`}
+                title="Настроить агента"
+                aria-label="Настроить агента"
+                className="flex h-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 px-2.5 text-sm text-slate-700 hover:bg-slate-50 sm:px-3"
+              >
+                <Icon name="settings" size={18} className="sm:hidden" />
+                <span className="hidden sm:inline">Настроить</span>
+              </Link>
+            )}
           </header>
           <ChatPanel
             key={current?.id ?? "new"}
@@ -195,7 +203,7 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
             agentName={agent.name}
             chatId={current?.id ?? null}
             hasKey={!!key}
-            suggestions={suggestions(agent.scopes, agent.website)}
+            suggestions={suggestions(agentScopesFor(agent.scopes, user.sections), agent.website)}
             messages={messages.map((m) => ({
               id: m.id,
               role: m.role as "user" | "assistant",

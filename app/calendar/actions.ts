@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
 import { addDays, fromKey, isDayKey } from "@/lib/calendar";
-import { getOwner } from "@/lib/profile";
+import { actorName } from "@/lib/auth/session";
 import { REMIND_OPTIONS } from "@/lib/reminders";
 
 export type EventInput = {
@@ -68,7 +68,7 @@ async function createDeal(title: string, companyId: string) {
   if (!stage) throw new Error("В воронке нет открытых этапов");
   const top = await db.deal.findFirst({ where: { stageId: stage.id }, orderBy: { position: "asc" }, select: { position: true } });
   const deal = await db.deal.create({
-    data: { title, companyId, stageId: stage.id, owner: (await getOwner()).name, position: (top?.position ?? 1) - 1 },
+    data: { title, companyId, stageId: stage.id, owner: await actorName(), position: (top?.position ?? 1) - 1 },
     select: { id: true },
   });
   revalidatePath("/deals");

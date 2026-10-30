@@ -9,6 +9,13 @@ import { db } from "@/lib/db";
 import { askAgent, chatTitle } from "@/lib/agents/agent";
 import { isScope } from "@/lib/agents/tools";
 import { normalizeWebsite } from "@/lib/agents/website";
+import { agentScopesFor } from "@/lib/agents/tools";
+import { requireOwner, requireUser } from "@/lib/auth/session";
+
+// Чаты сотрудника — только его; директор видит и свои старые чаты, созданные до появления входа
+function ownChats(user: { id: string; isOwner: boolean }) {
+  return user.isOwner ? { OR: [{ employeeId: user.id }, { employeeId: null }] } : { employeeId: user.id };
+}
 
 export type AskState = { ok: true; chatId: string } | { ok: false; error: string };
 
@@ -19,9 +26,10 @@ export async function askAgentAction(agentId: string, chatId: string | null, que
   if (!text) return { ok: false, error: "Напишите вопрос" };
   if (text.length > 4000) return { ok: false, error: "Вопрос слишком длинный: до 4000 символов" };
 
+  const user = await requireUser();
   const agent = await db.agent.findUnique({ where: { id: agentId } });
   if (!agent) return { ok: false, error: "Агент не найден" };
-  const chat = chatId ? await db.agentChat.findFirst({ where: { id: chatId, agentId } }) : null;
+  const chat = chatId ? await db.agentChat.findFirst({ where: { id: chatId, agentId, ...ownChats(user) } }) : null;
   if (chatId && !chat) return { ok: false, error: "Чат не найден" };
 
   const history = chat
@@ -30,10 +38,11 @@ export async function askAgentAction(agentId: string, chatId: string | null, que
       )
     : [];
 
-  const result = await askAgent(agent, history, text);
+  // Агент работает только с теми разделами, которые открыты сотруднику: директор видит всё
+  const result = await askAgent({ ...agent, scopes: agentScopesFor(agent.scopes, user.sections) }, history, text);
   if (!result.ok) return result;
 
-  const id = chat?.id ?? (await db.agentChat.create({ data: { agentId, title: chatTitle(text) } })).id;
+  const id = chat?.id ?? (await db.agentChat.create({ data: { agentId, employeeId: user.id, title: chatTitle(text) } })).id;
   // По одному insert на шаг, чтобы порядковые номера шли строго по порядку
   await db.$transaction([
     ...result.steps.map((s) =>
@@ -48,7 +57,10 @@ export async function askAgentAction(agentId: string, chatId: string | null, que
 }
 
 export async function deleteAgentChat(chatId: string) {
-  const chat = await db.agentChat.delete({ where: { id: chatId } });
+  const user = await requireUser();
+  const own = await db.agentChat.findFirst({ where: { id: chatId, ...ownChats(user) } });
+  if (!own) throw new Error("Чат не найден");
+  const chat = await db.agentChat.delete({ where: { id: own.id } });
   revalidatePath(`/agents/${chat.agentId}`);
   redirect(`/agents/${chat.agentId}`);
 }
@@ -62,6 +74,7 @@ const agentSchema = z.object({
 export type AgentFormState = { error?: string } | undefined;
 
 export async function saveAgent(id: string | null, _prev: AgentFormState, formData: FormData): Promise<AgentFormState> {
+  await requireOwner();
   const parsed = agentSchema.safeParse({
     name: formData.get("name"),
     description: formData.get("description") || undefined,
@@ -82,6 +95,7 @@ export async function saveAgent(id: string | null, _prev: AgentFormState, formDa
 
 // Постоянного агента удалить нельзя: раздел всегда открывается с него
 export async function deleteAgent(id: string) {
+  await requireOwner();
   await db.agent.deleteMany({ where: { id, isDefault: false } });
   revalidatePath("/agents", "layout");
   redirect("/agents");
