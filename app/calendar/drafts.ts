@@ -28,7 +28,7 @@ export function draftFromEvent(e: CalEvent): EventInput {
 export function emptyDraft(date: string, startMin: number, extra: Partial<EventInput> = {}): EventInput {
   const endMin = Math.min(startMin + 60, 23 * 60 + 59);
   return {
-    kind: "MEETING",
+    kind: "TASK",
     title: "",
     notes: "",
     date,

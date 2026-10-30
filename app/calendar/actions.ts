@@ -120,7 +120,7 @@ export async function saveEvent(id: string | null, input: EventInput): Promise<{
     start,
     end,
     allDay: v.allDay,
-    done: v.kind === "TASK" && v.done,
+    done: v.done,
     companyId,
     dealId,
     taskId,

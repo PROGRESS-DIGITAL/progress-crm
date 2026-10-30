@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/icons";
 import { useConfirm } from "@/components/confirm-dialog";
+import { TimeField } from "@/components/time-field";
 import { REMIND_OPTIONS } from "@/lib/calendar";
 import { MAX_FILE_SIZE, fileSize } from "@/lib/tasks";
 import { deleteEvent, saveEvent, type EventInput } from "@/app/calendar/actions";
@@ -187,7 +188,8 @@ export function TaskForm({
             Выполнена
           </label>
 
-          <div className="mt-4 grid grid-cols-2 gap-3">
+          {/* Поля друг под другом: колонка справа узкая, рядом время не помещается */}
+          <div className="mt-4 grid gap-3">
             <label className={label}>
               {d.allDay ? "Начало" : "Дата"}
               <input
@@ -204,16 +206,16 @@ export function TaskForm({
                 <input type="date" value={d.endDate} min={d.date} onChange={(e) => set("endDate", e.target.value)} className={field} required />
               </label>
             ) : (
-              <div className="grid grid-cols-2 gap-2">
+              <>
                 <label className={label}>
                   С
-                  <input type="time" step={300} value={d.startTime} onChange={(e) => set("startTime", e.target.value)} className={`${field} px-2`} required />
+                  <TimeField label="Начало" value={d.startTime} onChange={(v) => set("startTime", v)} />
                 </label>
                 <label className={label}>
                   До
-                  <input type="time" step={300} value={d.endTime} onChange={(e) => set("endTime", e.target.value)} className={`${field} px-2`} required />
+                  <TimeField label="Конец" value={d.endTime} onChange={(v) => set("endTime", v)} />
                 </label>
-              </div>
+              </>
             )}
           </div>
           <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
