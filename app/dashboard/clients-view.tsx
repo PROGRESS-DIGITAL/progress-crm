@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { Icon, type IconName } from "@/components/icons";
+import { CountUp } from "@/components/count-up";
 import { formatRub } from "@/lib/format";
 import { clientLtv, rankClients } from "@/lib/ltv";
 
@@ -37,7 +38,7 @@ function Tile({
   tone,
 }: {
   label: string;
-  value: string;
+  value: React.ReactNode;
   hint?: string;
   icon: IconName;
   tone: string;
@@ -79,16 +80,16 @@ export async function ClientsView() {
       </p>
 
       <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Tile icon="wallet" tone="bg-blue-600" label="Оплачено всего" value={formatRub(totalLtv)} />
+        <Tile icon="wallet" tone="bg-blue-600" label="Оплачено всего" value={<CountUp value={totalLtv} money />} />
         <Tile
           icon="trend"
           tone="bg-emerald-500"
           label="Средний LTV"
-          value={formatRub(paying.length ? Math.round(totalLtv / paying.length) : 0)}
+          value={<CountUp value={paying.length ? Math.round(totalLtv / paying.length) : 0} money />}
           hint="по клиентам с оплатами"
         />
-        <Tile icon="users" tone="bg-orange-400" label="Клиентов с оплатами" value={`${paying.length} из ${rows.length}`} />
-        <Tile icon="deals" tone="bg-sky-500" label="В работе" value={formatRub(totalOpen)} hint="открытые сделки всех клиентов" />
+        <Tile icon="users" tone="bg-orange-400" label="Клиентов с оплатами" value={<CountUp value={paying.length} suffix={` из ${rows.length}`} />} />
+        <Tile icon="deals" tone="bg-sky-500" label="В работе" value={<CountUp value={totalOpen} money />} hint="открытые сделки всех клиентов" />
       </div>
 
       <section className="mb-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-5">
