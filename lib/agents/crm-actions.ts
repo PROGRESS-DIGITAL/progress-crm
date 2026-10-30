@@ -3,7 +3,7 @@ import { z } from "zod/v4";
 import type { StageKind } from "@prisma/client";
 import { db } from "@/lib/db";
 import { addDays, fromKey, isDayKey, REMIND_OPTIONS } from "@/lib/calendar";
-import { getOwner } from "@/lib/profile";
+import { actorName } from "@/lib/auth/session";
 import { tool } from "@/lib/agents/tool";
 
 // Инструменты, которые меняют CRM: создают лиды, клиентов, сделки, встречи и задачи и двигают
@@ -73,7 +73,7 @@ const createLead = tool({
         email: input.email || null,
         companyName: input.company_name || null,
         message: input.message || null,
-        owner: (await getOwner()).name,
+        owner: await actorName(),
       },
     });
     refresh("/leads");
@@ -159,7 +159,7 @@ const createDeal = tool({
         stageId: stage.id,
         expectedCloseDate: input.expected_close ? fromKey(input.expected_close) : null,
         notes: input.notes || null,
-        owner: (await getOwner()).name,
+        owner: await actorName(),
         closedAt: closedAtFor(stage.kind, null),
         position: await topPosition(stage.id),
       },

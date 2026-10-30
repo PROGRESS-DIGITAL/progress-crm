@@ -5,11 +5,12 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icon, type IconName } from "@/components/icons";
 import { SIDEBAR_COOKIE } from "@/components/sidebar-cookie";
+import { signOut } from "@/app/login/actions";
 
 type Item = { href: string; label: string; icon: IconName; badge?: number };
 type Group = { title: string; items: Item[] };
 
-function menu(newLeads: number, unreadChats: number, dueTasks: number, unreadMail: number): Group[] {
+function menu(newLeads: number, unreadChats: number, dueTasks: number, unreadMail: number, isOwner: boolean): Group[] {
   return [
     {
       title: "Главное",
@@ -38,10 +39,37 @@ function menu(newLeads: number, unreadChats: number, dueTasks: number, unreadMai
       title: "Общее",
       items: [
         { href: "/integrations", label: "Интеграции", icon: "integrations" },
+        ...(isOwner ? [{ href: "/employees", label: "Сотрудники", icon: "users" as const }] : []),
         { href: "/profile", label: "Личные данные", icon: "profile" },
       ],
     },
   ];
+}
+
+// Сотрудник видит только разделы своей роли; «Сотрудники» и «Личные данные» решаются отдельно
+function allowed(groups: Group[], sections: string[]) {
+  const open = (href: string) => {
+    const key = href.slice(1);
+    return key === "profile" || key === "employees" || sections.includes(key);
+  };
+  return groups.map((g) => ({ ...g, items: g.items.filter((i) => open(i.href)) })).filter((g) => g.items.length > 0);
+}
+
+function SignOut({ collapsed }: { collapsed: boolean }) {
+  return (
+    <form action={signOut} className="border-t border-slate-100 pt-2">
+      <button
+        type="submit"
+        title={collapsed ? "Выйти" : undefined}
+        className={`flex h-11 w-full items-center gap-3 rounded-xl text-[15px] text-slate-500 hover:bg-slate-100 hover:text-slate-900 ${
+          collapsed ? "justify-center" : "px-3"
+        }`}
+      >
+        <Icon name="logout" />
+        {!collapsed && <span>Выйти</span>}
+      </button>
+    </form>
+  );
 }
 
 function isActive(pathname: string, href: string) {
@@ -127,17 +155,21 @@ export function Sidebar({
   unreadChats,
   dueTasks,
   unreadMail,
+  sections,
+  isOwner,
 }: {
   initialCollapsed: boolean;
   newLeads: number;
   unreadChats: number;
   dueTasks: number;
   unreadMail: number;
+  sections: string[];
+  isOwner: boolean;
 }) {
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [drawer, setDrawer] = useState(false);
   const pathname = usePathname();
-  const groups = menu(newLeads, unreadChats, dueTasks, unreadMail);
+  const groups = allowed(menu(newLeads, unreadChats, dueTasks, unreadMail, isOwner), sections);
 
   // Переход по ссылке закрывает мобильное меню
   useEffect(() => setDrawer(false), [pathname]);
@@ -148,10 +180,13 @@ export function Sidebar({
     document.cookie = `${SIDEBAR_COOKIE}=${next ? "collapsed" : "expanded"}; path=/; max-age=31536000; samesite=lax`;
   }
 
-  // Снизу на телефоне помещается пять кнопок: дашборд, задачи, почта и агенты остаются в «Меню»
-  const tabs = groups[0].items.filter((t) => !["/dashboard", "/tasks", "/mail", "/agents"].includes(t.href));
+  // Снизу на телефоне помещается пять кнопок: четыре раздела и «Меню». У директора дашборд, задачи, почта
+  // и агенты остаются в «Меню»; у сотрудника с урезанной ролью их место занимают его разделы
+  const main = groups[0]?.title === "Главное" ? groups[0].items : [];
+  const preferred = main.filter((t) => !["/dashboard", "/tasks", "/mail", "/agents"].includes(t.href));
+  const tabs = [...preferred, ...main.filter((t) => !preferred.includes(t))].slice(0, 4);
   const inTabs = tabs.some((t) => isActive(pathname, t.href));
-  const hiddenBadge = groups[0].items.some((t) => !tabs.includes(t) && t.badge);
+  const hiddenBadge = main.some((t) => !tabs.includes(t) && t.badge);
 
   return (
     <>
@@ -165,7 +200,7 @@ export function Sidebar({
         </div>
 
         <NavGroups groups={groups} collapsed={collapsed} pathname={pathname} />
-
+        <SignOut collapsed={collapsed} />
       </aside>
 
       <nav
@@ -223,6 +258,7 @@ export function Sidebar({
               </button>
             </div>
             <NavGroups groups={groups} collapsed={false} pathname={pathname} />
+            <SignOut collapsed={false} />
           </div>
         </div>
       )}

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
 import { recordOutgoing } from "@/lib/chat/inbox";
 import { NotConnected, sendToChannel } from "@/lib/chat/send";
-import { getOwner } from "@/lib/profile";
+import { actorName } from "@/lib/auth/session";
 import { setSetting } from "@/lib/settings";
 import { CHAT_AI_SETTING, draftClientReply, getChatAi, type ChatAi } from "@/lib/agents/client-chat";
 
@@ -28,8 +28,7 @@ export async function sendChatMessage(conversationId: string, _prev: SendState, 
     return { error: `Не отправилось: ${e instanceof Error ? e.message : "ошибка мессенджера"}` };
   }
 
-  const owner = await getOwner();
-  await recordOutgoing(conversation.id, text, externalId, owner.name);
+  await recordOutgoing(conversation.id, text, externalId, await actorName());
   revalidatePath("/chats");
   return { sentAt: Date.now() };
 }

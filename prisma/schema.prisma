@@ -232,6 +232,82 @@ model Employee {
   isOwner   Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Вход в CRM: логин и пароль (scrypt), второй шаг — код из приложения
+  login              String?         @unique
+  passwordHash       String?
+  // Пароль выдал директор: при первом входе его нужно сменить
+  mustChangePassword Boolean         @default(false)
+  totpSecret         String?
+  totpEnabled        Boolean         @default(false)
+  failedLogins       Int             @default(0)
+  lockedUntil        DateTime?
+  blocked            Boolean         @default(false)
+  // Директор (isOwner) видит всё; остальным разделы задаёт роль
+  role               Role?           @relation(fields: [roleId], references: [id], onDelete: SetNull)
+  roleId             String?
+  sessions           Session[]
+  devices            TrustedDevice[]
+  loginEvents        LoginEvent[]
+  agentChats         AgentChat[]
+}
+
+// Роль сотрудника: какие разделы CRM ему открыты (ключи из lib/auth/sections.ts)
+model Role {
+  id        String     @id @default(cuid())
+  name      String     @unique
+  sections  String[]
+  createdAt DateTime   @default(now())
+  employees Employee[]
+}
+
+// Вход в браузере. В cookie лежит случайный токен, здесь — только его хэш.
+// verified=false — пароль верный, но код второго шага ещё не введён
+model Session {
+  id          String    @id @default(cuid())
+  tokenHash   String    @unique
+  employee    Employee  @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId  String
+  verified    Boolean   @default(false)
+  // Запасной код из Telegram: хэш, срок и число попыток
+  codeHash    String?
+  codeExpires DateTime?
+  codeTries   Int       @default(0)
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime  @default(now())
+  lastSeenAt  DateTime  @default(now())
+  expiresAt   DateTime
+
+  @@index([employeeId])
+}
+
+// Доверенное устройство: 30 дней вход без кода второго шага
+model TrustedDevice {
+  id         String   @id @default(cuid())
+  tokenHash  String   @unique
+  employee   Employee @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId String
+  label      String?
+  createdAt  DateTime @default(now())
+  expiresAt  DateTime
+
+  @@index([employeeId])
+}
+
+// Журнал входов: удачные и неудачные попытки
+model LoginEvent {
+  id         String    @id @default(cuid())
+  employee   Employee? @relation(fields: [employeeId], references: [id], onDelete: SetNull)
+  employeeId String?
+  login      String
+  ok         Boolean
+  reason     String
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime  @default(now())
+
+  @@index([createdAt])
 }
 
 enum Channel {
@@ -532,6 +608,9 @@ model AgentChat {
   id        String         @id @default(cuid())
   agent     Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
   agentId   String
+  // Кто ведёт чат: сотрудник видит только свои чаты; null — чаты директора до появления входа
+  employee   Employee?      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
+  employeeId String?
   title     String
   messages  AgentMessage[]
   createdAt DateTime       @default(now())

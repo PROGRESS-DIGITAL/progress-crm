@@ -1,7 +1,7 @@
 import { getCompanyOptions, getProductOptions, getStageOptions } from "@/lib/queries";
 import { createDeal } from "../actions";
 import { DealForm } from "../deal-form";
-import { getOwner } from "@/lib/profile";
+import { actorName } from "@/lib/auth/session";
 import { SALES_STEPS, isSalesStep } from "@/lib/sales-map";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +16,7 @@ export default async function NewDealPage({
     getStageOptions(),
     getCompanyOptions(),
     getProductOptions(),
-    getOwner(),
+    actorName(),
   ]);
   // Переход из планограммы: подставляем шаг и, если есть, услугу из прайса с её ценой
   const product = products.find((p) => p.id === productId);
@@ -33,7 +33,7 @@ export default async function NewDealPage({
           companies={companies}
           products={products}
           initial={{
-            owner: owner.name,
+            owner,
             startDate: new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Moscow" }),
             companyId: companies.some((c) => c.id === companyId) ? companyId : "",
             title: salesStep ? SALES_STEPS[salesStep] : "",

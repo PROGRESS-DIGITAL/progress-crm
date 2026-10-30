@@ -654,6 +654,22 @@ export function isScope(key: string): key is ScopeKey {
   return SCOPES.some((s) => s.key === key);
 }
 
+// Какие разделы CRM нужны агенту для каждой группы данных. Сотрудник без финансов не узнает
+// у агента выручку, даже если агент настроен на деньги
+const SCOPE_SECTIONS: Record<ScopeKey, string[]> = {
+  money: ["finance"],
+  sales: ["deals", "leads"],
+  clients: ["clients"],
+  work: ["tasks", "calendar"],
+  comms: ["chats", "mail"],
+  plan: ["finance"],
+  edit: ["deals"],
+};
+
+export function agentScopesFor(scopes: string[], sections: readonly string[]) {
+  return scopes.filter((s) => isScope(s) && SCOPE_SECTIONS[s].some((k) => sections.includes(k)));
+}
+
 export function toolsFor(scopes: string[]): Tool[] {
   return SCOPES.filter((s) => scopes.includes(s.key)).flatMap((s) => [...s.tools] as Tool[]);
 }

@@ -48,8 +48,7 @@ if [ ! -f "$ENV_FILE" ]; then
 DOMAIN=$DOMAIN
 POSTGRES_PASSWORD=$(openssl rand -hex 16)
 TILDA_WEBHOOK_KEY=$(openssl rand -hex 16)
-BASIC_AUTH_USER=progress
-BASIC_AUTH_PASSWORD=$(openssl rand -base64 12 | tr -d '/+=')
+SETUP_KEY=$(openssl rand -hex 8)
 SEED_DEMO=${SEED_DEMO:-1}
 ENV
   chmod 600 "$ENV_FILE"
@@ -69,8 +68,8 @@ cat <<DONE
 
 Готово.
   CRM:          https://$DOMAIN
-  Логин:        $BASIC_AUTH_USER
-  Пароль:       $BASIC_AUTH_PASSWORD
+  Ключ установки: ${SETUP_KEY:-$BASIC_AUTH_PASSWORD}
+                (спросят один раз, когда директор будет задавать свой логин и пароль)
   Webhook Тильды: https://$DOMAIN/api/webhooks/tilda?key=$TILDA_WEBHOOK_KEY
 
 Настройки лежат в $ENV_FILE, копии базы в $APP_DIR/deploy/backups.
