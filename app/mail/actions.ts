@@ -4,14 +4,16 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 import { MAX_FILE_SIZE, fileSize } from "@/lib/tasks";
-import { parseAddresses } from "@/lib/mail/core";
+import { MAIL_MAX_TOTAL, cleanEditorHtml, editorText, parseAddresses } from "@/lib/mail/core";
 import { cleanMessageId, companyByEmails, trashOnServer } from "@/lib/mail/imap";
 import { sendViaSmtp, smtpError } from "@/lib/mail/send";
 import { syncAllMail } from "@/lib/mail/sync";
 import { makeSnippet } from "@/lib/mail/core";
 
+// Кнопка «Обновить» ждёт почту не дольше 15 секунд: большой ящик докачается в фоне, а страница
+// обновляется сама. Иначе, пока идёт долгая загрузка, браузер держит в очереди и «Отправить»
 export async function refreshMail() {
-  await syncAllMail();
+  await Promise.race([syncAllMail().catch(() => {}), new Promise((ok) => setTimeout(ok, 15_000))]);
   revalidatePath("/mail");
 }
 
@@ -37,11 +39,14 @@ export async function sendMail(_prev: SendState, formData: FormData): Promise<Se
   if (!account) return { error: "Выберите ящик, с которого отправить" };
   const to = parseAddresses(String(formData.get("to") ?? ""));
   const cc = parseAddresses(String(formData.get("cc") ?? ""));
-  const wrong = [...to.invalid, ...cc.invalid];
+  const bcc = parseAddresses(String(formData.get("bcc") ?? ""));
+  const wrong = [...to.invalid, ...cc.invalid, ...bcc.invalid];
   if (wrong.length) return { error: `Проверьте адрес: ${wrong.join(", ")}` };
   if (!to.valid.length) return { error: "Укажите, кому отправить" };
   const subject = String(formData.get("subject") ?? "").trim() || "(без темы)";
-  const text = String(formData.get("text") ?? "");
+  // Письмо из редактора приходит в HTML, текстовую версию для простых почтовых программ собираем из него
+  const html = formData.has("html") ? cleanEditorHtml(String(formData.get("html"))) : null;
+  const text = html !== null ? editorText(html) : String(formData.get("text") ?? "");
 
   // Новые файлы и вложения пересылаемого письма, которые оставили отмеченными
   const files = formData.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
@@ -55,6 +60,8 @@ export async function sendMail(_prev: SendState, formData: FormData): Promise<Se
       files.map(async (f) => ({ filename: f.name, content: Buffer.from(await f.arrayBuffer()), contentType: f.type || "application/octet-stream" })),
     )),
   ];
+  const total = attachments.reduce((sum, a) => sum + a.content.length, 0);
+  if (total > MAIL_MAX_TOTAL) return { error: `Вместе файлы весят ${fileSize(total)}, а в одно письмо помещается до ${fileSize(MAIL_MAX_TOTAL)}` };
 
   // Ответ продолжает переписку: почтовые программы клиента покажут его в той же цепочке
   const original = formData.get("replyTo") ? await db.mailMessage.findUnique({ where: { id: String(formData.get("replyTo")) } }) : null;
@@ -63,7 +70,7 @@ export async function sendMail(_prev: SendState, formData: FormData): Promise<Se
 
   let messageId: string;
   try {
-    messageId = await sendViaSmtp(account, { to: to.valid, cc: cc.valid, subject, text, inReplyTo, references, attachments });
+    messageId = await sendViaSmtp(account, { to: to.valid, cc: cc.valid, bcc: bcc.valid, subject, text, html, inReplyTo, references, attachments });
   } catch (e) {
     return { error: `Письмо не ушло: ${smtpError(e, account.provider)}` };
   }
@@ -82,6 +89,7 @@ export async function sendMail(_prev: SendState, formData: FormData): Promise<Se
       cc: cc.valid.join(", ") || null,
       subject,
       text,
+      html: html || null,
       snippet: makeSnippet(text),
       date: new Date(),
       seen: true,

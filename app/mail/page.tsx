@@ -8,6 +8,7 @@ import { formatChatTime } from "@/lib/format";
 import { fileSize } from "@/lib/tasks";
 import { PROVIDERS } from "@/lib/mail/core";
 import { markSeenOnServer } from "@/lib/mail/imap";
+import { mailSyncing } from "@/lib/mail/sync";
 import { AutoRefresh } from "@/app/chats/auto-refresh";
 import { deleteMail, refreshMail } from "./actions";
 import { MailBody } from "./mail-body";
@@ -113,12 +114,15 @@ export default async function MailPage({ searchParams }: { searchParams: Promise
     await db.mailMessage.update({ where: { id: current.id }, data: { seen: true } });
     if (current.uid !== null && current.folder === "INBOX") void markSeenOnServer(current.account, current.uid).catch(() => {});
   }
-  const errors = accounts.filter((a) => a.lastError);
+  const syncing = mailSyncing();
+  // Пока идёт новая попытка, старую ошибку не показываем: при удаче она исчезнет сама
+  const errors = syncing ? [] : accounts.filter((a) => a.lastError);
   const back = link({ m: undefined });
 
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
-      <AutoRefresh ms={30_000} />
+      {/* Пока письма докачиваются, страница обновляется чаще, чтобы они появлялись по мере загрузки */}
+      <AutoRefresh ms={syncing ? 5_000 : 30_000} />
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">Почта</h1>
@@ -140,6 +144,15 @@ export default async function MailPage({ searchParams }: { searchParams: Promise
           </Link>
         </div>
       </div>
+
+      {syncing && (
+        <div role="status" className="mb-3 flex items-center gap-3 text-sm text-slate-500">
+          <div className="h-1.5 w-24 overflow-hidden rounded-full bg-blue-100">
+            <div className="load-stripes h-full w-full rounded-full" />
+          </div>
+          Забираю письма из ящика…
+        </div>
+      )}
 
       {errors.map((a) => (
         <p key={a.id} className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm text-rose-700">

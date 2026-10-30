@@ -238,3 +238,9 @@ html.dark .tile-glow .text-\[26px\] {
     animation: none;
   }
 }
+
+/* Ссылки в тексте письма, пока его пишут */
+.mail-editor a {
+  color: var(--color-blue-600);
+  text-decoration: underline;
+}

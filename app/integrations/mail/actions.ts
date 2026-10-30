@@ -54,3 +54,11 @@ export async function disconnectMailbox(id: string) {
   await db.mailAccount.delete({ where: { id } });
   revalidateMail();
 }
+
+// Имя отправителя и подпись можно поменять у подключённого ящика, не подключая его заново
+export async function updateMailbox(id: string, formData: FormData) {
+  const name = String(formData.get("name") ?? "").trim() || null;
+  const signature = String(formData.get("signature") ?? "").replace(/\s+$/, "") || null;
+  await db.mailAccount.update({ where: { id }, data: { name, signature } });
+  revalidateMail();
+}

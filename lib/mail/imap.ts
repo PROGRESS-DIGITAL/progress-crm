@@ -2,11 +2,17 @@ import { ImapFlow } from "imapflow";
 import { simpleParser, type AddressObject, type ParsedMail } from "mailparser";
 import type { MailAccount, MailFolder, MailProvider } from "@prisma/client";
 import { db } from "@/lib/db";
-import { networkError } from "@/lib/net";
+import { RU_SERVICE_HINT, networkError } from "@/lib/net";
 import { PROVIDERS, emailsOf, formatAddresses, htmlToText, makeSnippet, type Address } from "./core";
 
 // При первом подключении забираем последние письма папки, а не весь архив за годы
 const FIRST_SYNC = 200;
+// Письма забираем пачками и после каждой запоминаем, докуда дошли: если сервер оборвёт соединение,
+// следующая попытка продолжит с того же места, а не начнёт все 200 писем заново
+const BATCH = 20;
+// Дольше этого одна работа с ящиком не идёт: зависшее соединение закрываем, иначе встанет вся почта
+const SYNC_LIMIT_MS = 10 * 60_000;
+const ACTION_LIMIT_MS = 60_000;
 
 type Login = { provider: MailProvider; email: string; password: string };
 
@@ -25,24 +31,46 @@ function client(a: Login) {
 
 // Понятная причина вместо «Command failed»
 export function mailError(e: unknown, provider: MailProvider) {
-  const err = e as { authenticationFailed?: boolean; responseText?: string; message?: string };
+  const err = e as { authenticationFailed?: boolean; responseText?: string; message?: string; code?: string; reason?: string };
   const text = `${err.responseText ?? ""} ${err.message ?? ""}`;
+  const host = PROVIDERS[provider].imap;
   if (/imap.*(disabled|выключен|отключен)/i.test(text))
     return `В настройках ${PROVIDERS[provider].label} выключен доступ по IMAP: включите его и попробуйте снова`;
   if (err.authenticationFailed || /AUTHENTICATIONFAILED|invalid credentials|authentication failed/i.test(text))
     return "Почта не приняла пароль. Нужен пароль приложения, а не обычный пароль от аккаунта";
-  return networkError(e, PROVIDERS[provider].imap);
+  if (dropped(e)) return `${host} оборвал соединение${err.reason ? ` (${err.reason})` : ""}. CRM попробует снова при следующей проверке почты`;
+  return networkError(e, host);
 }
 
-export async function withImap<T>(a: Login, fn: (c: ImapFlow) => Promise<T>) {
+// Сервер закрыл соединение посреди работы: такое лечится повторной попыткой
+function dropped(e: unknown) {
+  const code = (e as { code?: string })?.code;
+  return ["NoConnection", "EConnectionClosed", "ETIMEOUT", "ECONNRESET", "EPIPE"].includes(code ?? "");
+}
+
+export async function withImap<T>(a: Login, fn: (c: ImapFlow) => Promise<T>, limitMs = ACTION_LIMIT_MS) {
   const c = client(a);
   // Без обработчика обрыв соединения в фоне роняет сервер
   c.on("error", () => {});
-  await c.connect();
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const limit = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${PROVIDERS[a.provider].imap} слишком долго не отвечает, ${RU_SERVICE_HINT}`));
+      c.close();
+    }, limitMs);
+  });
+  const work = async () => {
+    await c.connect();
+    try {
+      return await fn(c);
+    } finally {
+      await c.logout().catch(() => c.close());
+    }
+  };
   try {
-    return await fn(c);
+    return await Promise.race([work(), limit]);
   } finally {
-    await c.logout().catch(() => c.close());
+    clearTimeout(timer);
   }
 }
 
@@ -146,29 +174,51 @@ async function syncFolder(c: ImapFlow, account: MailAccount, folder: MailFolder)
       if (account[validityKey]) await db.mailMessage.deleteMany({ where: { accountId: account.id, folder, uid: { not: null } } });
       lastUid = 0;
     }
-    let maxUid = lastUid;
-    if (box.exists) {
-      const messages = lastUid
-        ? c.fetch(`${lastUid + 1}:*`, { uid: true, flags: true, source: true }, { uid: true })
-        : c.fetch(`${Math.max(1, box.exists - FIRST_SYNC + 1)}:*`, { uid: true, flags: true, source: true });
-      for await (const m of messages) {
-        // «N:*» по правилам IMAP возвращает последнее письмо, даже если оно старше N
-        if (m.uid <= lastUid || !m.source) continue;
-        maxUid = Math.max(maxUid, m.uid);
+    // Сначала только номера новых писем: это быстро, а сами письма потом пачками
+    const uids = box.exists
+      ? (lastUid
+          ? await c.fetchAll(`${lastUid + 1}:*`, { uid: true }, { uid: true })
+          : await c.fetchAll(`${Math.max(1, box.exists - FIRST_SYNC + 1)}:*`, { uid: true })
+        )
+          .map((m) => m.uid)
+          // «N:*» по правилам IMAP возвращает последнее письмо, даже если оно старше N
+          .filter((uid) => uid > lastUid)
+          .sort((x, y) => x - y)
+      : [];
+    for (let i = 0; i < uids.length; i += BATCH) {
+      const part = uids.slice(i, i + BATCH);
+      const messages = await c.fetchAll(part.join(","), { uid: true, flags: true, source: true }, { uid: true });
+      for (const m of messages) {
+        if (!m.source) continue;
         await saveMessage(account, folder, m.uid, folder === "SENT" || !!m.flags?.has("\\Seen"), await simpleParser(m.source));
       }
+      await db.mailAccount.update({ where: { id: account.id }, data: { [uidKey]: part[part.length - 1], [validityKey]: validity } });
     }
-    await db.mailAccount.update({ where: { id: account.id }, data: { [uidKey]: maxUid, [validityKey]: validity } });
+    if (!uids.length) await db.mailAccount.update({ where: { id: account.id }, data: { [uidKey]: lastUid, [validityKey]: validity } });
   } finally {
     lock.release();
   }
 }
 
 export async function syncAccount(account: MailAccount) {
-  await withImap(account, async (c) => {
-    await syncFolder(c, account, "INBOX");
-    await syncFolder(c, account, "SENT");
-  });
+  for (let attempt = 1; ; attempt++) {
+    // После обрыва берём ящик из базы заново: в нём уже записано, докуда дошли
+    const fresh = attempt === 1 ? account : await db.mailAccount.findUniqueOrThrow({ where: { id: account.id } });
+    try {
+      await withImap(
+        fresh,
+        async (c) => {
+          await syncFolder(c, fresh, "INBOX");
+          await syncFolder(c, fresh, "SENT");
+        },
+        SYNC_LIMIT_MS,
+      );
+      return;
+    } catch (e) {
+      if (attempt >= 3 || !dropped(e)) throw e;
+      await new Promise((ok) => setTimeout(ok, 2000 * attempt));
+    }
+  }
 }
 
 // Прочитано в CRM — прочитано и в почте

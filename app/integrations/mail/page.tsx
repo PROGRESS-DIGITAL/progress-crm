@@ -3,7 +3,8 @@ import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { db } from "@/lib/db";
 import { PROVIDERS } from "@/lib/mail/core";
 import { formatChatTime } from "@/lib/format";
-import { disconnectMailbox } from "./actions";
+import { inputClass } from "@/components/field";
+import { disconnectMailbox, updateMailbox } from "./actions";
 import { MailboxForm } from "./mailbox-form";
 
 export const dynamic = "force-dynamic";
@@ -47,6 +48,33 @@ export default async function MailIntegrationPage() {
                   message="Письма этого ящика удалятся из CRM. В самой почте они останутся."
                   label="Отключить"
                 />
+                <form
+                  key={`${a.name}|${a.signature}`}
+                  action={updateMailbox.bind(null, a.id)}
+                  className="mt-2 grid w-full gap-3 rounded-xl bg-slate-50 p-3 sm:grid-cols-2"
+                >
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-slate-600">Имя отправителя</span>
+                    <input name="name" defaultValue={a.name ?? ""} placeholder="Имя или название компании" className={inputClass} />
+                    <span className="text-xs text-slate-500">Клиент увидит его вместо голого адреса</span>
+                  </label>
+                  <label className="flex flex-col gap-1">
+                    <span className="text-xs font-medium text-slate-600">Подпись</span>
+                    <textarea
+                      name="signature"
+                      defaultValue={a.signature ?? ""}
+                      rows={3}
+                      placeholder={"С уважением,\nИмя Фамилия\n+7 900 000-00-00"}
+                      className={`${inputClass} resize-y`}
+                    />
+                    <span className="text-xs text-slate-500">Встаёт в конец нового письма и ответа, её можно поправить перед отправкой</span>
+                  </label>
+                  <div className="sm:col-span-2">
+                    <button type="submit" className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm hover:bg-slate-100">
+                      Сохранить
+                    </button>
+                  </div>
+                </form>
               </li>
             ))}
           </ul>
