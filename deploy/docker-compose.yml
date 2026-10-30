@@ -26,6 +26,8 @@ services:
       BASIC_AUTH_USER: ${BASIC_AUTH_USER:-}
       BASIC_AUTH_PASSWORD: ${BASIC_AUTH_PASSWORD:-}
       SEED_DEMO: ${SEED_DEMO:-0}
+      # Если Telegram с сервера недоступен: адрес HTTP-прокси, например http://user:pass@host:port
+      TELEGRAM_PROXY: ${TELEGRAM_PROXY:-}
 
   caddy:
     image: caddy:2
