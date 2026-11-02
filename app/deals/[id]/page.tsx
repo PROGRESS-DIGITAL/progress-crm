@@ -9,16 +9,18 @@ import { DealDocuments } from "@/components/deal-documents";
 import { LinkedEvents } from "@/components/linked-events";
 import { deleteDeal, updateDeal } from "../actions";
 import { DealForm } from "../deal-form";
+import { getEmployeeNames } from "@/lib/profile";
 
 export const dynamic = "force-dynamic";
 
 export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [deal, stages, companies, products] = await Promise.all([
+  const [deal, stages, companies, products, employees] = await Promise.all([
     db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true, email: true } } } }),
     getStageOptions(),
     getCompanyOptions(),
     getProductOptions(),
+    getEmployeeNames(),
   ]);
   if (!deal) notFound();
 
@@ -46,6 +48,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
           stages={stages}
           companies={companies}
           products={products}
+          employees={employees}
           submitLabel="Сохранить"
           initial={{
             ...deal,

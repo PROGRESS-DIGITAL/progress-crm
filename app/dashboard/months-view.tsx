@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { Icon, type IconName } from "@/components/icons";
+import { CountUp } from "@/components/count-up";
 import { formatRub } from "@/lib/format";
 import { change, emptyMonth, monthKey, monthLabel, monthlyStats, shiftMonth, type MonthStats } from "@/lib/monthly";
 
@@ -62,7 +63,9 @@ export function CompareTile({
         </span>
         <p className="text-sm font-medium text-slate-700">{label}</p>
       </div>
-      <p className="mt-4 text-[26px] font-semibold tracking-tight tabular-nums">{fmt(current)}</p>
+      <p className="mt-4 text-[26px] font-semibold tracking-tight tabular-nums">
+        <CountUp value={current} money={money} />
+      </p>
       <div className="mt-3 flex flex-col gap-1.5">
         <Delta current={current} previous={prev} label="прошлый месяц" fmt={fmt} />
         <Delta current={current} previous={yearAgo} label="год назад" fmt={fmt} />
@@ -123,15 +126,15 @@ export async function MonthsView() {
           </ul>
         </div>
         <div className="mt-6 flex h-56 items-end gap-2" role="img" aria-label="Выручка по месяцам">
-          {rows.map((r) => (
+          {rows.map((r, i) => (
             <div key={r.key} className="group relative flex h-full flex-1 items-end justify-center gap-0.5">
               <div
-                className="w-2/5 rounded-md bg-slate-200"
-                style={{ height: `${(r.lastYear / max) * 100}%`, minHeight: r.lastYear ? 2 : 0 }}
+                className="grow-y w-2/5 rounded-md bg-slate-200"
+                style={{ height: `${(r.lastYear / max) * 100}%`, minHeight: r.lastYear ? 2 : 0, animationDelay: `${i * 30}ms` }}
               />
               <div
-                className={`w-2/5 rounded-md ${r.key === now ? "bg-blue-600" : "bg-blue-300"} group-hover:bg-blue-500`}
-                style={{ height: `${(r.revenue / max) * 100}%`, minHeight: r.revenue ? 2 : 0 }}
+                className={`grow-y w-2/5 rounded-md ${r.key === now ? "bg-blue-600" : "bg-blue-300"} group-hover:bg-blue-500`}
+                style={{ height: `${(r.revenue / max) * 100}%`, minHeight: r.revenue ? 2 : 0, animationDelay: `${i * 30}ms` }}
               />
               <div
                 role="tooltip"

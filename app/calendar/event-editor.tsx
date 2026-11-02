@@ -4,6 +4,8 @@ import Link from "next/link";
 import { useEffect, useState, useTransition } from "react";
 import { REMIND_OPTIONS } from "@/lib/calendar";
 import { useConfirm } from "@/components/confirm-dialog";
+import { KindMark } from "@/components/event-kind";
+import { TimeField } from "@/components/time-field";
 import { deleteEvent, saveEvent, type EventInput } from "./actions";
 import type { Options } from "./types";
 
@@ -83,13 +85,14 @@ export function EventEditor({
       >
         <div className="flex items-center justify-between gap-3">
           <div className="flex rounded-xl bg-slate-100 p-1 text-sm">
-            {(["MEETING", "TASK"] as const).map((k) => (
+            {(["TASK", "MEETING"] as const).map((k) => (
               <button
                 key={k}
                 type="button"
                 onClick={() => set("kind", k)}
-                className={`rounded-lg px-3 py-1.5 font-medium ${d.kind === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                className={`flex items-center gap-2 rounded-lg px-3 py-1.5 font-medium ${d.kind === k ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
               >
+                <KindMark kind={k} />
                 {k === "MEETING" ? "Встреча" : "Задача"}
               </button>
             ))}
@@ -128,11 +131,11 @@ export function EventEditor({
             <>
               <label className={label}>
                 Начало
-                <input type="time" step={300} value={d.startTime} onChange={(e) => set("startTime", e.target.value)} className={field} required />
+                <TimeField label="Начало" value={d.startTime} onChange={(v) => set("startTime", v)} />
               </label>
               <label className={label}>
                 Конец
-                <input type="time" step={300} value={d.endTime} onChange={(e) => set("endTime", e.target.value)} className={field} required />
+                <TimeField label="Конец" value={d.endTime} onChange={(v) => set("endTime", v)} />
               </label>
             </>
           )}
@@ -142,12 +145,10 @@ export function EventEditor({
             <input type="checkbox" checked={d.allDay} onChange={(e) => set("allDay", e.target.checked)} className="h-4 w-4 accent-blue-600" />
             Весь день
           </label>
-          {d.kind === "TASK" && (
-            <label className="flex items-center gap-2">
-              <input type="checkbox" checked={d.done} onChange={(e) => set("done", e.target.checked)} className="h-4 w-4 accent-emerald-600" />
-              Выполнена
-            </label>
-          )}
+          <label className="flex items-center gap-2">
+            <input type="checkbox" checked={d.done} onChange={(e) => set("done", e.target.checked)} className="h-4 w-4 accent-emerald-600" />
+            {d.kind === "TASK" ? "Выполнена" : "Состоялась"}
+          </label>
         </div>
 
         <label className={`${label} mt-4`}>

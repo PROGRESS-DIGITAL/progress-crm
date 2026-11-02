@@ -509,10 +509,12 @@ const listEvents = tool({
     return {
       period: input.overdue_only ? "просроченные" : r ? { from: r.from, to: r.to } : "ближайшие 7 дней",
       events: rows.map((e) => ({
+        id: e.id,
         kind: e.kind === "TASK" ? "задача" : "встреча",
         title: e.title,
         start: e.start.toLocaleString("ru-RU", { timeZone: TZ, dateStyle: "short", timeStyle: e.allDay ? undefined : "short" }),
         done: e.done,
+        remind_minutes: e.remindMinutes,
         client: e.company?.name ?? null,
         deal: e.deal?.title ?? null,
         notes: cut(e.notes, 150),
@@ -642,7 +644,7 @@ export const SCOPES = [
   {
     key: "edit",
     label: "Изменения в CRM",
-    hint: "Создаёт лиды, клиентов, сделки, встречи и задачи, двигает сделки по воронке. Ничего не удаляет",
+    hint: "Создаёт лиды, клиентов, сделки, встречи и задачи, меняет встречи и задачи, двигает сделки по воронке. Ничего не удаляет",
     tools: editTools,
   },
 ] as const;
