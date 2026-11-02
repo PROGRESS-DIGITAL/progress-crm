@@ -7,6 +7,7 @@ import { fieldValue, type FormState } from "@/lib/forms";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { ProductPicker } from "@/components/product-picker";
 import type { ProductOption } from "@/lib/queries";
+import { LOST_REASONS } from "@/lib/deals";
 
 export type DealValues = {
   title: string;
@@ -37,11 +38,17 @@ type Props = {
   stages: { id: string; name: string }[];
   companies: CompanyOption[];
   products: ProductOption[];
+  employees: string[];
   initial?: Partial<DealValues>;
   submitLabel: string;
 };
 
-export function DealForm({ action, stages, companies, products, initial, submitLabel }: Props) {
+// Значение, которого нет в списке (старое или удалённого сотрудника), остаётся выбранным отдельной строкой
+function withCurrent(list: readonly string[], current: string) {
+  return current && !list.includes(current) ? [...list, current] : list;
+}
+
+export function DealForm({ action, stages, companies, products, employees, initial, submitLabel }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [companyId, setCompanyId] = useState(initial?.companyId ?? "");
   const err = state?.errors ?? {};
@@ -118,7 +125,14 @@ export function DealForm({ action, stages, companies, products, initial, submitL
         </select>
       </Field>
       <Field label="Ответственный" error={err.owner}>
-        <input name="owner" defaultValue={v("owner")} className={inputClass} />
+        <select key={v("owner")} name="owner" defaultValue={v("owner")} className={inputClass}>
+          <option value="">Не назначен</option>
+          {withCurrent(employees, v("owner")).map((name) => (
+            <option key={name} value={name}>
+              {name}
+            </option>
+          ))}
+        </select>
       </Field>
       <Field label="Дата начала" error={err.startDate}>
         <input name="startDate" type="date" defaultValue={v("startDate")} className={inputClass} />
@@ -131,7 +145,14 @@ export function DealForm({ action, stages, companies, products, initial, submitL
         <span className="text-xs text-slate-500">Ставится сама при переносе в «Оплачен»; по ней считается выручка месяца</span>
       </Field>
       <Field label="Причина отказа" error={err.lostReason}>
-        <input name="lostReason" defaultValue={v("lostReason")} className={inputClass} />
+        <select key={v("lostReason")} name="lostReason" defaultValue={v("lostReason")} className={inputClass}>
+          <option value="">Не указана</option>
+          {withCurrent(LOST_REASONS, v("lostReason")).map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
       </Field>
       <Field label="Заметки" error={err.notes} wide>
         <textarea name="notes" rows={4} defaultValue={v("notes")} className={inputClass} />

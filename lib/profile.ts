@@ -8,6 +8,13 @@ export async function getOwner() {
   );
 }
 
+// Кого можно назначить ответственным: владелец первым, потом сотрудники по дате добавления
+export async function getEmployeeNames() {
+  await getOwner();
+  const employees = await db.employee.findMany({ orderBy: [{ isOwner: "desc" }, { createdAt: "asc" }], select: { name: true } });
+  return [...new Set(employees.map((e) => e.name))];
+}
+
 // Аватары по имени: ответственный в сделке пока хранится строкой
 export async function getAvatars() {
   const employees = await db.employee.findMany({ select: { name: true, avatar: true } });
