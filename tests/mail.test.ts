@@ -61,3 +61,10 @@ test("редактор письма: черновик в HTML и обратно 
 test("редактор письма: опасное из HTML убирается", () => {
   assert.equal(cleanEditorHtml('<b onclick="x()">a</b><script>alert(1)</script><a href="javascript:alert(1)">l</a>'), '<b>a</b><a href="#">l</a>');
 });
+
+test("ошибка входа Яндекса не сваливается на выключенный IMAP", async () => {
+  const { mailError } = await import("../lib/mail/imap");
+  const yandex = { authenticationFailed: true, responseText: "[AUTHENTICATIONFAILED] LOGIN Invalid credentials or IMAP is disabled sc=abc" };
+  assert.match(mailError(yandex, "YANDEX"), /и на неподходящий пароль, и на выключенный IMAP/);
+  assert.match(mailError({ authenticationFailed: true, responseText: "[AUTHENTICATIONFAILED] Invalid credentials (Failure)" }, "GMAIL"), /не приняла пароль/);
+});
