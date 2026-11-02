@@ -1,8 +1,11 @@
+import { Suspense } from "react";
 import Link from "next/link";
-import type { AuthUser } from "@/lib/auth/session";
+import { currentSession, type AuthUser } from "@/lib/auth/session";
 import { Avatar } from "@/components/avatar";
 import { Icon } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { HeaderClock } from "@/components/header-clock";
+import { HeaderSearch } from "@/components/header-search";
 import type { Theme } from "@/components/theme-cookie";
 
 function greeting(now: Date) {
@@ -13,35 +16,34 @@ function greeting(now: Date) {
   return "Добрый вечер";
 }
 
-// Верхняя панель: приветствие, поиск клиентов, новые лиды и карточка того, кто вошёл.
+// Верхняя панель: приветствие, часы, поиск клиентов, новые лиды и карточка того, кто вошёл.
 // Поиск и колокольчик лидов видны, только если роль открывает клиентов и лиды
-export function TopBar({ newLeads, theme, user }: { newLeads: number; theme: Theme; user: AuthUser }) {
+export async function TopBar({ newLeads, theme, user }: { newLeads: number; theme: Theme; user: AuthUser }) {
   const firstName = user.name.split(/\s+/)[0];
   const clients = user.sections.includes("clients");
   const leads = user.sections.includes("leads");
+  // «Время в CRM» считается с момента входа: после выхода и нового входа отсчёт начинается заново
+  const loginAt = (await currentSession())?.session.createdAt.getTime() ?? Date.now();
   return (
     <header className="flex min-h-14 items-center gap-3 rounded-2xl bg-white px-3 py-2 shadow-card sm:min-h-16 sm:gap-4 sm:rounded-3xl sm:px-5 sm:py-3">
       <div className="min-w-0">
         <p className="truncate text-base font-semibold tracking-tight sm:text-lg">
           {greeting(new Date())}, {firstName}!
         </p>
-        <p className="hidden text-xs text-slate-500 sm:block">Сделки, клиенты и выручка PROGRESS Digital</p>
+        <p className="hidden truncate text-xs text-slate-500 sm:block">Сделки, клиенты и выручка PROGRESS Digital</p>
       </div>
       <ThemeToggle initial={theme} />
 
-      {clients && (
-        <form action="/clients" className="relative ml-auto hidden w-full max-w-sm md:block" role="search">
-          <Icon name="search" size={18} className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-slate-400" />
-          <input
-            name="q"
-            type="search"
-            placeholder="Найти клиента по названию, ИНН, телефону"
-            className="h-11 w-full rounded-2xl border border-transparent bg-slate-100 pr-4 pl-10 text-sm outline-none placeholder:text-slate-400 focus:border-blue-300 focus:bg-white focus:ring-4 focus:ring-blue-100"
-          />
-        </form>
-      )}
+      <div className="ml-auto flex shrink-0 items-center gap-5">
+        <HeaderClock serverNow={Date.now()} startedAt={loginAt} />
+        {clients && (
+          <Suspense>
+            <HeaderSearch />
+          </Suspense>
+        )}
+      </div>
 
-      <div className={`ml-auto flex shrink-0 items-center gap-2 ${clients ? "md:ml-0" : ""}`}>
+      <div className="flex shrink-0 items-center gap-2">
         {leads && (
           <Link
             href="/leads"
