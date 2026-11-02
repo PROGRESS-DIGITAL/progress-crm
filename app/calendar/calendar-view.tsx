@@ -16,6 +16,7 @@ import {
 } from "@/lib/calendar";
 import { moveEvent, toggleDone } from "./actions";
 import { draftFromEvent, emptyDraft } from "./drafts";
+import { KindMark, Tick } from "@/components/event-kind";
 import { EventEditor } from "./event-editor";
 import type { EventInput } from "./actions";
 import type { CalEvent, Options, Prefill } from "./types";
@@ -27,9 +28,31 @@ const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
 const href = (view: View, date: string) => `/calendar?view=${view}&date=${date}`;
 const weekday = (key: string) => WEEKDAYS[(new Date(`${key}T00:00:00Z`).getUTCDay() + 6) % 7];
 
+// Встреча — голубая плашка с полоской слева и иконкой людей, задача — жёлтая карточка с рамкой и кружком-чекбоксом.
+// Отмеченные «Выполнена» и «Состоялась» серые
 function tone(e: CalEvent) {
-  if (e.kind === "TASK" && e.done) return "border-slate-300 bg-slate-100 text-slate-500";
-  return e.kind === "TASK" ? "border-amber-500 bg-amber-50 text-amber-950" : "border-blue-500 bg-blue-50 text-blue-950";
+  if (e.kind === "MEETING") return e.done ? "border-l-4 border-slate-300 bg-slate-100 text-slate-500" : "border-l-4 border-blue-500 bg-blue-50 text-blue-950";
+  if (e.done) return "border border-l-4 border-slate-200 border-l-slate-300 bg-slate-100 text-slate-500";
+  return "border border-l-4 border-amber-300 border-l-amber-500 bg-amber-50 text-amber-950";
+}
+
+// Просрочено: время прошло, а задача не выполнена или встреча не отмечена как состоявшаяся.
+// Красная обводка, как у просроченных сделок
+function overdueRing(e: CalEvent, now: number | null) {
+  return now !== null && !e.done && Date.parse(e.end) < now ? "ring-2 ring-rose-500" : "";
+}
+const struck = (e: CalEvent) => (e.kind === "TASK" && e.done ? "line-through" : "");
+
+// Текущее время, обновляется раз в минуту; на сервере null, чтобы разметка совпала при гидрации
+function useNow() {
+  const [now, setNow] = useState<number | null>(null);
+  useEffect(() => {
+    const tick = () => setNow(Date.now());
+    tick();
+    const t = setInterval(tick, 60_000);
+    return () => clearInterval(t);
+  }, []);
+  return now;
 }
 
 type Editing = { id: string | null; draft: EventInput };
@@ -89,6 +112,16 @@ export function CalendarView({
     <>
       <div className="mb-4 flex flex-wrap items-center gap-3">
         <h1 className="mr-auto text-2xl font-semibold tracking-tight">{viewTitle(view, date)}</h1>
+        <div className="hidden items-center gap-3 text-xs text-slate-500 sm:flex">
+          <span className="flex items-center gap-1.5">
+            <KindMark kind="TASK" />
+            Задачи
+          </span>
+          <span className="flex items-center gap-1.5">
+            <KindMark kind="MEETING" />
+            Встречи
+          </span>
+        </div>
         <div className="flex items-center gap-1">
           <Link
             href={href(view, today)}
@@ -202,7 +235,8 @@ function TimeGrid({
 }) {
   const scroller = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
-  const [now, setNow] = useState<number | null>(null);
+  const nowMs = useNow();
+  const now = nowMs === null ? null : minutesOfDay(new Date(nowMs));
   const timed = events.filter((e) => !e.allDay);
   const allDay = events.filter((e) => e.allDay);
   const template = { gridTemplateColumns: `52px repeat(${days.length}, minmax(0, 1fr))` };
@@ -213,13 +247,6 @@ function TimeGrid({
     if (scroller.current) scroller.current.scrollTop = (first / 60) * HOUR - 8;
     // Прокрутку задаём один раз при открытии вида
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    const tick = () => setNow(minutesOfDay(new Date()));
-    tick();
-    const t = setInterval(tick, 60_000);
-    return () => clearInterval(t);
   }, []);
 
   function onColumnClick(e: React.MouseEvent<HTMLDivElement>, day: string) {
@@ -289,9 +316,10 @@ function TimeGrid({
                     key={e.id}
                     type="button"
                     onClick={() => onOpen(e)}
-                    className={`truncate rounded-md border-l-4 px-1.5 py-0.5 text-left text-xs font-medium ${tone(e)} ${e.done ? "line-through" : ""}`}
+                    className={`flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-left text-xs font-medium ${tone(e)} ${overdueRing(e, nowMs)} ${struck(e)}`}
                   >
-                    {e.title}
+                    {e.kind === "MEETING" ? <Icon name="users" size={12} className="shrink-0" /> : <KindMark kind="TASK" done={e.done} />}
+                    <span className="truncate">{e.title}</span>
                   </button>
                 ))}
             </div>
@@ -345,7 +373,7 @@ function TimeGrid({
                         onPointerCancel={() => setDrag(null)}
                         onKeyDown={(ev) => ev.key === "Enter" && onOpen(e)}
                         onClick={(ev) => ev.stopPropagation()}
-                        className={`absolute touch-none overflow-hidden rounded-lg border-l-4 px-1.5 text-xs select-none ${tone(e)} ${
+                        className={`absolute touch-none overflow-hidden rounded-lg px-1.5 text-xs select-none ${tone(e)} ${overdueRing(e, nowMs)} ${
                           dragging ? "z-20 cursor-grabbing opacity-90 shadow-lg" : "z-10 cursor-grab hover:shadow-md"
                         } ${short ? "py-0" : "py-1"}`}
                         style={{
@@ -359,6 +387,7 @@ function TimeGrid({
                         }}
                       >
                         <div className={`flex items-start gap-1 ${short ? "leading-4" : ""}`}>
+                          {e.kind === "MEETING" && <Icon name="users" size={12} className="mt-0.5 shrink-0" />}
                           {e.kind === "TASK" && (
                             <button
                               type="button"
@@ -368,14 +397,14 @@ function TimeGrid({
                                 ev.stopPropagation();
                                 onToggle(e.id);
                               }}
-                              className={`mt-px flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border ${
-                                e.done ? "border-slate-400 bg-slate-400 text-white" : "border-amber-600 bg-white"
+                              className={`mt-px flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-full border-[1.5px] ${
+                                e.done ? "border-slate-400 bg-slate-400 text-white" : "border-amber-500 bg-white hover:bg-amber-100"
                               }`}
                             >
-                              {e.done && <Icon name="check" size={10} />}
+                              {e.done && <Tick size={10} />}
                             </button>
                           )}
-                          <span className={`min-w-0 truncate font-medium ${e.done ? "line-through" : ""}`}>{e.title}</span>
+                          <span className={`min-w-0 truncate font-medium ${struck(e)}`}>{e.title}</span>
                           {short && <span className="shrink-0 opacity-70">{timeLabel(minutesOfDay(start))}</span>}
                         </div>
                         {!short && (
@@ -400,7 +429,7 @@ function TimeGrid({
         </div>
       </div>
       {view === "day" && timed.length + allDay.length === 0 && (
-        <p className="border-t border-slate-100 px-4 py-3 text-sm text-slate-500">На этот день ничего нет. Нажмите на время, чтобы добавить встречу.</p>
+        <p className="border-t border-slate-100 px-4 py-3 text-sm text-slate-500">На этот день ничего нет. Нажмите на время, чтобы добавить задачу или встречу.</p>
       )}
     </div>
   );
@@ -422,6 +451,7 @@ function MonthGrid({
   onOpen: (e: CalEvent) => void;
 }) {
   const month = date.slice(0, 7);
+  const now = useNow();
   return (
     <div>
       <div className="grid grid-cols-7 border-b border-slate-200 text-center text-xs text-slate-500">
@@ -463,12 +493,10 @@ function MonthGrid({
                   type="button"
                   onClick={() => onOpen(e)}
                   className={`flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] leading-4 sm:text-xs ${
-                    e.allDay ? `border-l-4 ${tone(e)}` : "hover:bg-slate-100"
-                  } ${e.done ? "text-slate-400 line-through" : ""}`}
+                    e.allDay ? tone(e) : "hover:bg-slate-100"
+                  } ${e.done ? `text-slate-400 ${struck(e)}` : ""} ${overdueRing(e, now).replace("ring-2", "ring-1")}`}
                 >
-                  {!e.allDay && (
-                    <span className={`h-2 w-2 shrink-0 rounded-full ${e.kind === "TASK" ? (e.done ? "bg-slate-300" : "bg-amber-500") : "bg-blue-500"}`} />
-                  )}
+                  {!e.allDay && <KindMark kind={e.kind} done={e.done} />}
                   {!e.allDay && <span className="hidden shrink-0 text-slate-500 sm:inline">{timeLabel(minutesOfDay(new Date(e.start)))}</span>}
                   <span className="truncate">{e.title}</span>
                 </button>
