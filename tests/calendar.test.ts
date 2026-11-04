@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { coversDay, dayKey, fromKey, layoutDay, minutesOfDay, shift, viewDays, viewTitle, weekStart } from "../lib/calendar";
+import { coversDay, dayKey, fromKey, layoutDay, layoutSpans, minutesOfDay, resizeRange, shift, viewDays, viewTitle, weekStart } from "../lib/calendar";
 
 test("даты считаются по Москве", () => {
   assert.equal(dayKey(new Date("2026-10-26T21:30:00Z")), "2026-10-27");
@@ -49,4 +49,31 @@ test("событие через полночь обрезается по дню"
   const e = { id: "x", start: fromKey("2026-10-26", 23 * 60), end: fromKey("2026-10-27", 60) };
   assert.deepEqual(layoutDay([e], "2026-10-27")[0], { id: "x", top: 0, height: 60, col: 0, cols: 1 });
   assert.ok(coversDay(e, "2026-10-26") && coversDay(e, "2026-10-27") && !coversDay(e, "2026-10-28"));
+});
+
+test("карточку тянут за верх и низ, но не короче 15 минут", () => {
+  const start = new Date("2026-11-04T10:00:00Z");
+  const end = new Date("2026-11-04T11:00:00Z");
+  assert.equal(resizeRange(start, end, "bottom", 30).end.toISOString(), "2026-11-04T11:30:00.000Z");
+  assert.equal(resizeRange(start, end, "top", -45).start.toISOString(), "2026-11-04T09:15:00.000Z");
+  assert.equal(resizeRange(start, end, "top", 120).start.toISOString(), "2026-11-04T10:45:00.000Z");
+  assert.equal(resizeRange(start, end, "bottom", -90).end.toISOString(), "2026-11-04T10:15:00.000Z");
+});
+
+test("события на весь день идут одной полосой и не наезжают друг на друга", () => {
+  const days = viewDays("week", "2026-10-28");
+  const spans = layoutSpans(
+    [
+      { id: "a", start: fromKey("2026-10-27"), end: fromKey("2026-11-01") },
+      { id: "b", start: fromKey("2026-10-29"), end: fromKey("2026-10-30") },
+      { id: "c", start: fromKey("2026-10-20"), end: fromKey("2026-10-27") },
+      { id: "d", start: fromKey("2026-10-31"), end: fromKey("2026-11-05") },
+    ],
+    days,
+  );
+  const by = Object.fromEntries(spans.map((s) => [s.id, s]));
+  assert.deepEqual([by.a.first, by.a.last, by.a.lane], [1, 5, 0]);
+  assert.deepEqual([by.b.first, by.b.last, by.b.lane], [3, 3, 1]);
+  assert.deepEqual([by.c.first, by.c.last, by.c.cutStart, by.c.cutEnd], [0, 0, true, false]);
+  assert.deepEqual([by.d.first, by.d.last, by.d.lane, by.d.cutEnd], [5, 6, 1, true]);
 });

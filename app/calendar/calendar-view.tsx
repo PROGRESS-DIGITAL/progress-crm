@@ -7,14 +7,18 @@ import { Icon } from "@/components/icons";
 import {
   VIEWS,
   coversDay,
+  dayKey,
   layoutDay,
+  layoutSpans,
   minutesOfDay,
+  resizeRange,
   shift,
   timeLabel,
   viewTitle,
+  MIN_EVENT_MINUTES,
   type CalendarView as View,
 } from "@/lib/calendar";
-import { moveEvent, toggleDone } from "./actions";
+import { moveEvent, resizeEvent, toggleDone } from "./actions";
 import { draftFromEvent, emptyDraft } from "./drafts";
 import { KindMark, Tick } from "@/components/event-kind";
 import { EventEditor } from "./event-editor";
@@ -24,6 +28,10 @@ import type { CalEvent, Options, Prefill } from "./types";
 const HOUR = 48; // высота часа в сетке, px
 const SNAP = 15; // шаг перетаскивания, минуты
 const WEEKDAYS = ["Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс"];
+
+// «26 окт – 31 окт» для многодневных событий: конец хранится как начало следующего дня
+const shortDay = (d: Date) => d.toLocaleDateString("ru-RU", { day: "numeric", month: "short", timeZone: "Europe/Moscow" }).replace(".", "");
+const rangeLabel = (e: CalEvent) => `${shortDay(new Date(e.start))} – ${shortDay(new Date(Date.parse(e.end) - 1))}`;
 
 const href = (view: View, date: string) => `/calendar?view=${view}&date=${date}`;
 const weekday = (key: string) => WEEKDAYS[(new Date(`${key}T00:00:00Z`).getUTCDay() + 6) % 7];
@@ -56,7 +64,8 @@ function useNow() {
 }
 
 type Editing = { id: string | null; draft: EventInput };
-type Drag = { id: string; x: number; y: number; width: number; dx: number; dy: number; moved: boolean };
+// move — перенос карточки целиком, top и bottom — растягивание за верхний или нижний край
+type Drag = { id: string; mode: "move" | "top" | "bottom"; x: number; y: number; width: number; dx: number; dy: number; moved: boolean };
 
 export function CalendarView({
   view,
@@ -186,6 +195,10 @@ export function CalendarView({
               );
               moveEvent(id, start.toISOString()).then(() => router.refresh());
             }}
+            onResize={(id, start, end) => {
+              setEvents((list) => list.map((e) => (e.id === id ? { ...e, start: start.toISOString(), end: end.toISOString() } : e)));
+              resizeEvent(id, start.toISOString(), end.toISOString()).then(() => router.refresh());
+            }}
             onToggle={(id) => {
               setEvents((list) => list.map((e) => (e.id === id ? { ...e, done: !e.done } : e)));
               toggleDone(id).then(() => router.refresh());
@@ -222,6 +235,7 @@ function TimeGrid({
   onCreate,
   onOpen,
   onMove,
+  onResize,
   onToggle,
 }: {
   view: View;
@@ -231,6 +245,7 @@ function TimeGrid({
   onCreate: (day: string, minutes?: number, allDay?: boolean) => void;
   onOpen: (e: CalEvent) => void;
   onMove: (id: string, start: Date) => void;
+  onResize: (id: string, start: Date, end: Date) => void;
   onToggle: (id: string) => void;
 }) {
   const scroller = useRef<HTMLDivElement>(null);
@@ -239,6 +254,10 @@ function TimeGrid({
   const now = nowMs === null ? null : minutesOfDay(new Date(nowMs));
   const timed = events.filter((e) => !e.allDay);
   const allDay = events.filter((e) => e.allDay);
+  const spans = layoutSpans(
+    allDay.map((e) => ({ id: e.id, start: new Date(e.start), end: new Date(e.end) })),
+    days,
+  );
   const template = { gridTemplateColumns: `52px repeat(${days.length}, minmax(0, 1fr))` };
 
   // Сетка открывается на рабочем утре или на первом раннем событии
@@ -255,11 +274,13 @@ function TimeGrid({
     onCreate(day, Math.min(Math.floor(((y / HOUR) * 60) / 30) * 30, 23 * 60));
   }
 
-  function startDrag(e: React.PointerEvent<HTMLDivElement>, id: string) {
+  function startDrag(e: React.PointerEvent<HTMLElement>, id: string, mode: Drag["mode"] = "move") {
     if (e.button !== 0) return;
+    e.stopPropagation();
     e.currentTarget.setPointerCapture(e.pointerId);
-    const width = e.currentTarget.parentElement!.getBoundingClientRect().width;
-    setDrag({ id, x: e.clientX, y: e.clientY, width, dx: 0, dy: 0, moved: false });
+    const card = e.currentTarget.closest<HTMLElement>("[data-event]")!;
+    const width = card.parentElement!.getBoundingClientRect().width;
+    setDrag({ id, mode, x: e.clientX, y: e.clientY, width, dx: 0, dy: 0, moved: false });
   }
 
   function deltas(d: Drag, dayIndex: number) {
@@ -272,8 +293,13 @@ function TimeGrid({
     if (!drag || drag.id !== e.id) return;
     const d = drag;
     setDrag(null);
-    if (!d.moved) return onOpen(e);
+    if (!d.moved) return d.mode === "move" ? onOpen(e) : undefined;
     const { minutes, daysShift } = deltas(d, dayIndex);
+    if (d.mode !== "move") {
+      if (!minutes) return;
+      const r = resizeRange(new Date(e.start), new Date(e.end), d.mode, minutes);
+      return onResize(e.id, r.start, r.end);
+    }
     if (!minutes && !daysShift) return;
     onMove(e.id, new Date(Date.parse(e.start) + (daysShift * 1440 + minutes) * 60_000));
   }
@@ -302,28 +328,46 @@ function TimeGrid({
         </div>
 
         <div className="grid border-b border-slate-200" style={template}>
-          <div className="px-1 py-1.5 text-right text-[10px] leading-tight text-slate-400">весь день</div>
-          {days.map((day) => (
-            <div
-              key={day}
-              onClick={(e) => e.target === e.currentTarget && onCreate(day, 0, true)}
-              className="flex min-h-8 min-w-0 cursor-pointer flex-col gap-1 border-l border-slate-100 p-1"
-            >
-              {allDay
-                .filter((e) => coversDay({ start: new Date(e.start), end: new Date(e.end) }, day))
-                .map((e) => (
-                  <button
-                    key={e.id}
-                    type="button"
-                    onClick={() => onOpen(e)}
-                    className={`flex min-w-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-left text-xs font-medium ${tone(e)} ${overdueRing(e, nowMs)} ${struck(e)}`}
-                  >
-                    {e.kind === "MEETING" ? <Icon name="users" size={12} className="shrink-0" /> : <KindMark kind="TASK" done={e.done} />}
-                    <span className="truncate">{e.title}</span>
-                  </button>
-                ))}
-            </div>
-          ))}
+          <div className="px-1 py-2 text-right text-[10px] leading-tight text-slate-400">весь день</div>
+          {/* Многодневное событие — одна карточка через все свои дни, пересекающиеся идут строками */}
+          <div
+            className="grid gap-y-1 py-1"
+            style={{
+              gridColumn: `2 / span ${days.length}`,
+              gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`,
+              gridTemplateRows: `repeat(${Math.max(1, ...spans.map((s) => s.lane + 1))}, 40px)`,
+            }}
+          >
+            {days.map((day, i) => (
+              <div
+                key={day}
+                onClick={() => onCreate(day, 0, true)}
+                className="-my-1 cursor-pointer border-l border-slate-100"
+                style={{ gridColumn: i + 1, gridRow: "1 / -1" }}
+              />
+            ))}
+            {spans.map((s) => {
+              const e = allDay.find((x) => x.id === s.id)!;
+              const multi = Date.parse(e.end) - Date.parse(e.start) > 86_400_000;
+              return (
+                <button
+                  key={e.id}
+                  type="button"
+                  onClick={() => onOpen(e)}
+                  style={{ gridColumn: `${s.first + 1} / ${s.last + 2}`, gridRow: s.lane + 1 }}
+                  className={`relative z-10 mx-1 flex min-w-0 items-center gap-1.5 rounded-lg px-2 text-left text-sm font-medium ${tone(e)} ${overdueRing(e, nowMs)} ${
+                    s.cutStart ? "-ml-px rounded-l-none" : ""
+                  } ${s.cutEnd ? "-mr-px rounded-r-none" : ""}`}
+                >
+                  {e.kind === "MEETING" ? <Icon name="users" size={14} className="shrink-0" /> : <KindMark kind="TASK" done={e.done} />}
+                  <span className="min-w-0">
+                    <span className={`block truncate ${struck(e)}`}>{e.title}</span>
+                    {multi && <span className="block truncate text-[11px] font-normal opacity-70">{rangeLabel(e)}</span>}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div ref={scroller} className="h-[calc(100dvh-300px)] min-h-[420px] overflow-y-auto overscroll-contain">
@@ -353,13 +397,25 @@ function TimeGrid({
                   {placed.map((p) => {
                     const e = mine.find((x) => x.id === p.id)!;
                     const dragging = drag?.id === e.id && drag.moved;
-                    const shiftBy = dragging ? deltas(drag, dayIndex) : null;
-                    const start = new Date(e.start);
-                    const end = new Date(e.end);
+                    const moving = dragging && drag.mode === "move";
+                    const shiftBy = moving ? deltas(drag, dayIndex) : null;
+                    // Пока тянут край, карточка и подпись времени показывают новое время
+                    const resized =
+                      dragging && drag.mode !== "move"
+                        ? resizeRange(new Date(e.start), new Date(e.end), drag.mode, deltas(drag, dayIndex).minutes)
+                        : null;
+                    const start = resized?.start ?? new Date(e.start);
+                    const end = resized?.end ?? new Date(e.end);
+                    const topShift = resized ? (start.getTime() - Date.parse(e.start)) / 60_000 : 0;
+                    const lengthShift = resized ? (end.getTime() - start.getTime() - (Date.parse(e.end) - Date.parse(e.start))) / 60_000 : 0;
+                    // Ручки только у тех краёв, что лежат в этом дне: у многодневной встречи верх в первом дне, низ в последнем
+                    const canTop = dayKey(new Date(e.start)) === day;
+                    const canBottom = dayKey(new Date(Date.parse(e.end) - 1)) === day;
                     const short = p.height < 40;
                     return (
                       <div
                         key={e.id}
+                        data-event
                         role="button"
                         tabIndex={0}
                         onPointerDown={(ev) => startDrag(ev, e.id)}
@@ -373,12 +429,12 @@ function TimeGrid({
                         onPointerCancel={() => setDrag(null)}
                         onKeyDown={(ev) => ev.key === "Enter" && onOpen(e)}
                         onClick={(ev) => ev.stopPropagation()}
-                        className={`absolute touch-none overflow-hidden rounded-lg px-1.5 text-xs select-none ${tone(e)} ${overdueRing(e, nowMs)} ${
-                          dragging ? "z-20 cursor-grabbing opacity-90 shadow-lg" : "z-10 cursor-grab hover:shadow-md"
+                        className={`group absolute touch-none overflow-hidden rounded-lg px-1.5 text-xs select-none ${tone(e)} ${overdueRing(e, nowMs)} ${
+                          dragging ? `z-20 opacity-90 shadow-lg ${moving ? "cursor-grabbing" : "cursor-ns-resize"}` : "z-10 cursor-grab hover:shadow-md"
                         } ${short ? "py-0" : "py-1"}`}
                         style={{
-                          top: (p.top / 60) * HOUR + 1,
-                          height: (p.height / 60) * HOUR - 2,
+                          top: ((p.top + topShift) / 60) * HOUR + 1,
+                          height: (Math.max(p.height + lengthShift, MIN_EVENT_MINUTES) / 60) * HOUR - 2,
                           left: `calc(${(p.col / p.cols) * 100}% + 2px)`,
                           width: `calc(${100 / p.cols}% - 4px)`,
                           transform: shiftBy
@@ -386,6 +442,24 @@ function TimeGrid({
                             : undefined,
                         }}
                       >
+                        {canTop && (
+                          <span
+                            aria-hidden
+                            title="Потяните, чтобы изменить начало"
+                            onPointerDown={(ev) => startDrag(ev, e.id, "top")}
+                            className="absolute inset-x-0 top-0 z-10 h-1.5 cursor-ns-resize"
+                          />
+                        )}
+                        {canBottom && (
+                          <span
+                            aria-hidden
+                            title="Потяните, чтобы изменить окончание"
+                            onPointerDown={(ev) => startDrag(ev, e.id, "bottom")}
+                            className="absolute inset-x-0 bottom-0 z-10 flex h-2 cursor-ns-resize items-end justify-center pb-0.5"
+                          >
+                            <span className="h-0.5 w-6 rounded-full bg-current opacity-0 group-hover:opacity-30" />
+                          </span>
+                        )}
                         <div className={`flex items-start gap-1 ${short ? "leading-4" : ""}`}>
                           {e.kind === "MEETING" && <Icon name="users" size={12} className="mt-0.5 shrink-0" />}
                           {e.kind === "TASK" && (
@@ -461,55 +535,90 @@ function MonthGrid({
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7">
-        {days.map((day, i) => {
-          const list = events
-            .filter((e) => coversDay({ start: new Date(e.start), end: new Date(e.end) }, day))
-            .sort((a, b) => Number(b.allDay) - Number(a.allDay) || a.start.localeCompare(b.start));
-          const shown = list.slice(0, 3);
-          return (
-            <div
-              key={day}
-              onClick={(e) => e.target === e.currentTarget && onCreate(day)}
-              className={`flex min-h-[88px] min-w-0 cursor-pointer flex-col gap-0.5 border-slate-100 p-1 sm:min-h-[120px] sm:p-1.5 ${
-                i % 7 ? "border-l" : ""
-              } ${i >= 7 ? "border-t" : ""} ${day.slice(0, 7) === month ? "" : "bg-slate-50/70"}`}
-            >
-              <Link
-                href={href("day", day)}
-                className={`mb-0.5 flex h-6 w-6 items-center justify-center self-start rounded-full text-xs ${
-                  day === today
-                    ? "bg-blue-600 font-semibold text-white"
-                    : day.slice(0, 7) === month
-                      ? "text-slate-800 hover:bg-slate-100"
-                      : "text-slate-400 hover:bg-slate-100"
-                }`}
+      {Array.from({ length: Math.ceil(days.length / 7) }, (_, w) => days.slice(w * 7, w * 7 + 7)).map((week, w) => {
+        const allDay = events.filter((e) => e.allDay);
+        const spans = layoutSpans(
+          allDay.map((e) => ({ id: e.id, start: new Date(e.start), end: new Date(e.end) })),
+          week,
+        );
+        const lanes = Math.max(0, ...spans.map((s) => s.lane + 1));
+        return (
+          // Неделя — сетка: номер дня, полосы событий «весь день» через все их дни, ниже события со временем
+          <div
+            key={week[0]}
+            className={`grid min-h-[88px] grid-cols-7 gap-y-0.5 pb-1 sm:min-h-[120px] ${w ? "border-t border-slate-100" : ""}`}
+            style={{ gridTemplateRows: `30px ${lanes ? `repeat(${lanes}, 40px) ` : ""}minmax(52px, auto)` }}
+          >
+            {week.map((day, i) => (
+              <div
+                key={day}
+                onClick={(e) => e.target === e.currentTarget && onCreate(day)}
+                className={`-mb-1 cursor-pointer border-slate-100 p-1 sm:p-1.5 ${i ? "border-l" : ""} ${day.slice(0, 7) === month ? "" : "bg-slate-50/70"}`}
+                style={{ gridColumn: i + 1, gridRow: "1 / -1" }}
               >
-                {Number(day.slice(8))}
-              </Link>
-              {shown.map((e) => (
+                <Link
+                  href={href("day", day)}
+                  className={`flex h-6 w-6 items-center justify-center rounded-full text-xs ${
+                    day === today
+                      ? "bg-blue-600 font-semibold text-white"
+                      : day.slice(0, 7) === month
+                        ? "text-slate-800 hover:bg-slate-100"
+                        : "text-slate-400 hover:bg-slate-100"
+                  }`}
+                >
+                  {Number(day.slice(8))}
+                </Link>
+              </div>
+            ))}
+            {spans.map((s) => {
+              const e = allDay.find((x) => x.id === s.id)!;
+              return (
                 <button
                   key={e.id}
                   type="button"
                   onClick={() => onOpen(e)}
-                  className={`flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] leading-4 sm:text-xs ${
-                    e.allDay ? tone(e) : "hover:bg-slate-100"
-                  } ${e.done ? `text-slate-400 ${struck(e)}` : ""} ${overdueRing(e, now).replace("ring-2", "ring-1")}`}
+                  style={{ gridColumn: `${s.first + 1} / ${s.last + 2}`, gridRow: s.lane + 2 }}
+                  className={`relative z-10 mx-1 flex min-w-0 items-center gap-1 rounded-lg px-1.5 text-left text-xs font-medium sm:text-sm ${tone(e)} ${overdueRing(e, now).replace("ring-2", "ring-1")} ${
+                    s.cutStart ? "-ml-px rounded-l-none" : ""
+                  } ${s.cutEnd ? "-mr-px rounded-r-none" : ""}`}
                 >
-                  {!e.allDay && <KindMark kind={e.kind} done={e.done} />}
-                  {!e.allDay && <span className="hidden shrink-0 text-slate-500 sm:inline">{timeLabel(minutesOfDay(new Date(e.start)))}</span>}
-                  <span className="truncate">{e.title}</span>
+                  {e.kind === "MEETING" ? <Icon name="users" size={14} className="hidden shrink-0 sm:block" /> : <KindMark kind="TASK" done={e.done} />}
+                  <span className={`truncate ${struck(e)}`}>{e.title}</span>
                 </button>
-              ))}
-              {list.length > shown.length && (
-                <Link href={href("day", day)} className="px-1 text-[11px] font-medium text-slate-500 hover:text-blue-600">
-                  ещё {list.length - shown.length}
-                </Link>
-              )}
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+            {week.map((day, i) => {
+              const list = events
+                .filter((e) => !e.allDay && coversDay({ start: new Date(e.start), end: new Date(e.end) }, day))
+                .sort((a, b) => a.start.localeCompare(b.start));
+              const shown = list.slice(0, 3);
+              return (
+                <div key={day} className="relative z-10 flex min-w-0 flex-col gap-0.5 px-1 sm:px-1.5" style={{ gridColumn: i + 1, gridRow: lanes + 2 }}>
+                  {shown.map((e) => (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => onOpen(e)}
+                      className={`flex min-w-0 items-center gap-1 rounded-md px-1 py-0.5 text-left text-[11px] leading-4 hover:bg-slate-100 sm:text-xs ${
+                        e.done ? `text-slate-400 ${struck(e)}` : ""
+                      } ${overdueRing(e, now).replace("ring-2", "ring-1")}`}
+                    >
+                      <KindMark kind={e.kind} done={e.done} />
+                      <span className="hidden shrink-0 text-slate-500 sm:inline">{timeLabel(minutesOfDay(new Date(e.start)))}</span>
+                      <span className="truncate">{e.title}</span>
+                    </button>
+                  ))}
+                  {list.length > shown.length && (
+                    <Link href={href("day", day)} className="px-1 text-[11px] font-medium text-slate-500 hover:text-blue-600">
+                      ещё {list.length - shown.length}
+                    </Link>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   );
 }
