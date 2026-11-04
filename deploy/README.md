@@ -79,6 +79,14 @@ docker compose exec app npx tsx scripts/reset-login.ts
 sudo bash /opt/progress-crm/deploy/update.sh
 ```
 
+Если сборка упала, скрипт пробует снова при каждой проверке, пока она не пройдёт; причина
+видна в конце лога. При `no space left on device` освободите место и запустите обновление вручную:
+
+```bash
+docker builder prune -af && docker image prune -af
+sudo bash /opt/progress-crm/deploy/update.sh
+```
+
 Копии базы складываются каждый день в `deploy/backups`. Восстановление:
 
 ```bash
