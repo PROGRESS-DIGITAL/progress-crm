@@ -31,7 +31,12 @@ export default async function ClientsPage({ searchParams }: { searchParams: Prom
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Клиенты</h1>
-          <p className="mt-1 text-sm text-slate-600">Всего: {companies.length}</p>
+          <p className="mt-1 text-sm text-slate-600">
+            Всего: {companies.length} ·{" "}
+            <Link href="/clients/import" className="text-blue-700 hover:underline">
+              Загрузить таблицей
+            </Link>
+          </p>
         </div>
         <div className="flex w-full items-center gap-3 sm:w-auto">
           <ClientSearch initial={q} />
