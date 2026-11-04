@@ -3,11 +3,15 @@ import { db } from "@/lib/db";
 import { formatRub } from "@/lib/format";
 import { Board } from "./board";
 import { getAvatars } from "@/lib/profile";
+import { currentUser } from "@/lib/auth/session";
+import { accessForPath, canAccess } from "@/lib/auth/sections";
 
 export const dynamic = "force-dynamic";
 
 export default async function DealsPage() {
   const avatars = await getAvatars();
+  // Ссылку на дашборд видят только те, кому открыт этот раздел
+  const showDashboard = canAccess(accessForPath("/dashboard"), await currentUser());
   const clientNames = (await db.company.findMany({ select: { name: true }, orderBy: { name: "asc" } })).map((c) => c.name);
   const stages = await db.stage.findMany({
     orderBy: { order: "asc" },
@@ -25,7 +29,14 @@ export default async function DealsPage() {
     <div className="flex w-full flex-1 flex-col px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Сделки</h1>
+          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Сделки</h1>
+            {showDashboard && (
+              <Link href="/dashboard" className="text-sm font-medium text-blue-700 hover:underline">
+                Дашборд →
+              </Link>
+            )}
+          </div>
           <p className="mt-1 text-sm text-slate-600">
             Открыто: {open.length} на {formatRub(sum(open))} · Оплачено: {won.length} на{" "}
             {formatRub(sum(won))}
