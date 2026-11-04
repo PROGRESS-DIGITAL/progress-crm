@@ -54,7 +54,33 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
           Здесь пока пусто
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-2xl border border-slate-200/60 bg-white shadow-card">
+        <>
+        {/* На телефоне лиды идут карточками: кто, когда, откуда и кнопка звонка */}
+        <ul className="flex flex-col gap-2 sm:hidden">
+          {leads.map((l) => (
+            <li key={l.id} className="relative rounded-2xl bg-white p-4 shadow-card">
+              <div className="flex items-start justify-between gap-3">
+                <Link href={`/leads/${l.id}`} className="min-w-0 font-medium text-slate-900 after:absolute after:inset-0">
+                  {l.name ?? l.phone ?? l.email ?? "Без имени"}
+                  {l.companyName && <span className="font-normal text-slate-500"> · {l.companyName}</span>}
+                </Link>
+                <span className={`shrink-0 rounded px-2 py-0.5 text-xs ${LEAD_STATUS_BADGE[l.status]}`}>{LEAD_STATUS_LABELS[l.status]}</span>
+              </div>
+              {l.message && <p className="mt-1 line-clamp-2 text-sm text-slate-600">{l.message}</p>}
+              <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-500">
+                <span className="tabular-nums">
+                  {formatDateTime(l.createdAt)} · {LEAD_SOURCE_LABELS[l.source]}
+                </span>
+                {l.phone && (
+                  <a href={`tel:${l.phone.replace(/[^\d+]/g, "")}`} className="relative z-10 text-sm text-blue-600">
+                    {l.phone}
+                  </a>
+                )}
+              </div>
+            </li>
+          ))}
+        </ul>
+        <div className="relative hidden overflow-x-auto rounded-2xl border border-slate-200/60 bg-white shadow-card sm:block">
           <table className="w-full text-sm">
             <thead className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
               <tr>
@@ -91,6 +117,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
             </tbody>
           </table>
         </div>
+        </>
       )}
     </div>
   );

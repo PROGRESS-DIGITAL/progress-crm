@@ -77,7 +77,7 @@ async function Contracts() {
     );
   }
   return (
-    <section className="overflow-x-auto rounded-2xl border border-slate-200/60 bg-white shadow-card">
+    <section className="relative overflow-x-auto rounded-2xl border border-slate-200/60 bg-white shadow-card">
       <table className="w-full text-sm">
         <thead className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
           <tr>

@@ -146,6 +146,17 @@ export async function updateContact(id: string, _prev: FormState, formData: Form
   redirect(`/clients/${contact.companyId}`);
 }
 
+// Правка контакта прямо в карточке клиента: форма закрывается сама, без перехода на другую страницу
+export async function updateContactInline(id: string, _prev: FormState, formData: FormData): Promise<FormState> {
+  const parsed = parseForm(contactSchema, formData);
+  if (!parsed.success) return invalid(toErrors(parsed.error), formData);
+
+  const contact = await db.contact.update({ where: { id }, data: parsed.data });
+  revalidatePath(`/clients/${contact.companyId}`);
+  revalidatePath("/deals");
+  return { saved: true };
+}
+
 export async function deleteContact(id: string) {
   const contact = await db.contact.delete({ where: { id } });
   revalidatePath(`/clients/${contact.companyId}`);

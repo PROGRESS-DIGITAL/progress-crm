@@ -49,6 +49,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               unreadMail={unreadMail}
               sections={user.sections}
               isOwner={user.isOwner}
+              theme={theme}
             />
             <div className="flex min-w-0 flex-1 flex-col gap-2 sm:gap-3">
               <TopBar newLeads={newLeads} theme={theme} user={user} />
