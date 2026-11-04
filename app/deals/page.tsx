@@ -29,7 +29,7 @@ export default async function DealsPage() {
     <div className="flex w-full flex-1 flex-col px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">Сделки</h1>
             {showDashboard && (
               <Link href="/dashboard" className="text-xs text-slate-500 hover:text-slate-800 hover:underline">
