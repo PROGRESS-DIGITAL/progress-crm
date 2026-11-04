@@ -17,6 +17,7 @@ export function ChatPanel({
   agentName,
   chatId,
   hasKey,
+  engine,
   suggestions,
   messages,
 }: {
@@ -24,6 +25,7 @@ export function ChatPanel({
   agentName: string;
   chatId: string | null;
   hasKey: boolean;
+  engine: { label: string; href: string };
   suggestions: string[];
   messages: Message[];
 }) {
@@ -132,8 +134,8 @@ export function ChatPanel({
       >
         {!hasKey && (
           <p className="mb-2 text-xs text-amber-800">
-            Чтобы агент заработал, подключите Claude в{" "}
-            <Link href="/integrations/claude" className="font-medium underline">
+            Чтобы агент заработал, подключите {engine.label} в{" "}
+            <Link href={engine.href} className="font-medium underline">
               «Интеграциях»
             </Link>
             .

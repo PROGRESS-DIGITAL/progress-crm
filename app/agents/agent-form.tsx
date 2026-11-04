@@ -6,7 +6,8 @@ import { Field, inputClass, primaryButton } from "@/components/field";
 import { saveAgent } from "./actions";
 
 type Scope = { key: string; label: string; hint: string };
-type Values = { name: string; description: string; website: string; instructions: string; scopes: string[] };
+type Values = { name: string; description: string; website: string; instructions: string; scopes: string[]; engine: string };
+type Engine = { id: string; label: string; ready: boolean; href: string };
 
 // Заготовки, с которых удобно начать: дальше всё правится
 const TEMPLATES: (Values & { title: string })[] = [
@@ -19,6 +20,7 @@ const TEMPLATES: (Values & { title: string })[] = [
       "Сравнивай факт с финмоделью: какой сценарий месяца уже взят и сколько не хватает до следующего. " +
       "Показывай динамику к прошлому месяцу и году. Обращай внимание на неоплаченные счета и поступления без счёта.",
     scopes: ["money", "plan", "sales"],
+    engine: "claude",
   },
   {
     title: "Менеджер по продажам",
@@ -29,6 +31,7 @@ const TEMPLATES: (Values & { title: string })[] = [
       "Помогай вести воронку: какие сделки зависли, у каких прошла ожидаемая дата оплаты, кому стоит написать или позвонить. " +
       "Предлагай следующий шаг по каждой сделке. Учитывай задачи и последнюю переписку с клиентом.",
     scopes: ["sales", "clients", "work", "comms", "edit"],
+    engine: "claude",
   },
   {
     title: "Сводка по клиенту",
@@ -39,10 +42,23 @@ const TEMPLATES: (Values & { title: string })[] = [
       "Когда называют клиента, собери короткую сводку: кто это, какие были сделки и на какую сумму, что оплачено и что нет, " +
       "о чём последняя переписка и какие открыты задачи. В конце предложи, что обсудить на встрече.",
     scopes: ["clients", "comms", "money", "work"],
+    engine: "claude",
   },
 ];
 
-export function AgentForm({ id, initial, scopes, isDefault }: { id: string | null; initial: Values; scopes: Scope[]; isDefault?: boolean }) {
+export function AgentForm({
+  id,
+  initial,
+  scopes,
+  engines,
+  isDefault,
+}: {
+  id: string | null;
+  initial: Values;
+  scopes: Scope[];
+  engines: Engine[];
+  isDefault?: boolean;
+}) {
   const [state, formAction, pending] = useActionState(saveAgent.bind(null, id), undefined);
   const [values, setValues] = useState(initial);
   const set = (patch: Partial<Values>) => setValues((v) => ({ ...v, ...patch }));
@@ -58,7 +74,7 @@ export function AgentForm({ id, initial, scopes, isDefault }: { id: string | nul
               <button
                 key={title}
                 type="button"
-                onClick={() => setValues({ ...t, website: values.website })}
+                onClick={() => setValues({ ...t, website: values.website, engine: values.engine })}
                 className={`rounded-xl border px-3 py-2.5 text-left text-sm ${
                   values.name === t.name ? "border-blue-500 bg-blue-50 text-blue-800" : "border-slate-200 hover:border-blue-300"
                 }`}
@@ -102,6 +118,25 @@ export function AgentForm({ id, initial, scopes, isDefault }: { id: string | nul
             />
           </Field>
         </div>
+        <Field label="Модель">
+          <select name="engine" value={values.engine} onChange={(e) => set({ engine: e.target.value })} className={`${inputClass} sm:max-w-sm`}>
+            {engines.map((e) => (
+              <option key={e.id} value={e.id}>
+                {e.label}
+                {e.ready ? "" : " — не подключена"}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {engines.find((e) => e.id === values.engine && !e.ready) && (
+          <p className="-mt-2 text-xs text-amber-800">
+            Модель не подключена: добавьте ключ в{" "}
+            <Link href={engines.find((e) => e.id === values.engine)!.href} className="underline">
+              «Интеграциях»
+            </Link>
+            , иначе агент не ответит.
+          </p>
+        )}
         <p className="-mt-2 text-xs text-slate-500">
           Агент откроет этот сайт и его страницы, когда это нужно по инструкциям или по вопросу. Например: «Проверь цены на сайте и сравни с
           прайсом в CRM».

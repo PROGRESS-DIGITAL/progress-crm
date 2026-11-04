@@ -8,7 +8,7 @@ import { recordOutgoing } from "@/lib/chat/inbox";
 import { connectedChannels, sendToChannel, sendTyping } from "@/lib/chat/send";
 import { sendTelegram, TELEGRAM_TOKEN_SETTING } from "@/lib/chat/telegram";
 import { getRemindChat } from "@/lib/reminders";
-import { describeError, finalText, getClaude, runAgentLoop, websiteRule } from "@/lib/agents/agent";
+import { describeError, finalText, getEngine, notConnected, runEngineLoop, websiteRule } from "@/lib/agents/agent";
 import { websiteTool } from "@/lib/agents/website";
 import { priceList, tool, type Tool } from "@/lib/agents/tools";
 
@@ -189,9 +189,8 @@ export type ClientReply = { ok: true; text: string; handoff: string | null } | {
 export async function draftClientReply(conversationId: string, { save = false } = {}): Promise<ClientReply> {
   const settings = await getChatAi();
   if (!settings.agentId) return { ok: false, error: "Выберите AI агента для «Чатов»" };
-  const [agent, client, conversation] = await Promise.all([
+  const [agent, conversation] = await Promise.all([
     db.agent.findUnique({ where: { id: settings.agentId } }),
-    getClaude(),
     db.conversation.findUnique({
       where: { id: conversationId },
       include: {
@@ -205,11 +204,8 @@ export async function draftClientReply(conversationId: string, { save = false } 
     }),
   ]);
   if (!agent) return { ok: false, error: "Агент для «Чатов» удалён: выберите другого" };
-  if (!client)
-    return {
-      ok: false,
-      error: "Не подключён Claude: добавьте ключ в «Интеграциях»",
-    };
+  const engine = await getEngine(agent.engine);
+  if (!engine) return { ok: false, error: notConnected(agent.engine) };
   if (!conversation) return { ok: false, error: "Переписка не найдена" };
   const messages = history(conversation.messages.reverse());
   if (!messages.length) return { ok: false, error: "Клиент ещё ничего не написал" };
@@ -228,7 +224,7 @@ export async function draftClientReply(conversationId: string, { save = false } 
   const handoff = { reason: null as string | null };
   const canSave = save && agent.scopes.includes("edit");
   try {
-    const r = await runAgentLoop(client, {
+    const r = await runEngineLoop(engine, {
       system: clientPrompt(agent, conversation, canSave),
       tools: [...clientTools(conversation, handoff, canSave), ...(agent.website ? [websiteTool(agent.website)] : [])],
       messages,
@@ -251,7 +247,9 @@ async function notifyOwner(text: string) {
 // Фоновая задача: ответить клиентам, которые написали и замолчали хотя бы на QUIET_MS
 export async function answerPendingChats(now = new Date()) {
   const settings = await getChatAi();
-  if (!settings.agentId || !(await getClaude())) return 0;
+  if (!settings.agentId) return 0;
+  const aiAgent = await db.agent.findUnique({ where: { id: settings.agentId }, select: { engine: true } });
+  if (!aiAgent || !(await getEngine(aiAgent.engine))) return 0;
   const [connected, remind] = await Promise.all([connectedChannels(), getRemindChat()]);
   const candidates = await db.conversation.findMany({
     where: {
