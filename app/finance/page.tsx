@@ -5,21 +5,24 @@ import { db } from "@/lib/db";
 import { docTitle, getTochka } from "@/lib/finance/documents";
 import { formatDateTime, formatRub } from "@/lib/format";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
+import { BankView } from "@/app/dashboard/bank-view";
 import { deleteDocumentAction, syncPaymentsAction } from "./actions";
 
 export const dynamic = "force-dynamic";
 
+// Договоры живут в «Документах», здесь только деньги. Первая вкладка открывается по умолчанию
 const TABS = [
+  { view: "payments", label: "Поступления" },
   { view: "invoices", label: "Счета" },
   { view: "acts", label: "Акты" },
-  { view: "payments", label: "Поступления" },
+  { view: "bank", label: "Дашборд" },
 ] as const;
 
 const day = (d: Date) => d.toLocaleDateString("ru-RU", { timeZone: "Europe/Moscow" });
 
 export default async function FinancePage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
-  const v = (await searchParams).view;
-  const view = v === "acts" || v === "payments" ? v : "invoices";
+  const requested = (await searchParams).view;
+  const view = TABS.find((t) => t.view === requested)?.view ?? TABS[0].view;
   const [tochka, waiting] = await Promise.all([
     getTochka(),
     db.document.aggregate({ where: { kind: "INVOICE", status: { not: "PAID" } }, _sum: { amount: true }, _count: true }),
@@ -45,24 +48,21 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
               Подключить Точку
             </Link>
           )}
-          <nav className="flex rounded-xl bg-white p-1 text-sm shadow-card" aria-label="Раздел финансов">
+          <nav className="grid w-full grid-cols-2 rounded-xl bg-white p-1 text-sm shadow-card sm:flex sm:w-auto" aria-label="Раздел финансов">
             {TABS.map((t) => (
               <Link
                 key={t.view}
-                href={t.view === "invoices" ? "/finance" : `/finance?view=${t.view}`}
+                href={t.view === TABS[0].view ? "/finance" : `/finance?view=${t.view}`}
                 aria-current={view === t.view ? "page" : undefined}
-                className={`rounded-lg px-4 py-1.5 ${view === t.view ? "bg-blue-600 font-medium text-white shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
+                className={`rounded-lg px-4 py-1.5 text-center whitespace-nowrap ${view === t.view ? "bg-blue-600 font-medium text-white shadow-sm" : "text-slate-600 hover:text-slate-900"}`}
               >
                 {t.label}
               </Link>
             ))}
-            <Link href="/documents" className="rounded-lg px-4 py-1.5 text-slate-600 hover:text-slate-900">
-              Договоры
-            </Link>
           </nav>
         </div>
       </div>
-      {view === "payments" ? <Payments /> : <Documents kind={view === "acts" ? "ACT" : "INVOICE"} />}
+      {view === "payments" ? <Payments /> : view === "bank" ? <BankView /> : <Documents kind={view === "acts" ? "ACT" : "INVOICE"} />}
     </div>
   );
 }
