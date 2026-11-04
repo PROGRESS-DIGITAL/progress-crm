@@ -5,8 +5,7 @@ import Link from "next/link";
 import {
   DndContext,
   DragOverlay,
-  MouseSensor,
-  TouchSensor,
+  PointerSensor,
   closestCorners,
   defaultDropAnimationSideEffects,
   pointerWithin,
@@ -75,27 +74,8 @@ export function Board({
   // Свежие данные с сервера (после revalidate) заменяют локальное состояние
   useEffect(() => setColumns(stages), [stages]);
   const [, startTransition] = useTransition();
-  // Без порога перемещения клик по карточке сразу начинал бы перетаскивание. На телефоне карточку берут
-  // долгим нажатием, иначе листание колонок пальцем хватало бы карточки
-  const sensors = useSensors(
-    useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 300, tolerance: 8 } }),
-  );
-  const scroller = useRef<HTMLDivElement>(null);
-  const [visible, setVisible] = useState(0);
-
-  // На телефоне видна одна колонка: переключатель этапов сверху показывает, какая, и листает к нужной
-  function onScroll() {
-    const el = scroller.current;
-    const first = el?.firstElementChild as HTMLElement | null;
-    if (!el || !first) return;
-    setVisible(Math.round(el.scrollLeft / (first.offsetWidth + 16)));
-  }
-  function showColumn(i: number) {
-    const box = scroller.current;
-    const el = box?.children[i] as HTMLElement | undefined;
-    if (box && el) box.scrollTo({ left: el.offsetLeft, behavior: "smooth" });
-  }
+  // Без порога перемещения клик по карточке сразу начинал бы перетаскивание
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
   // Сделка, которую сейчас тащат: её копия едет под курсором, а на старом месте остаётся контур.
   // from — колонка и порядок до захвата, чтобы понять, изменилось ли что-то, и откатить при ошибке
   const [dragged, setDragged] = useState<{ deal: DealCard; overdue: boolean; from: Column[] } | null>(null);
@@ -182,23 +162,7 @@ export function Board({
         setDragged(null);
       }}
     >
-      <div className="-mx-1 mb-3 flex gap-2 overflow-x-auto px-1 pb-1 md:hidden" role="tablist" aria-label="Этапы">
-        {columns.map((c, i) => (
-          <button
-            key={c.id}
-            type="button"
-            role="tab"
-            aria-selected={i === visible}
-            onClick={() => showColumn(i)}
-            className={`shrink-0 rounded-full px-3 py-1.5 text-sm whitespace-nowrap ${
-              i === visible ? "bg-slate-900 text-white" : "bg-white text-slate-700 ring-1 ring-slate-200"
-            }`}
-          >
-            {c.name} · {c.deals.length}
-          </button>
-        ))}
-      </div>
-      <div ref={scroller} onScroll={onScroll} className="relative flex flex-1 snap-x snap-mandatory gap-4 overflow-x-auto pb-4 md:snap-none">
+      <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
         {columns.map((c) => (
           <StageColumn
             key={c.id}
@@ -238,7 +202,7 @@ function StageColumn({ column, avatars, target }: { column: Column; avatars: Rec
     <section
       ref={setNodeRef}
       data-testid={`stage-${column.name}`}
-      className={`flex w-[calc(100vw-2.5rem)] shrink-0 snap-start flex-col rounded-2xl md:w-64 border border-t-4 border-slate-200/60 bg-white/60 transition-[box-shadow,background-color] duration-200 ${KIND_ACCENT[column.kind]} ${target ? "bg-blue-50/60 ring-2 ring-blue-400" : "ring-0 ring-transparent"}`}
+      className={`flex w-64 shrink-0 flex-col rounded-2xl border border-t-4 border-slate-200/60 bg-white/60 transition-[box-shadow,background-color] duration-200 ${KIND_ACCENT[column.kind]} ${target ? "bg-blue-50/60 ring-2 ring-blue-400" : "ring-0 ring-transparent"}`}
     >
       <header className="px-3 pt-3 pb-2">
         <div className="flex items-baseline justify-between">
@@ -269,7 +233,7 @@ function DealItem({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean;
       {...listeners}
       {...attributes}
       style={{ transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, transition }}
-      className={`deal-settle cursor-grab touch-manipulation rounded-xl ${isDragging ? "opacity-30" : ""}`}
+      className={`deal-settle cursor-grab rounded-xl ${isDragging ? "opacity-30" : ""}`}
     >
       <DealCardBody deal={deal} overdue={overdue} avatar={avatar} />
     </div>

@@ -32,10 +32,7 @@ export async function TopBar({ newLeads, theme, user }: { newLeads: number; them
         </p>
         <p className="hidden truncate text-xs text-slate-500 sm:block">Сделки, клиенты и выручка PROGRESS Digital</p>
       </div>
-      {/* На телефоне переключатель темы живёт в меню, чтобы шапка была короче */}
-      <div className="hidden sm:block">
-        <ThemeToggle initial={theme} />
-      </div>
+      <ThemeToggle initial={theme} />
 
       <div className="ml-auto flex shrink-0 items-center gap-5">
         <HeaderClock serverNow={Date.now()} startedAt={loginAt} />
