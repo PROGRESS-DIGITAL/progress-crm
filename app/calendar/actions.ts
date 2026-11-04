@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { addDays, fromKey, isDayKey } from "@/lib/calendar";
+import { addDays, fromKey, isDayKey, MIN_EVENT_MINUTES } from "@/lib/calendar";
 import { actorName } from "@/lib/auth/session";
 import { REMIND_OPTIONS } from "@/lib/reminders";
 
@@ -148,6 +148,20 @@ export async function moveEvent(id: string, startIso: string): Promise<{ error?:
   if (Number.isNaN(start.getTime())) return { error: "Некорректное время" };
   const end = new Date(start.getTime() + (event.end.getTime() - event.start.getTime()));
   await db.event.update({ where: { id }, data: { start, end, remindedAt: null } });
+  revalidate(event.companyId, event.dealId);
+  return {};
+}
+
+// Растягивание за верх или низ карточки: меняется начало или конец, событие не короче 15 минут
+export async function resizeEvent(id: string, startIso: string, endIso: string): Promise<{ error?: string }> {
+  const event = await db.event.findUnique({ where: { id } });
+  if (!event) return { error: "Событие уже удалено" };
+  const start = new Date(startIso);
+  const end = new Date(endIso);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return { error: "Некорректное время" };
+  if (end.getTime() - start.getTime() < MIN_EVENT_MINUTES * 60_000) return { error: "Событие короче 15 минут" };
+  const moved = start.getTime() !== event.start.getTime();
+  await db.event.update({ where: { id }, data: { start, end, ...(moved && { remindedAt: null }) } });
   revalidate(event.companyId, event.dealId);
   return {};
 }

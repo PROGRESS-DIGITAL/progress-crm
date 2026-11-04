@@ -139,3 +139,42 @@ export const REMIND_OPTIONS: { value: number; label: string }[] = [
   { value: 1440, label: "За 1 день" },
 ];
 export const DEFAULT_REMIND = 15;
+
+export const MIN_EVENT_MINUTES = 15;
+
+// Растягивание карточки за верх или низ: край сдвигается на delta минут, но событие не короче 15 минут
+export function resizeRange(start: Date, end: Date, edge: "top" | "bottom", delta: number) {
+  const min = MIN_EVENT_MINUTES * 60_000;
+  if (edge === "top") return { start: new Date(Math.min(start.getTime() + delta * 60_000, end.getTime() - min)), end };
+  return { start, end: new Date(Math.max(end.getTime() + delta * 60_000, start.getTime() + min)) };
+}
+
+export type Span = { id: string; first: number; last: number; lane: number; cutStart: boolean; cutEnd: boolean };
+
+// Полосы событий «весь день»: многодневное событие — одна карточка от первого до последнего видимого дня.
+// Пересекающиеся события раскладываются по строкам, длинные сверху
+export function layoutSpans(events: { id: string; start: Date; end: Date }[], days: string[]): Span[] {
+  const spans = events
+    .map((e) => {
+      const covered = days.map((d, i) => (coversDay(e, d) ? i : -1)).filter((i) => i >= 0);
+      if (!covered.length) return null;
+      const first = covered[0];
+      const last = covered[covered.length - 1];
+      return {
+        id: e.id,
+        first,
+        last,
+        cutStart: e.start.getTime() < fromKey(days[first]).getTime(),
+        cutEnd: e.end.getTime() > fromKey(days[last]).getTime() + DAY,
+      };
+    })
+    .filter((s) => s !== null)
+    .sort((a, b) => a.first - b.first || b.last - b.first - (a.last - a.first));
+  const laneEnds: number[] = [];
+  return spans.map((s) => {
+    let lane = laneEnds.findIndex((end) => end < s.first);
+    if (lane < 0) lane = laneEnds.length;
+    laneEnds[lane] = s.last;
+    return { ...s, lane };
+  });
+}
