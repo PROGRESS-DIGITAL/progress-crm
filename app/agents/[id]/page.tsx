@@ -3,10 +3,9 @@ import { notFound } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { db } from "@/lib/db";
-import { getSetting } from "@/lib/settings";
 import { formatChatTime } from "@/lib/format";
 import { monthLabel, monthKey } from "@/lib/monthly";
-import { CLAUDE_KEY_SETTING, ensureDefaultAgent } from "@/lib/agents/agent";
+import { ensureDefaultAgent, enginesReady, engineOf, isEngine } from "@/lib/agents/agent";
 import { requireUser } from "@/lib/auth/session";
 import { agentScopesFor } from "@/lib/agents/tools";
 import { deleteAgentChat } from "../actions";
@@ -49,9 +48,10 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
   const [agents, agent, key] = await Promise.all([
     db.agent.findMany({ orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }], select: { id: true, name: true, description: true } }),
     db.agent.findUnique({ where: { id }, include: { chats: { where: own, orderBy: { updatedAt: "desc" }, take: CHATS_SHOWN } } }),
-    getSetting(CLAUDE_KEY_SETTING),
+    enginesReady(),
   ]);
   if (!agent) notFound();
+  const engine = engineOf(agent.engine);
   const current = chatId ? agent.chats.find((c) => c.id === chatId) : undefined;
   const messages = current
     ? await db.agentMessage.findMany({
@@ -202,7 +202,8 @@ export default async function AgentPage({ params, searchParams }: { params: Prom
             agentId={agent.id}
             agentName={agent.name}
             chatId={current?.id ?? null}
-            hasKey={!!key}
+            hasKey={isEngine(agent.engine) && key[agent.engine]}
+            engine={{ label: engine.label, href: engine.href }}
             suggestions={suggestions(agentScopesFor(agent.scopes, user.sections), agent.website)}
             messages={messages.map((m) => ({
               id: m.id,

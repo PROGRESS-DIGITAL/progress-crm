@@ -5,8 +5,7 @@ import { connectedChannels } from "@/lib/chat/send";
 import { chatVersion } from "@/lib/chat/version";
 import { formatChatTime } from "@/lib/format";
 import { aiOn, getChatAi, isTyping } from "@/lib/agents/client-chat";
-import { CLAUDE_KEY_SETTING } from "@/lib/agents/agent";
-import { getSetting } from "@/lib/settings";
+import { enginesReady, isEngine } from "@/lib/agents/agent";
 import { getRemindChat } from "@/lib/reminders";
 
 const MESSAGES_SHOWN = 300;
@@ -52,17 +51,17 @@ export type ChatsView = {
 };
 
 export async function loadChatsView(c?: string | null): Promise<ChatsView> {
-  const [conversations, connected, ai, claudeKey, remind] = await Promise.all([
+  const [conversations, connected, ai, ready, remind] = await Promise.all([
     db.conversation.findMany({
       orderBy: { lastMessageAt: "desc" },
       include: { company: { select: { name: true } } },
     }),
     connectedChannels(),
     getChatAi(),
-    getSetting(CLAUDE_KEY_SETTING),
+    enginesReady(),
     getRemindChat(),
   ]);
-  const agent = ai.agentId ? await db.agent.findUnique({ where: { id: ai.agentId }, select: { name: true } }) : null;
+  const agent = ai.agentId ? await db.agent.findUnique({ where: { id: ai.agentId }, select: { name: true, engine: true } }) : null;
   const agentName = agent?.name ?? null;
 
   const found = c ? conversations.find((x) => x.id === c) : undefined;
@@ -103,7 +102,7 @@ export async function loadChatsView(c?: string | null): Promise<ChatsView> {
     // Отпечаток считаем после пометки «прочитано», иначе следующий опрос сразу увидит изменение
     version: await chatVersion(),
     agentName,
-    aiReady: !!agent && !!claudeKey,
+    aiReady: !!agent && isEngine(agent.engine) && ready[agent.engine],
     connected: connected.size,
     list: conversations.map((x) => ({
       id: x.id,

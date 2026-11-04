@@ -4,8 +4,7 @@ import { db } from "@/lib/db";
 import { CHANNEL_LABELS } from "@/lib/chat/channels";
 import { connectedChannels } from "@/lib/chat/send";
 import { getChatAi } from "@/lib/agents/client-chat";
-import { getSetting } from "@/lib/settings";
-import { CLAUDE_KEY_SETTING } from "@/lib/agents/agent";
+import { engineOf, enginesReady, isEngine } from "@/lib/agents/agent";
 import { loadChatsView } from "@/lib/chat/view";
 import { saveChatAi } from "./actions";
 import { ChatsLive } from "./live";
@@ -14,14 +13,17 @@ export const dynamic = "force-dynamic";
 
 export default async function ChatsPage({ searchParams }: { searchParams: Promise<{ c?: string }> }) {
   const { c } = await searchParams;
-  const [view, connected, ai, agents, claudeKey] = await Promise.all([
+  const [view, connected, ai, agents, ready] = await Promise.all([
     loadChatsView(c),
     connectedChannels(),
     getChatAi(),
-    db.agent.findMany({ orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }], select: { id: true, name: true } }),
-    getSetting(CLAUDE_KEY_SETTING),
+    db.agent.findMany({ orderBy: [{ isDefault: "desc" }, { createdAt: "asc" }], select: { id: true, name: true, engine: true } }),
+    enginesReady(),
   ]);
   const aiAgent = agents.find((a) => a.id === ai.agentId) ?? null;
+  // Модель выбранного агента (или Claude, пока агент не выбран) должна быть подключена
+  const aiEngine = engineOf(aiAgent?.engine ?? "claude");
+  const engineReady = isEngine(aiEngine.id) && ready[aiEngine.id];
   // Список клиентов нужен и тогда, когда переписку откроют уже на странице
   const companies = await db.company.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } });
 
@@ -70,10 +72,10 @@ export default async function ChatsPage({ searchParams }: { searchParams: Promis
                   <span className="block text-xs text-slate-500">Иначе включайте агента в нужной переписке кнопкой «AI» в её шапке</span>
                 </span>
               </label>
-              {!claudeKey && (
+              {!engineReady && (
                 <p className="text-xs text-amber-800">
-                  Claude не подключён:{" "}
-                  <Link href="/integrations/claude" className="underline">
+                  {aiEngine.label} не подключён:{" "}
+                  <Link href={aiEngine.href} className="underline">
                     добавьте ключ
                   </Link>
                   .

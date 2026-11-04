@@ -9,11 +9,12 @@ import { VK_GROUP_SETTING, type VkGroup } from "@/lib/chat/vk";
 import { DIADOC_ORG_SETTING, DIADOC_REFRESH_SETTING, type DiadocOrg } from "@/lib/finance/diadoc";
 import { getTochka } from "@/lib/finance/documents";
 import { CLAUDE_KEY_SETTING } from "@/lib/agents/agent";
+import { YANDEX_KEY_SETTING } from "@/lib/agents/yandex";
 
 export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage() {
-  const [tilda, lastTilda, dadataKey, telegramBot, maxBot, vkGroup, tochka, diadocRefresh, diadocOrg, mailboxes, claudeKey] = await Promise.all([
+  const [tilda, lastTilda, dadataKey, telegramBot, maxBot, vkGroup, tochka, diadocRefresh, diadocOrg, mailboxes, claudeKey, yandexKey] = await Promise.all([
     getTildaSettings(),
     db.webhookLog.findFirst({ where: { source: "tilda", status: "ok" }, orderBy: { createdAt: "desc" } }),
     getDadataKey(),
@@ -25,7 +26,14 @@ export default async function IntegrationsPage() {
     getSetting(DIADOC_ORG_SETTING),
     db.mailAccount.findMany({ select: { email: true }, orderBy: { createdAt: "asc" } }),
     getSetting(CLAUDE_KEY_SETTING),
+    getSetting(YANDEX_KEY_SETTING),
   ]);
+  const yandex = {
+    href: "/integrations/yandex",
+    title: "YandexGPT",
+    status: yandexKey && "ключ добавлен",
+    text: "Модель Яндекса для AI агентов: работает из России без посредника.",
+  };
   const claude = {
     href: "/integrations/claude",
     title: "Claude",
@@ -102,7 +110,7 @@ export default async function IntegrationsPage() {
           </div>
           <p className="mt-2 text-sm text-slate-600">Реквизиты клиента по ИНН: название, КПП, ОГРН, адрес, руководитель.</p>
         </Link>
-        {[mail, claude, ...finance, ...messengers.map((m) => ({ ...m, text: `${m.text} Сообщения приходят в «Чаты».` }))].map((m) => (
+        {[mail, claude, yandex, ...finance, ...messengers.map((m) => ({ ...m, text: `${m.text} Сообщения приходят в «Чаты».` }))].map((m) => (
           <Link
             key={m.href}
             href={m.href}

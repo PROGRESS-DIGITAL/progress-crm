@@ -4,6 +4,7 @@ import { db } from "@/lib/db";
 import { getSetting } from "@/lib/settings";
 import { ALL_SCOPES, SCOPES, runTool, scopeOfTool, toolDefinition, toolsFor, type Tool } from "@/lib/agents/tools";
 import { WEBSITE_SOURCE, websiteTool } from "@/lib/agents/website";
+import { YANDEX_KEY_SETTING, YandexError, describeYandexError, fromYandex, getYandex, toYandexMessages, yandexComplete, type YandexClient } from "@/lib/agents/yandex";
 
 export const CLAUDE_KEY_SETTING = "claude.apiKey";
 export const CLAUDE_URL_SETTING = "claude.baseUrl";
@@ -18,6 +19,34 @@ export async function getClaude() {
   if (!apiKey) return null;
   return new Anthropic({ apiKey, baseURL: baseURL || DEFAULT_BASE_URL, maxRetries: 2, timeout: 120_000 });
 }
+
+// Модели, на которых могут работать агенты; у каждого агента своя
+export const ENGINES = [
+  { id: "claude", label: "Claude", setting: CLAUDE_KEY_SETTING, href: "/integrations/claude" },
+  { id: "yandex", label: "YandexGPT", setting: YANDEX_KEY_SETTING, href: "/integrations/yandex" },
+] as const;
+export type EngineId = (typeof ENGINES)[number]["id"];
+export const isEngine = (v: unknown): v is EngineId => ENGINES.some((e) => e.id === v);
+export const engineOf = (id: string) => ENGINES.find((e) => e.id === id) ?? ENGINES[0];
+
+// Подключена ли модель: для каждой проверяется её ключ в «Интеграциях»
+export async function enginesReady(): Promise<Record<EngineId, boolean>> {
+  const [claude, yandex] = await Promise.all([getClaude(), getYandex()]);
+  return { claude: !!claude, yandex: !!yandex };
+}
+
+export type EngineClient = { engine: "claude"; client: Anthropic } | { engine: "yandex"; client: YandexClient };
+
+export async function getEngine(id: string): Promise<EngineClient | null> {
+  if (id === "yandex") {
+    const client = await getYandex();
+    return client && { engine: "yandex", client };
+  }
+  const client = await getClaude();
+  return client && { engine: "claude", client };
+}
+
+export const notConnected = (id: string) => `Не подключён ${engineOf(id).label}: добавьте ключ в «Интеграциях».`;
 
 export const DEFAULT_AGENT = {
   name: "Ассистент CRM",
@@ -95,7 +124,45 @@ type Loop = {
   maxSteps: number;
 };
 
-type LoopResult = { steps: Omit<Step, "text" | "sources">[]; final: Anthropic.Beta.BetaMessage; used: Set<string> };
+type Final = { content: Anthropic.Beta.BetaContentBlock[]; stop_reason: string | null };
+type LoopResult = { steps: Omit<Step, "text" | "sources">[]; final: Final; used: Set<string> };
+
+async function toolResults(loop: Loop, toolUses: Anthropic.Beta.BetaToolUseBlock[], used: Set<string>) {
+  return Promise.all(
+    toolUses.map(async (b) => {
+      const r = await runTool(loop.tools, b.name, b.input);
+      const scope = scopeOfTool(b.name) ?? (b.name === "read_website" ? WEBSITE_SOURCE : null);
+      if (r.ok && scope) used.add(scope);
+      return { type: "tool_result" as const, tool_use_id: b.id, content: r.content, ...(r.ok ? {} : { is_error: true }) };
+    }),
+  );
+}
+
+// Тот же цикл на выбранной модели агента
+export async function runEngineLoop(engine: EngineClient, loop: Loop): Promise<LoopResult> {
+  return engine.engine === "yandex" ? runYandexLoop(engine.client, loop) : runAgentLoop(engine.client, loop);
+}
+
+async function runYandexLoop(client: YandexClient, loop: Loop): Promise<LoopResult> {
+  const messages = [...loop.messages];
+  const steps: LoopResult["steps"] = [];
+  const used = new Set<string>();
+  for (let step = 0; ; step++) {
+    const alt = await yandexComplete(client, {
+      messages: toYandexMessages(`${loop.system}\n\n${nowLine()}`, messages),
+      tools: loop.tools,
+      noTools: step >= loop.maxSteps,
+    });
+    const reply = fromYandex(alt, step);
+    messages.push({ role: "assistant", content: reply.content });
+    steps.push({ role: "assistant", content: reply.content });
+    const toolUses = reply.content.filter((b): b is Anthropic.Beta.BetaToolUseBlock => b.type === "tool_use");
+    if (reply.stop_reason !== "tool_use" || !toolUses.length || step >= loop.maxSteps) return { steps, final: reply, used };
+    const results = await toolResults(loop, toolUses, used);
+    messages.push({ role: "user", content: results });
+    steps.push({ role: "user", content: results });
+  }
+}
 
 // Цикл tool use: модель запрашивает данные, пока не соберёт ответ. На последнем шаге инструменты
 // больше не даются, и модель отвечает тем, что уже собрала. Ошибки API пробрасываются наверх
@@ -126,33 +193,26 @@ export async function runAgentLoop(client: Anthropic, loop: Loop): Promise<LoopR
     steps.push({ role: "assistant", content: response.content });
     if (response.stop_reason !== "tool_use" || !toolUses.length) return { steps, final: response, used };
 
-    const results = await Promise.all(
-      toolUses.map(async (b) => {
-        const r = await runTool(loop.tools, b.name, b.input);
-        const scope = scopeOfTool(b.name) ?? (b.name === "read_website" ? WEBSITE_SOURCE : null);
-        if (r.ok && scope) used.add(scope);
-        return { type: "tool_result" as const, tool_use_id: b.id, content: r.content, ...(r.ok ? {} : { is_error: true }) };
-      }),
-    );
+    const results = await toolResults(loop, toolUses, used);
     // Все результаты одним сообщением: так модель продолжает запрашивать данные параллельно
     messages.push({ role: "user", content: results });
     steps.push({ role: "user", content: results });
   }
 }
 
-export function finalText(m: Anthropic.Beta.BetaMessage) {
+export function finalText(m: Final) {
   return m.stop_reason === "refusal" ? null : textOf(m.content) || null;
 }
 
 // Один вопрос владельца. История передаётся как есть, без правок, а новые шаги возвращаются целиком:
 // их сохраняют только если ответ получен
 export async function askAgent(agent: Agent, history: Anthropic.Beta.BetaMessageParam[], question: string): Promise<AskResult> {
-  const client = await getClaude();
-  if (!client) return { ok: false, error: "Не подключён Claude: добавьте ключ в «Интеграциях»." };
+  const engine = await getEngine(agent.engine);
+  if (!engine) return { ok: false, error: notConnected(agent.engine) };
 
   const asked: Anthropic.Beta.BetaMessageParam = { role: "user", content: [{ type: "text", text: question }] };
   try {
-    const r = await runAgentLoop(client, {
+    const r = await runEngineLoop(engine, {
       system: systemPrompt(agent),
       tools: [...toolsFor(agent.scopes), ...(agent.website ? [websiteTool(agent.website)] : [])],
       messages: [...history, asked],
@@ -176,6 +236,7 @@ export async function askAgent(agent: Agent, history: Anthropic.Beta.BetaMessage
 }
 
 export function describeError(e: unknown) {
+  if (e instanceof YandexError) return describeYandexError(e);
   if (e instanceof Anthropic.AuthenticationError) return "Claude не принял ключ. Проверьте его в «Интеграциях» → Claude.";
   if (e instanceof Anthropic.PermissionDeniedError)
     return "Claude отказал в доступе. Из России API Anthropic напрямую недоступен: укажите адрес посредника в «Интеграциях» → Claude.";

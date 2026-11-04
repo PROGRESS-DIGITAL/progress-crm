@@ -598,6 +598,8 @@ model Agent {
   instructions String      @default("")
   // Ключи разделов из lib/agents/tools.ts: money, sales, clients, work, comms, plan, edit
   scopes       String[]
+  // Модель, на которой работает агент: claude или yandex (YandexGPT Lite)
+  engine       String      @default("claude")
   isDefault    Boolean     @default(false)
   chats        AgentChat[]
   createdAt    DateTime    @default(now())

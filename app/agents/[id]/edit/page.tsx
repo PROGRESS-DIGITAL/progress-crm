@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { db } from "@/lib/db";
 import { SCOPES } from "@/lib/agents/tools";
+import { ENGINES, enginesReady } from "@/lib/agents/agent";
 import { deleteAgent } from "../../actions";
 import { AgentForm } from "../../agent-form";
 
@@ -12,6 +13,7 @@ export default async function EditAgentPage({ params }: { params: Promise<{ id: 
   const { id } = await params;
   const agent = await db.agent.findUnique({ where: { id }, include: { _count: { select: { chats: true } } } });
   if (!agent) notFound();
+  const ready = await enginesReady();
 
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
@@ -35,8 +37,9 @@ export default async function EditAgentPage({ params }: { params: Promise<{ id: 
       <AgentForm
         id={agent.id}
         isDefault={agent.isDefault}
-        initial={{ name: agent.name, description: agent.description ?? "", website: agent.website ?? "", instructions: agent.instructions, scopes: agent.scopes }}
+        initial={{ name: agent.name, description: agent.description ?? "", website: agent.website ?? "", instructions: agent.instructions, scopes: agent.scopes, engine: agent.engine }}
         scopes={SCOPES.map(({ key, label, hint }) => ({ key, label, hint }))}
+        engines={ENGINES.map((e) => ({ id: e.id, label: e.label, href: e.href, ready: ready[e.id] }))}
       />
     </div>
   );

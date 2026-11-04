@@ -6,7 +6,7 @@ import type Anthropic from "@anthropic-ai/sdk";
 import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { db } from "@/lib/db";
-import { askAgent, chatTitle } from "@/lib/agents/agent";
+import { askAgent, chatTitle, isEngine } from "@/lib/agents/agent";
 import { isScope } from "@/lib/agents/tools";
 import { normalizeWebsite } from "@/lib/agents/website";
 import { agentScopesFor } from "@/lib/agents/tools";
@@ -87,7 +87,10 @@ export async function saveAgent(id: string | null, _prev: AgentFormState, formDa
   const website = normalizeWebsite(String(formData.get("website") ?? ""));
   if (website === undefined) return { error: "Проверьте адрес сайта: например, progrs.ru или https://progrs.ru/uslugi" };
 
-  const data = { ...parsed.data, description: parsed.data.description || null, website, scopes };
+  const engine = String(formData.get("engine") ?? "claude");
+  if (!isEngine(engine)) return { error: "Выберите модель" };
+
+  const data = { ...parsed.data, description: parsed.data.description || null, website, scopes, engine };
   const agent = id ? await db.agent.update({ where: { id }, data }) : await db.agent.create({ data });
   revalidatePath("/agents", "layout");
   redirect(`/agents/${agent.id}`);
