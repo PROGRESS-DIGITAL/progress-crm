@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRef, useState, useTransition } from "react";
 import { Field, inputClass } from "@/components/field";
 import { lookupBic } from "@/app/clients/actions";
+import { CopyInput } from "@/components/copy-input";
 
 type Values = { bankAccount: string; corrAccount: string; bankName: string; bik: string };
 
@@ -37,7 +38,9 @@ export function BankFields({ value, errors = {} }: { value: (name: keyof Values)
       <div className="sm:col-span-2">
         <Field label="БИК" error={errors.bik}>
           <div className="flex gap-2">
-            <input name="bik" inputMode="numeric" defaultValue={value("bik")} className={inputClass} />
+            <CopyInput>
+              <input name="bik" inputMode="numeric" defaultValue={value("bik")} className={inputClass} />
+            </CopyInput>
             <button
               type="button"
               onClick={fillByBic}
@@ -62,13 +65,19 @@ export function BankFields({ value, errors = {} }: { value: (name: keyof Values)
         )}
       </div>
       <Field label="Банк" error={errors.bankName} wide>
-        <input name="bankName" defaultValue={value("bankName")} className={inputClass} />
+        <CopyInput>
+          <input name="bankName" defaultValue={value("bankName")} className={inputClass} />
+        </CopyInput>
       </Field>
       <Field label="Расчётный счёт" error={errors.bankAccount}>
-        <input name="bankAccount" inputMode="numeric" defaultValue={value("bankAccount")} className={inputClass} />
+        <CopyInput>
+          <input name="bankAccount" inputMode="numeric" defaultValue={value("bankAccount")} className={inputClass} />
+        </CopyInput>
       </Field>
       <Field label="Корр. счёт" error={errors.corrAccount}>
-        <input name="corrAccount" inputMode="numeric" defaultValue={value("corrAccount")} className={inputClass} />
+        <CopyInput>
+          <input name="corrAccount" inputMode="numeric" defaultValue={value("corrAccount")} className={inputClass} />
+        </CopyInput>
       </Field>
     </div>
   );

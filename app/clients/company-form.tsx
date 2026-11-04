@@ -8,6 +8,7 @@ import { lookupInn } from "./actions";
 import { BankFields } from "@/components/bank-fields";
 import { SALES_COLUMNS } from "@/lib/sales-map";
 import { PhoneInput } from "@/components/phone-input";
+import { CopyInput } from "@/components/copy-input";
 
 export type CompanyValues = {
   name: string;
@@ -97,12 +98,16 @@ export function CompanyForm({
   return (
     <form ref={formRef} action={formAction} className="grid gap-4 sm:grid-cols-2">
       <Field label="Название компании" error={err.name} wide>
-        <input name="name" defaultValue={v("name")} required className={inputClass} />
+        <CopyInput>
+          <input name="name" defaultValue={v("name")} required className={inputClass} />
+        </CopyInput>
       </Field>
       <div className="sm:col-span-2">
         <Field label="ИНН" error={err.inn}>
           <div className="flex gap-2">
-            <input name="inn" inputMode="numeric" defaultValue={v("inn")} className={inputClass} />
+            <CopyInput>
+              <input name="inn" inputMode="numeric" defaultValue={v("inn")} className={inputClass} />
+            </CopyInput>
             <button
               type="button"
               onClick={fillByInn}
@@ -127,25 +132,39 @@ export function CompanyForm({
         )}
       </div>
       <Field label="КПП" error={err.kpp}>
-        <input name="kpp" inputMode="numeric" defaultValue={v("kpp")} className={inputClass} />
+        <CopyInput>
+          <input name="kpp" inputMode="numeric" defaultValue={v("kpp")} className={inputClass} />
+        </CopyInput>
       </Field>
       <Field label="ОГРН" error={err.ogrn}>
-        <input name="ogrn" inputMode="numeric" defaultValue={v("ogrn")} className={inputClass} />
+        <CopyInput>
+          <input name="ogrn" inputMode="numeric" defaultValue={v("ogrn")} className={inputClass} />
+        </CopyInput>
       </Field>
       <Field label="Руководитель" error={err.director} wide>
-        <input name="director" defaultValue={v("director")} className={inputClass} />
+        <CopyInput>
+          <input name="director" defaultValue={v("director")} className={inputClass} />
+        </CopyInput>
       </Field>
       <Field label="Сайт" error={err.website}>
-        <input name="website" defaultValue={v("website")} className={inputClass} />
+        <CopyInput>
+          <input name="website" defaultValue={v("website")} className={inputClass} />
+        </CopyInput>
       </Field>
       <Field label="Телефон" error={err.phone}>
-        <PhoneInput defaultValue={v("phone")} className={inputClass} />
+        <CopyInput>
+          <PhoneInput defaultValue={v("phone")} className={inputClass} />
+        </CopyInput>
       </Field>
       <Field label="Email" error={err.email}>
-        <input name="email" type="email" defaultValue={v("email")} className={inputClass} />
+        <CopyInput>
+          <input name="email" type="email" defaultValue={v("email")} className={inputClass} />
+        </CopyInput>
       </Field>
       <Field label="Адрес" error={err.address} wide>
-        <input name="address" defaultValue={v("address")} className={inputClass} />
+        <CopyInput>
+          <input name="address" defaultValue={v("address")} className={inputClass} />
+        </CopyInput>
       </Field>
       <BankFields value={v} errors={err} />
       <Field label="Что есть у клиента (планограмма)" error={err.situation} wide>

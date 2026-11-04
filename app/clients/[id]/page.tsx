@@ -4,7 +4,8 @@ import { db } from "@/lib/db";
 import { SERVICE_LABELS, formatRub } from "@/lib/format";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { LinkedEvents } from "@/components/linked-events";
-import { createContact, deleteCompany, deleteContact, updateCompany } from "../actions";
+import { createContact, deleteCompany, deleteContact, updateCompany, updateContactInline } from "../actions";
+import { ContactRow } from "../contact-row";
 import { CompanyForm } from "../company-form";
 import { ContactForm } from "../contact-form";
 import { SalesPlan } from "../sales-plan";
@@ -105,24 +106,12 @@ export default async function ClientPage({
           {company.contacts.length > 0 && (
             <ul className="mb-6 divide-y divide-slate-100">
               {company.contacts.map((c) => (
-                <li key={c.id} className="flex items-start justify-between gap-3 py-3">
-                  <div className="text-sm">
-                    <Link
-                      href={`/clients/${company.id}/contacts/${c.id}`}
-                      className="font-medium hover:text-blue-700"
-                    >
-                      {c.fullName}
-                    </Link>
-                    {c.position && <span className="text-slate-500"> · {c.position}</span>}
-                    <div className="mt-0.5 text-slate-600">
-                      {[c.phone, c.email].filter(Boolean).join(" · ") || "Нет телефона и email"}
-                    </div>
-                  </div>
-                  <ConfirmDeleteButton
-                    action={deleteContact.bind(null, c.id)}
-                    what={`контакт «${c.fullName}»`}
-                  />
-                </li>
+                <ContactRow
+                  key={c.id}
+                  contact={c}
+                  update={updateContactInline.bind(null, c.id)}
+                  remove={deleteContact.bind(null, c.id)}
+                />
               ))}
             </ul>
           )}

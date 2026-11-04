@@ -279,7 +279,7 @@ function TimeGrid({
   }
 
   return (
-    <div className="overflow-x-auto">
+    <div className="relative overflow-x-auto">
       <div style={{ minWidth: days.length > 1 ? 720 : undefined }}>
         <div className="grid border-b border-slate-200" style={template}>
           <div />

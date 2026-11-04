@@ -142,7 +142,7 @@ export async function ClientsView() {
         )}
       </section>
 
-      <section className="overflow-x-auto rounded-2xl border border-slate-200/60 bg-white shadow-card">
+      <section className="relative overflow-x-auto rounded-2xl border border-slate-200/60 bg-white shadow-card">
         <h2 className="border-b border-slate-200 px-5 py-4 font-semibold">Все клиенты</h2>
         <table className="w-full text-sm">
           <thead className="border-b border-slate-200 bg-slate-50 text-left text-slate-600">
