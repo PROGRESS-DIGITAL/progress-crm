@@ -32,7 +32,7 @@ export default async function DealsPage() {
           <div className="flex flex-wrap items-baseline gap-x-4 gap-y-1">
             <h1 className="text-2xl font-semibold tracking-tight">Сделки</h1>
             {showDashboard && (
-              <Link href="/dashboard" className="text-sm font-medium text-blue-700 hover:underline">
+              <Link href="/dashboard" className="text-xs text-slate-500 hover:text-slate-800 hover:underline">
                 Дашборд →
               </Link>
             )}
