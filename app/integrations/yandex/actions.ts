@@ -29,7 +29,7 @@ export async function saveYandex(_prev: YandexState, formData: FormData): Promis
   if (!key && !current) return { error: "Вставьте API-ключ" };
   if (key && (key.length < 20 || /\s/.test(key))) return { error: "Это не похоже на API-ключ: он длинный и без пробелов" };
   if (!/^[a-z0-9]{10,40}$/i.test(folderId)) return { error: "Идентификатор каталога — строка из латинских букв и цифр, например b1g…" };
-  if (!/^[a-z0-9][a-z0-9._/@-]*$/i.test(model)) return { error: "Название модели без пробелов, например yandexgpt-5-lite" };
+  if (!/^(gpt:\/\/)?[a-z0-9][a-z0-9._/@-]*$/i.test(model)) return { error: "Название модели без пробелов, например yandexgpt-5-lite" };
 
   if (key) await setSetting(YANDEX_KEY_SETTING, key);
   await setSetting(YANDEX_FOLDER_SETTING, folderId);
@@ -40,10 +40,10 @@ export async function saveYandex(_prev: YandexState, formData: FormData): Promis
   try {
     const alt = await yandexComplete(
       { apiKey: key || current!, folderId, model },
-      { messages: [{ role: "user", text: "Ответь одним словом: работает?" }], maxTokens: 20 },
+      { messages: [{ role: "user", content: "Ответь одним словом: работает?" }], maxTokens: 20 },
       20_000,
     );
-    return alt?.message?.text
+    return alt?.message?.content?.trim()
       ? { ok: true, check: "Сохранено, YandexGPT отвечает." }
       : { ok: false, check: "Сохранено, но YandexGPT вернул пустой ответ." };
   } catch (e) {

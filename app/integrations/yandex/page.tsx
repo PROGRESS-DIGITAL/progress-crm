@@ -64,8 +64,9 @@ export default async function YandexPage() {
           <li>В настройках агента выберите модель «YandexGPT».</li>
         </ol>
         <p className="mt-3 text-slate-500">
-          Модель по умолчанию — {YANDEX_DEFAULT_MODEL} (YandexGPT Lite). Если Яндекс переименует или заменит её, впишите новое название в поле
-          «Модель», например yandexgpt для YandexGPT Pro. Ключ хранится только в базе вашей CRM.
+          Модель по умолчанию — {YANDEX_DEFAULT_MODEL} (YandexGPT Lite), Яндекс отключает её 15 ноября 2026 года. Другую модель впишите в поле
+          «Модель», например yandexgpt-5.1 для YandexGPT Pro 5.1: она дороже, но надёжнее сама обращается к данным CRM. Ключ хранится
+          только в базе вашей CRM.
         </p>
       </section>
     </div>
