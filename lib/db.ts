@@ -11,7 +11,7 @@ if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = base;
 
 // Новые лиды, сделки, клиенты, контакты, встречи, задачи и договоры сами попадают в журнал событий:
 // так в него пишут и формы, и импорт, и AI агенты, и Тильда, без отдельного вызова в каждом месте
-const LOGGED = new Set(["Lead", "Deal", "Company", "Contact", "Event", "Contract"]);
+const LOGGED = new Set(["Lead", "Deal", "Company", "Contact", "Event", "Contract", "BoardCard"]);
 const silence = new AsyncLocalStorage<true>();
 
 // Записи, созданные внутри fn, в журнал не попадают: так восстановление из корзины не выглядит как новая сделка

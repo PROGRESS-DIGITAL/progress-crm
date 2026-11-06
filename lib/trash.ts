@@ -6,9 +6,10 @@ import { logActivity } from "@/lib/activity";
 // и со списком связей, которые база обнуляет (встречи сделки, оплаты счёта). Восстановление
 // создаёт записи заново с теми же id и возвращает связи, если связанная запись ещё есть
 
-export type TrashKind = "lead" | "deal" | "company" | "contact" | "event" | "document" | "contract" | "product";
+export type TrashKind = "card" | "lead" | "deal" | "company" | "contact" | "event" | "document" | "contract" | "product";
 
 export const TRASH_KINDS: Record<TrashKind, { label: string; deleted: string; restored: string; section: string }> = {
+  card: { label: "Карточка доски", deleted: "Удалена карточка", restored: "Восстановлена карточка", section: "tasks" },
   lead: { label: "Лид", deleted: "Удалён лид", restored: "Восстановлен лид", section: "leads" },
   deal: { label: "Сделка", deleted: "Удалена сделка", restored: "Восстановлена сделка", section: "deals" },
   company: { label: "Клиент", deleted: "Удалён клиент", restored: "Восстановлен клиент", section: "clients" },
@@ -160,6 +161,13 @@ export async function trashContract(id: string) {
   return contract;
 }
 
+export async function trashCard(id: string) {
+  const card = await db.boardCard.findUnique({ where: { id } });
+  if (!card) return null;
+  await put("card", card.title, { row: card }, (tx) => tx.boardCard.delete({ where: { id } }));
+  return card;
+}
+
 export async function trashLead(id: string) {
   const lead = await db.lead.findUnique({ where: { id } });
   if (!lead) return null;
@@ -282,6 +290,21 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
       });
       return `/documents/contracts/${id}`;
     }
+    case "card": {
+      // Столбец могли удалить: тогда карточка возвращается в первый
+      const columnId =
+        (await keep(row.columnId, (v) => tx.boardColumn.findUnique({ where: { id: v }, select: { id: true } }))) ??
+        (await tx.boardColumn.findFirst({ orderBy: { order: "asc" }, select: { id: true } }))?.id;
+      if (!columnId) throw new TrashError("На доске нет столбцов: сначала добавьте столбец");
+      await tx.boardCard.create({
+        data: {
+          ...(row as Prisma.BoardCardUncheckedCreateInput),
+          columnId,
+          assigneeId: await keep(row.assigneeId, (v) => tx.employee.findUnique({ where: { id: v }, select: { id: true } })),
+        },
+      });
+      return `/tasks/board?card=${id}`;
+    }
     case "lead": {
       // Сделка из лида возвращается к нему, только если её ещё не связали с другим лидом
       const dealId = await keep(row.dealId, (v) => tx.deal.findFirst({ where: { id: v, lead: null }, select: { id: true } }));
@@ -307,7 +330,7 @@ export async function restoreFromTrash(itemId: string) {
   const href = await withoutActivity(() => db.$transaction(async (tx) => {
     const t = tx as unknown as Tx;
     const row = (item.data as unknown as Snapshot).row;
-    const exists = await (t[kind] as unknown as { findUnique: (a: object) => Promise<unknown> }).findUnique({ where: { id: row.id as string } });
+    const exists = await (t[kind === "card" ? "boardCard" : kind] as unknown as { findUnique: (a: object) => Promise<unknown> }).findUnique({ where: { id: row.id as string } });
     if (exists) throw new TrashError("Запись с таким id уже есть в CRM");
     const link = await restoreSnapshot(t, kind, item.data as unknown as Snapshot);
     await t.trashItem.delete({ where: { id: itemId } });

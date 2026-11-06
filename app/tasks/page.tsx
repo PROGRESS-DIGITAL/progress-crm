@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { Icon } from "@/components/icons";
 import { toggleDone } from "@/app/calendar/actions";
 import { BUCKET_LABELS, taskBucket, taskPeriod, type TaskBucket } from "@/lib/tasks";
+import { TaskViewTabs } from "./view-tabs";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +38,10 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold tracking-tight">Задачи</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-2xl font-semibold tracking-tight">Задачи</h1>
+          <TaskViewTabs current="list" />
+        </div>
         <div className="flex flex-wrap items-center gap-2">
           <nav className="flex rounded-xl bg-white p-1 text-sm shadow-card" aria-label="Какие задачи показать">
             {FILTERS.map((f) => (
