@@ -60,3 +60,12 @@ test("перенос задачи на доске попадает в журна
     href: "/tasks/t1",
   });
 });
+
+test("новый материал базы знаний попадает в журнал раздела документов", () => {
+  assert.deepEqual(createdActivity("KnowledgeItem", { title: " Скрипт первого звонка ", kind: "SCRIPT" }, "k1"), {
+    section: "documents",
+    kind: "create",
+    text: "В базу знаний добавлен материал: Скрипт «Скрипт первого звонка»",
+    href: "/documents/knowledge/k1",
+  });
+});

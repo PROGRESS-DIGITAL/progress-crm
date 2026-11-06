@@ -6,6 +6,8 @@ import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { deleteContractFromList } from "./actions";
 import { NewTemplateForm } from "./new-template-form";
 import { ExecutorForm } from "./executor-form";
+import { KnowledgeList } from "./knowledge/list";
+import { isKnowledgeKind } from "@/lib/knowledge";
 
 export const dynamic = "force-dynamic";
 
@@ -13,11 +15,15 @@ const TABS = [
   { tab: "contracts", label: "Договоры" },
   { tab: "templates", label: "Шаблоны" },
   { tab: "requisites", label: "Мои реквизиты" },
+  { tab: "knowledge", label: "База знаний" },
 ] as const;
 
-export default async function DocumentsPage({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
-  const t = (await searchParams).tab;
-  const tab = t === "templates" || t === "requisites" ? t : "contracts";
+type Search = { tab?: string; kind?: string; q?: string };
+
+export default async function DocumentsPage({ searchParams }: { searchParams: Promise<Search> }) {
+  const sp = await searchParams;
+  const t = sp.tab;
+  const tab = t === "templates" || t === "requisites" || t === "knowledge" ? t : "contracts";
   await ensureDefaultTemplate();
   const executor = await getExecutor();
 
@@ -25,8 +31,20 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Документы</h1>
-          <p className="mt-1 text-sm text-slate-600">Договоры создаются из карточки сделки по шаблону</p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Документы</h1>
+            {tab === "knowledge" && (
+              <Link
+                href={`/documents/knowledge/new${isKnowledgeKind(sp.kind) ? `?kind=${sp.kind}` : ""}`}
+                className="text-xs text-slate-500 hover:text-slate-800 hover:underline"
+              >
+                + Добавить материал
+              </Link>
+            )}
+          </div>
+          <p className="mt-1 text-sm text-slate-600">
+            {tab === "knowledge" ? "Брифы, договоры, КП, ТЗ, стандарты работы и скрипты компании" : "Договоры создаются из карточки сделки по шаблону"}
+          </p>
         </div>
         <nav className="flex max-w-full overflow-x-auto rounded-xl bg-white p-1 text-sm shadow-card" aria-label="Раздел документов">
           {TABS.map((x) => (
@@ -41,7 +59,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
           ))}
         </nav>
       </div>
-      {!executor && tab !== "requisites" && (
+      {!executor && (tab === "contracts" || tab === "templates") && (
         <p className="mb-4 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-900">
           Заполните{" "}
           <Link href="/documents?tab=requisites" className="font-medium underline">
@@ -51,6 +69,7 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
         </p>
       )}
       {tab === "contracts" && <Contracts />}
+      {tab === "knowledge" && <KnowledgeList kind={isKnowledgeKind(sp.kind) ? sp.kind : null} q={(sp.q ?? "").trim().slice(0, 100)} />}
       {tab === "templates" && <Templates />}
       {tab === "requisites" && (
         <section className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card sm:p-6">

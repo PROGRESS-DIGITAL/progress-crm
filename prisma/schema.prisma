@@ -719,3 +719,43 @@ model EventComment {
 
   @@index([eventId, createdAt])
 }
+
+// Раздел базы знаний: что это за материал
+enum KnowledgeKind {
+  BRIEF
+  CONTRACT
+  PROPOSAL
+  SPEC
+  STANDARD
+  SCRIPT
+  OTHER
+}
+
+// Материал базы знаний компании: бриф, договор, КП, ТЗ, стандарт работы или скрипт. Текст и прикреплённые файлы
+model KnowledgeItem {
+  id        String          @id @default(cuid())
+  title     String
+  kind      KnowledgeKind   @default(OTHER)
+  // HTML из редактора, без скриптов
+  content   String?
+  author    String?
+  files     KnowledgeFile[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([kind, updatedAt])
+}
+
+// Файл материала: хранится в базе, как файлы задач
+model KnowledgeFile {
+  id        String        @id @default(cuid())
+  item      KnowledgeItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  itemId    String
+  name      String
+  mime      String
+  size      Int
+  data      Bytes
+  createdAt DateTime      @default(now())
+
+  @@index([itemId])
+}

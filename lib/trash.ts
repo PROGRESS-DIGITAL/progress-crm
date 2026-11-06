@@ -6,7 +6,7 @@ import { logActivity } from "@/lib/activity";
 // и со списком связей, которые база обнуляет (встречи сделки, оплаты счёта). Восстановление
 // создаёт записи заново с теми же id и возвращает связи, если связанная запись ещё есть
 
-export type TrashKind = "lead" | "deal" | "company" | "contact" | "event" | "document" | "contract" | "product";
+export type TrashKind = "lead" | "deal" | "company" | "contact" | "event" | "document" | "contract" | "product" | "knowledge";
 
 export const TRASH_KINDS: Record<TrashKind, { label: string; deleted: string; restored: string; section: string }> = {
   lead: { label: "Лид", deleted: "Удалён лид", restored: "Восстановлен лид", section: "leads" },
@@ -17,6 +17,7 @@ export const TRASH_KINDS: Record<TrashKind, { label: string; deleted: string; re
   document: { label: "Счёт или акт", deleted: "Удалён документ", restored: "Восстановлен документ", section: "finance" },
   contract: { label: "Договор", deleted: "Удалён договор", restored: "Восстановлен договор", section: "documents" },
   product: { label: "Услуга", deleted: "Удалена услуга", restored: "Восстановлена услуга", section: "price" },
+  knowledge: { label: "Материал базы знаний", deleted: "Из базы знаний удалён материал", restored: "В базу знаний возвращён материал", section: "documents" },
 };
 
 export class TrashError extends Error {}
@@ -160,6 +161,18 @@ export async function trashContract(id: string) {
   return contract;
 }
 
+export async function trashKnowledge(id: string) {
+  const item = await db.knowledgeItem.findUnique({ where: { id }, include: { files: true } });
+  if (!item) return null;
+  await put(
+    "knowledge",
+    item.title,
+    { row: pick(item, ["files"]), children: { files: item.files.map((f) => ({ ...f, data: Buffer.from(f.data).toString("base64") })) } },
+    (tx) => tx.knowledgeItem.delete({ where: { id } }),
+  );
+  return item;
+}
+
 export async function trashLead(id: string) {
   const lead = await db.lead.findUnique({ where: { id } });
   if (!lead) return null;
@@ -301,6 +314,12 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
       });
       return `/leads/${id}`;
     }
+    case "knowledge": {
+      await tx.knowledgeItem.create({ data: row as Prisma.KnowledgeItemUncheckedCreateInput });
+      for (const f of s.children?.files ?? [])
+        await tx.knowledgeFile.create({ data: { ...(f as Prisma.KnowledgeFileUncheckedCreateInput), data: Buffer.from(String(f.data), "base64") } });
+      return `/documents/knowledge/${id}`;
+    }
     case "product": {
       await tx.product.create({ data: row as Prisma.ProductUncheckedCreateInput });
       await relink(links.deals, (v) => tx.deal.updateMany({ where: { id: { in: v }, productId: null }, data: { productId: id } }));
@@ -317,7 +336,7 @@ export async function restoreFromTrash(itemId: string) {
   const href = await withoutActivity(() => db.$transaction(async (tx) => {
     const t = tx as unknown as Tx;
     const row = (item.data as unknown as Snapshot).row;
-    const exists = await (t[kind] as unknown as { findUnique: (a: object) => Promise<unknown> }).findUnique({ where: { id: row.id as string } });
+    const exists = await (t[kind === "knowledge" ? "knowledgeItem" : kind] as unknown as { findUnique: (a: object) => Promise<unknown> }).findUnique({ where: { id: row.id as string } });
     if (exists) throw new TrashError("Запись с таким id уже есть в CRM");
     const link = await restoreSnapshot(t, kind, item.data as unknown as Snapshot);
     await t.trashItem.delete({ where: { id: itemId } });
