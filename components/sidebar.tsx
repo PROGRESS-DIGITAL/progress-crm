@@ -5,7 +5,6 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useTransition } from "react";
 import { Icon, type IconName } from "@/components/icons";
 import { SIDEBAR_COOKIE } from "@/components/sidebar-cookie";
-import { signOut } from "@/app/login/actions";
 import { createBoard } from "@/app/tasks/board/actions";
 
 type Sub = { href: string; label: string };
@@ -48,36 +47,18 @@ function menu(newLeads: number, unreadChats: number, dueTasks: number, unreadMai
       items: [
         { href: "/integrations", label: "Интеграции", icon: "integrations" },
         ...(isOwner ? [{ href: "/employees", label: "Сотрудники", icon: "users" as const }] : []),
-        { href: "/profile", label: "Личные данные", icon: "profile" },
       ],
     },
   ];
 }
 
-// Сотрудник видит только разделы своей роли; «Сотрудники» и «Личные данные» решаются отдельно
+// Сотрудник видит только разделы своей роли; «Сотрудники» решаются отдельно. Личные данные и выход — по фото в шапке
 function allowed(groups: Group[], sections: string[]) {
   const open = (href: string) => {
     const key = href.slice(1);
     return key === "profile" || key === "employees" || sections.includes(key);
   };
   return groups.map((g) => ({ ...g, items: g.items.filter((i) => open(i.href)) })).filter((g) => g.items.length > 0);
-}
-
-function SignOut({ collapsed }: { collapsed: boolean }) {
-  return (
-    <form action={signOut} className="border-t border-slate-100 pt-2">
-      <button
-        type="submit"
-        title={collapsed ? "Выйти" : undefined}
-        className={`flex h-11 w-full items-center gap-3 rounded-xl text-[15px] text-slate-500 hover:bg-slate-100 hover:text-slate-900 ${
-          collapsed ? "justify-center" : "px-3"
-        }`}
-      >
-        <Icon name="logout" />
-        {!collapsed && <span>Выйти</span>}
-      </button>
-    </form>
-  );
 }
 
 function isActive(pathname: string, href: string) {
@@ -292,7 +273,6 @@ export function Sidebar({
         </div>
 
         <NavGroups groups={groups} collapsed={collapsed} pathname={pathname} />
-        <SignOut collapsed={collapsed} />
       </aside>
 
       <nav
@@ -350,7 +330,6 @@ export function Sidebar({
               </button>
             </div>
             <NavGroups groups={groups} collapsed={false} pathname={pathname} />
-            <SignOut collapsed={false} />
           </div>
         </div>
       )}

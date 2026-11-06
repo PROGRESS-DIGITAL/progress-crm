@@ -6,6 +6,8 @@ import { AvatarCropper } from "@/components/avatar-cropper";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { fieldValue, type FormState } from "@/lib/forms";
 import { saveProfile } from "./actions";
+import { signOut } from "@/app/login/actions";
+import { Icon } from "@/components/icons";
 import { PhoneInput } from "@/components/phone-input";
 
 export const MESSENGERS = [
@@ -78,6 +80,18 @@ export function ProfileForm({ initial }: { initial: Profile }) {
           <p className="text-xs text-slate-500">JPG или PNG, кадр в круге выберете сами</p>
           {(photoError || err.avatar) && <p className="text-xs text-rose-600">{photoError || err.avatar}</p>}
         </div>
+        {/* Выход редкий, поэтому он здесь, а не в меню. Кнопка отправляет форму в signOut, профиль при этом не сохраняется */}
+        <button
+          type="submit"
+          formAction={signOut}
+          formNoValidate
+          aria-label="Выйти"
+          title="Выйти"
+          className="ml-auto flex h-11 w-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-slate-200 text-sm sm:h-auto sm:w-auto sm:px-3 sm:py-2 text-slate-600 hover:border-rose-200 hover:bg-rose-50 hover:text-rose-600"
+        >
+          <Icon name="logout" size={16} />
+          <span className="hidden sm:inline">Выйти</span>
+        </button>
         <input
           ref={fileRef}
           type="file"
