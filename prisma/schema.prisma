@@ -217,21 +217,23 @@ model AppSetting {
 
 // Сотрудник CRM. Пока вход общий, владелец — один: его карточка в «Личных данных»
 model Employee {
-  id        String   @id @default(cuid())
-  name      String
-  position  String?
-  phone     String?
-  email     String?
-  telegram  String?
-  max       String?
-  vk        String?
-  instagram String?
-  whatsapp  String?
+  id             String    @id @default(cuid())
+  name           String
+  position       String?
+  phone          String?
+  email          String?
+  telegram       String?
+  max            String?
+  vk             String?
+  instagram      String?
+  whatsapp       String?
   // Аватар как data URL: сжимается в браузере до 256 px, чтобы не держать файлы на диске
-  avatar    String?
-  isOwner   Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  avatar         String?
+  isOwner        Boolean   @default(false)
+  // Когда сотрудник последний раз открывал журнал событий: новее — счётчик на колокольчике
+  activitySeenAt DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
   // Вход в CRM: логин и пароль (scrypt), второй шаг — код из приложения
   login              String?         @unique
@@ -607,16 +609,16 @@ model Agent {
 }
 
 model AgentChat {
-  id        String         @id @default(cuid())
-  agent     Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
-  agentId   String
+  id         String         @id @default(cuid())
+  agent      Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  agentId    String
   // Кто ведёт чат: сотрудник видит только свои чаты; null — чаты директора до появления входа
   employee   Employee?      @relation(fields: [employeeId], references: [id], onDelete: Cascade)
   employeeId String?
-  title     String
-  messages  AgentMessage[]
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  title      String
+  messages   AgentMessage[]
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
 
   @@index([agentId, updatedAt])
 }
@@ -636,4 +638,33 @@ model AgentMessage {
   createdAt DateTime  @default(now())
 
   @@index([chatId, seq])
+}
+
+// Журнал событий CRM: строка на каждое заметное действие. section — раздел, по которому решается, кому видна строка
+model Activity {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  section   String
+  // create, delete, restore, move, document, payment — для значка
+  kind      String
+  text      String
+  href      String?
+  // Кто сделал; пусто — сама CRM (Тильда, банк, AI агент)
+  actor     String?
+
+  @@index([createdAt])
+}
+
+// Корзина: удалённая запись целиком со связями, из неё её можно восстановить
+model TrashItem {
+  id        String   @id @default(cuid())
+  // deal, company, contact, event, document, contract, product
+  kind      String
+  section   String
+  title     String
+  data      Json
+  deletedBy String?
+  deletedAt DateTime @default(now())
+
+  @@index([deletedAt])
 }

@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { addDays, fromKey, isDayKey, MIN_EVENT_MINUTES } from "@/lib/calendar";
 import { actorName } from "@/lib/auth/session";
 import { REMIND_OPTIONS } from "@/lib/reminders";
+import { trashEvent } from "@/lib/trash";
 
 export type EventInput = {
   kind: "MEETING" | "TASK";
@@ -176,7 +177,7 @@ export async function toggleDone(id: string) {
 export async function deleteEvent(id: string): Promise<{ error?: string }> {
   const event = await db.event.findUnique({ where: { id }, select: { companyId: true, dealId: true } });
   if (!event) return {};
-  await db.event.delete({ where: { id } });
+  await trashEvent(id);
   revalidate(event.companyId, event.dealId);
   return {};
 }

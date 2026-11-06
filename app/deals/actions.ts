@@ -8,6 +8,8 @@ import { db } from "@/lib/db";
 import { invalid, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 import { isSalesStep } from "@/lib/sales-map";
 import { actorName } from "@/lib/auth/session";
+import { trashDeal } from "@/lib/trash";
+import { logDealMoved } from "@/lib/activity";
 
 const dealSchema = z.object({
   title: z.string().trim().min(1, "Укажите название сделки"),
@@ -104,20 +106,21 @@ export async function updateDeal(id: string, _prev: FormState, formData: FormDat
   const result = await validate(formData);
   if ("errors" in result) return invalid(result.errors, formData);
 
-  const current = await db.deal.findUnique({ where: { id }, select: { closedAt: true, stage: { select: { kind: true } } } });
+  const current = await db.deal.findUnique({ where: { id }, select: { closedAt: true, stageId: true, stage: { select: { kind: true } } } });
   const closedAt = await closedAtFor(
     result.data.stageId,
     current && { closedAt: current.closedAt, kind: current.stage.kind },
     result.data.closedAt,
   );
   const deal = await db.deal.update({ where: { id }, data: { ...result.data, closedAt }, select: { companyId: true } });
+  if (current) await logDealMoved(id, current.stageId, result.data.stageId);
   revalidateDeal(deal.companyId);
   redirect("/deals");
 }
 
 export async function deleteDeal(id: string) {
-  const deal = await db.deal.delete({ where: { id } });
-  revalidateDeal(deal.companyId);
+  const deal = await trashDeal(id);
+  if (deal) revalidateDeal(deal.companyId);
   redirect("/deals");
 }
 
@@ -172,6 +175,7 @@ export async function moveDeal(id: string, stageId: string, order: string[]) {
   const closedAt =
     current.stageId === stageId ? current.closedAt : await closedAtFor(stageId, { closedAt: current.closedAt, kind: current.stage.kind });
   const deal = await db.deal.update({ where: { id }, data: { stageId, closedAt } });
+  await logDealMoved(id, current.stageId, stageId);
   await db.$transaction(order.map((dealId, position) => db.deal.updateMany({ where: { id: dealId, stageId }, data: { position } })));
   revalidateDeal(deal.companyId);
 }

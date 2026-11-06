@@ -10,6 +10,7 @@ import { invalid, optionalEmail, optionalPhone, optionalText, parseForm, toError
 import { sanitizeHtml } from "@/lib/contracts/sanitize";
 import { createContract, saveExecutor } from "@/lib/contracts/store";
 import { updateContractFields } from "@/lib/contracts/fields";
+import { trashContract } from "@/lib/trash";
 
 export type SaveState = { saved?: boolean; error?: string } | undefined;
 
@@ -83,9 +84,9 @@ export async function saveContract(id: string, _prev: SaveState, formData: FormD
 }
 
 export async function deleteContract(id: string) {
-  const contract = await db.contract.delete({ where: { id } });
+  const contract = await trashContract(id);
   revalidatePath("/documents");
-  if (contract.dealId) {
+  if (contract?.dealId) {
     revalidatePath(`/deals/${contract.dealId}`);
     redirect(`/deals/${contract.dealId}`);
   }
@@ -96,7 +97,7 @@ export async function deleteContract(id: string) {
 export async function deleteContractFromList(id: string) {
   const contract = await db.contract.findUnique({ where: { id }, select: { dealId: true } });
   if (!contract) return;
-  await db.contract.delete({ where: { id } });
+  await trashContract(id);
   revalidatePath("/documents");
   if (contract.dealId) revalidatePath(`/deals/${contract.dealId}`);
 }

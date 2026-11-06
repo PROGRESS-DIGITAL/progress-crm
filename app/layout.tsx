@@ -9,6 +9,7 @@ import { ConfirmProvider } from "@/components/confirm-dialog";
 import { unreadChats } from "@/lib/chat/inbox";
 import { dueWhere } from "@/lib/tasks";
 import { currentUser } from "@/lib/auth/session";
+import { unseenActivity } from "@/lib/activity";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -30,11 +31,12 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </html>
     );
   }
-  const [newLeads, chats, dueTasks, unreadMail] = await Promise.all([
+  const [newLeads, chats, dueTasks, unreadMail, unseen] = await Promise.all([
     db.lead.count({ where: { status: "NEW" } }),
     unreadChats(),
     db.event.count({ where: dueWhere() }),
     db.mailMessage.count({ where: { folder: "INBOX", seen: false } }),
+    unseenActivity(user),
   ]);
   return (
     <html lang="ru" className={theme === "dark" ? "dark" : undefined}>
@@ -51,7 +53,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               isOwner={user.isOwner}
             />
             <div className="flex min-w-0 flex-1 flex-col gap-2 sm:gap-3">
-              <TopBar newLeads={newLeads} theme={theme} user={user} />
+              <TopBar unseenActivity={unseen} theme={theme} user={user} />
               <main className="flex flex-1 flex-col *:w-full">{children}</main>
             </div>
           </div>

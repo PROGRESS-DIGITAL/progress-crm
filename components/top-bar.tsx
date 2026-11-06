@@ -2,10 +2,10 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { currentSession, type AuthUser } from "@/lib/auth/session";
 import { Avatar } from "@/components/avatar";
-import { Icon } from "@/components/icons";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { HeaderClock } from "@/components/header-clock";
 import { HeaderSearch } from "@/components/header-search";
+import { ActivityBell } from "@/components/activity-bell";
 import type { Theme } from "@/components/theme-cookie";
 
 function greeting(now: Date) {
@@ -16,12 +16,11 @@ function greeting(now: Date) {
   return "Добрый вечер";
 }
 
-// Верхняя панель: приветствие, часы, поиск клиентов, новые лиды и карточка того, кто вошёл.
-// Поиск и колокольчик лидов видны, только если роль открывает клиентов и лиды
-export async function TopBar({ newLeads, theme, user }: { newLeads: number; theme: Theme; user: AuthUser }) {
+// Верхняя панель: приветствие, часы, поиск клиентов, журнал событий и карточка того, кто вошёл.
+// Поиск виден, только если роль открывает клиентов
+export async function TopBar({ unseenActivity, theme, user }: { unseenActivity: number; theme: Theme; user: AuthUser }) {
   const firstName = user.name.split(/\s+/)[0];
   const clients = user.sections.includes("clients");
-  const leads = user.sections.includes("leads");
   // «Время в CRM» считается с момента входа: после выхода и нового входа отсчёт начинается заново
   const loginAt = (await currentSession())?.session.createdAt.getTime() ?? Date.now();
   return (
@@ -44,20 +43,7 @@ export async function TopBar({ newLeads, theme, user }: { newLeads: number; them
       </div>
 
       <div className="flex shrink-0 items-center gap-2">
-        {leads && (
-          <Link
-            href="/leads"
-            title={newLeads ? `Новых лидов: ${newLeads}` : "Лиды"}
-            className="relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 text-slate-600 hover:bg-slate-50"
-          >
-            <Icon name="bell" />
-            {newLeads > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-rose-500 px-1 text-[10px] font-semibold text-white ring-2 ring-white">
-                {newLeads}
-              </span>
-            )}
-          </Link>
-        )}
+        <ActivityBell unseen={unseenActivity} />
         <Link
           href="/profile"
           title="Личные данные"
