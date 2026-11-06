@@ -16,6 +16,12 @@ echo "==> Docker"
 if ! command -v docker >/dev/null 2>&1; then
   curl -fsSL https://get.docker.com | sh
 fi
+# Docker Hub не пускает серверы из России: если он не отвечает, образы качаются через зеркала
+if [ ! -f /etc/docker/daemon.json ] && ! curl -s -m 15 -o /dev/null https://auth.docker.io/token; then
+  echo "==> Docker Hub недоступен, подключаю зеркала"
+  echo '{"registry-mirrors":["https://dockerhub.timeweb.cloud","https://mirror.gcr.io"]}' > /etc/docker/daemon.json
+  systemctl restart docker
+fi
 command -v git >/dev/null 2>&1 || { apt-get update -qq && apt-get install -y -qq git; }
 
 # Сборке Next.js не хватает 1–2 ГБ памяти, поэтому добавляем файл подкачки
