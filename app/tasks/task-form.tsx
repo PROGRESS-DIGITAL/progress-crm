@@ -6,7 +6,7 @@ import { useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/icons";
 import { useConfirm } from "@/components/confirm-dialog";
 import { TimeField } from "@/components/time-field";
-import { REMIND_OPTIONS } from "@/lib/calendar";
+import { remindForAllDay, remindOptions } from "@/lib/calendar";
 import { MAX_FILE_SIZE, fileSize } from "@/lib/tasks";
 import { deleteEvent, saveEvent, type EventInput } from "@/app/calendar/actions";
 import type { BoardChoice } from "@/lib/boards";
@@ -50,7 +50,8 @@ export function TaskForm({
 }) {
   const router = useRouter();
   const confirm = useConfirm();
-  const [d, setD] = useState(initial);
+  // Старые события на весь день могли хранить «за 15 минут»: показываем ближайший вариант из короткого списка
+  const [d, setD] = useState(() => ({ ...initial, remindMinutes: remindForAllDay(initial.remindMinutes, initial.allDay) }));
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, start] = useTransition();
@@ -262,7 +263,7 @@ export function TaskForm({
             )}
           </div>
           <label className="mt-3 flex items-center gap-2 text-sm text-slate-700">
-            <input type="checkbox" checked={!d.allDay} onChange={(e) => set("allDay", !e.target.checked)} className="h-4 w-4 accent-blue-600" />
+            <input type="checkbox" checked={!d.allDay} onChange={(e) => setD((p) => ({ ...p, allDay: !e.target.checked, remindMinutes: remindForAllDay(p.remindMinutes, !e.target.checked) }))} className="h-4 w-4 accent-blue-600" />
             Указать время
           </label>
 
@@ -270,9 +271,9 @@ export function TaskForm({
             Напомнить в Telegram
             <select value={d.remindMinutes} onChange={(e) => set("remindMinutes", e.target.value)} className={field}>
               <option value="">Не напоминать</option>
-              {REMIND_OPTIONS.map((o) => (
+              {remindOptions(d.allDay).map((o) => (
                 <option key={o.value} value={String(o.value)}>
-                  {d.allDay ? (o.value >= 1440 ? "Накануне в 9:00" : "В 9:00 в день начала") : o.label}
+                  {o.label}
                 </option>
               ))}
             </select>

@@ -5,7 +5,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { addDays, fromKey, isDayKey, MIN_EVENT_MINUTES } from "@/lib/calendar";
 import { actorName } from "@/lib/auth/session";
-import { REMIND_OPTIONS } from "@/lib/reminders";
+import { REMIND_OPTIONS, remindAt } from "@/lib/reminders";
 import { trashEvent } from "@/lib/trash";
 import { logActivity } from "@/lib/activity";
 import { taskMoveActivity } from "@/lib/activity-text";
@@ -148,7 +148,7 @@ export async function saveEvent(id: string | null, input: EventInput): Promise<{
     remindMinutes: v.remindMinutes === "" ? null : Number(v.remindMinutes),
   };
   const before = id
-    ? await db.event.findUnique({ where: { id }, select: { companyId: true, dealId: true, start: true, remindMinutes: true, columnId: true } })
+    ? await db.event.findUnique({ where: { id }, select: { companyId: true, dealId: true, start: true, allDay: true, remindMinutes: true, columnId: true } })
     : null;
   if (id && !before) return { error: "Событие уже удалено" };
   // Задача, которую перевели в другой столбец, встаёт в нём наверх
@@ -163,7 +163,8 @@ export async function saveEvent(id: string | null, input: EventInput): Promise<{
     placement.position = (top?.position ?? 1) - 1;
   }
   // Перенесли событие или поменяли напоминание — напомнить заново
-  const remindAgain = !before || before.start.getTime() !== start.getTime() || before.remindMinutes !== data.remindMinutes;
+  // Сравнивается сам момент напоминания: «за 15 минут» и «в момент начала» у события на весь день — одно и то же 9:00
+  const remindAgain = !before || remindAt(before)?.getTime() !== remindAt({ start, allDay: v.allDay, remindMinutes: data.remindMinutes })?.getTime();
   const saved = id
     ? await db.event.update({ where: { id }, data: { ...data, ...placement, ...(remindAgain && { remindedAt: null }) }, select: { id: true } })
     : await db.event.create({ data: { ...data, ...placement }, select: { id: true } });
