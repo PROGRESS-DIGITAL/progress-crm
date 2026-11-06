@@ -140,7 +140,7 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
         setDragged(null);
       }}
     >
-      <div className="flex flex-1 items-start gap-4 overflow-x-auto pb-4">
+      <div className="flex flex-1 gap-4 overflow-x-auto pb-4">
         {columns.map((c) => (
           <BoardColumnView
             key={c.id}
@@ -164,7 +164,7 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
           }
           title="Добавить столбец"
           aria-label="Добавить столбец"
-          className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-dashed border-slate-300 text-slate-500 hover:border-blue-400 hover:bg-white hover:text-blue-700 disabled:opacity-60"
+          className="flex h-12 w-12 shrink-0 items-center justify-center self-start rounded-2xl border border-dashed border-slate-300 text-slate-500 hover:border-blue-400 hover:bg-white hover:text-blue-700 disabled:opacity-60"
         >
           <Icon name="plus" size={20} />
         </button>
