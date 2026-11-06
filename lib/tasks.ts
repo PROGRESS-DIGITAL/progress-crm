@@ -18,8 +18,12 @@ export function taskBucket(t: { start: Date; end: Date; done: boolean }, now = n
 }
 
 // Сколько задач требуют внимания сегодня: просроченные и текущие
+// Основные задачи: из календаря, ИИ-агентов и списка. Они стоят на основной доске или ещё ни на какой.
+// Задачи досок команды живут только на своих досках
+export const mainTasks = { OR: [{ columnId: null }, { column: { board: { main: true } } }] };
+
 export function dueWhere(now = new Date()) {
-  return { kind: "TASK" as const, done: false, start: { lt: fromKey(addDays(dayKey(now), 1)) } };
+  return { kind: "TASK" as const, done: false, start: { lt: fromKey(addDays(dayKey(now), 1)) }, ...mainTasks };
 }
 
 export const MAX_FILE_SIZE = 15 * 1024 * 1024;

@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { getRemindChat } from "@/lib/reminders";
 import { addDays, dayKey, fromKey, isDayKey, isView, viewDays } from "@/lib/calendar";
+import { mainTasks } from "@/lib/tasks";
 import { CalendarView } from "./calendar-view";
 import type { CalEvent, Prefill } from "./types";
 
@@ -19,7 +20,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
 
   const [events, companies, deals, tasks, remindChat] = await Promise.all([
     db.event.findMany({
-      where: { start: { lt: to }, end: { gt: from } },
+      where: { start: { lt: to }, end: { gt: from }, ...mainTasks },
       orderBy: { start: "asc" },
       include: {
         company: { select: { name: true } },
@@ -33,7 +34,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       select: { id: true, title: true, companyId: true, stage: { select: { kind: true } } },
     }),
     db.event.findMany({
-      where: { kind: "TASK" },
+      where: { kind: "TASK", ...mainTasks },
       orderBy: [{ done: "asc" }, { start: "desc" }],
       take: 200,
       select: { id: true, title: true, done: true },

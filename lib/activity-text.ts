@@ -81,6 +81,11 @@ export function paymentActivity(p: { amount: number; payerName: string | null },
   };
 }
 
+// Задачу перетащили на доске в другой столбец
+export function taskMoveActivity(task: { id: string; title: string }, column: string, board: string): ActivityEntry {
+  return { section: "tasks", kind: "move", text: `Задача «${task.title}» перешла в «${column}» на доске «${board}»`, href: `/tasks/${task.id}` };
+}
+
 export function moveActivity(deal: { id: string; title: string }, stage: string): ActivityEntry {
   return { section: "deals", kind: "move", text: `Сделка «${deal.title}» перешла на этап «${stage}»`, href: `/deals/${deal.id}` };
 }

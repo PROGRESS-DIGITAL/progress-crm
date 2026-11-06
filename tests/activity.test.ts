@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ago, createdActivity, documentActivity, moveActivity, paymentActivity } from "../lib/activity-text";
+import { ago, createdActivity, documentActivity, moveActivity, paymentActivity, taskMoveActivity } from "../lib/activity-text";
 
 test("журнал: что пишется о новой записи и куда ведёт ссылка", () => {
   assert.deepEqual(createdActivity("Lead", { name: "Анна", source: "TILDA" }, "l1"), {
@@ -50,4 +50,13 @@ test("журнал: время события словами", () => {
   assert.equal(ago(new Date("2026-11-06T06:05:00Z"), now), "сегодня, 09:05");
   assert.equal(ago(new Date("2026-11-05T11:00:00Z"), now), "вчера, 14:00");
   assert.match(ago(new Date("2026-11-03T11:00:00Z"), now), /^3 нояб\.?, 14:00$/);
+});
+
+test("перенос задачи на доске попадает в журнал со ссылкой на задачу", () => {
+  assert.deepEqual(taskMoveActivity({ id: "t1", title: "Сверстать лендинг" }, "В работе", "Команда"), {
+    section: "tasks",
+    kind: "move",
+    text: "Задача «Сверстать лендинг» перешла в «В работе» на доске «Команда»",
+    href: "/tasks/t1",
+  });
 });

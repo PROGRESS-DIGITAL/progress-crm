@@ -127,14 +127,14 @@ export async function trashContact(id: string) {
 }
 
 export async function trashEvent(id: string) {
-  const event = await db.event.findUnique({ where: { id }, include: { files: true, linked: { select: { id: true } } } });
+  const event = await db.event.findUnique({ where: { id }, include: { files: true, comments: true, linked: { select: { id: true } } } });
   if (!event) return null;
   await put(
     "event",
     event.title,
     {
-      row: pick(event, ["files", "linked"]),
-      children: { files: event.files.map((f) => ({ ...f, data: Buffer.from(f.data).toString("base64") })) },
+      row: pick(event, ["files", "comments", "linked"]),
+      children: { files: event.files.map((f) => ({ ...f, data: Buffer.from(f.data).toString("base64") })), comments: event.comments },
       links: { linked: ids(event.linked) },
     },
     (tx) => tx.event.delete({ where: { id } }),
@@ -258,10 +258,20 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
           companyId: await keep(row.companyId, (v) => tx.company.findUnique({ where: { id: v }, select: { id: true } })),
           dealId: await keep(row.dealId, (v) => tx.deal.findUnique({ where: { id: v }, select: { id: true } })),
           taskId: await keep(row.taskId, (v) => tx.event.findUnique({ where: { id: v }, select: { id: true } })),
+          // Столбец могли удалить: тогда задача встаёт на основную доску
+          columnId: await keep(row.columnId, (v) => tx.boardColumn.findUnique({ where: { id: v }, select: { id: true } })),
+          assigneeId: await keep(row.assigneeId, (v) => tx.employee.findUnique({ where: { id: v }, select: { id: true } })),
         },
       });
       for (const f of s.children?.files ?? [])
         await tx.eventFile.create({ data: { ...(f as Prisma.EventFileUncheckedCreateInput), data: Buffer.from(String(f.data), "base64") } });
+      for (const c of s.children?.comments ?? [])
+        await tx.eventComment.create({
+          data: {
+            ...(c as Prisma.EventCommentUncheckedCreateInput),
+            authorId: await keep(c.authorId, (v) => tx.employee.findUnique({ where: { id: v }, select: { id: true } })),
+          },
+        });
       await relink(links.linked, (v) => tx.event.updateMany({ where: { id: { in: v }, taskId: null }, data: { taskId: id } }));
       return row.kind === "TASK" ? `/tasks/${id}` : `/calendar?open=${id}&date=${String(row.start).slice(0, 10)}`;
     }

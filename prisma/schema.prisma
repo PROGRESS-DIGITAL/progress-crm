@@ -252,6 +252,8 @@ model Employee {
   devices            TrustedDevice[]
   loginEvents        LoginEvent[]
   agentChats         AgentChat[]
+  boardTasks         Event[]
+  taskComments       EventComment[]
 }
 
 // Роль сотрудника: какие разделы CRM ему открыты (ключи из lib/auth/sections.ts)
@@ -436,34 +438,42 @@ enum EventKind {
 
 // Событие календаря: встреча или задача, при желании привязанная к клиенту, сделке или другой задаче
 model Event {
-  id            String      @id @default(cuid())
-  kind          EventKind   @default(MEETING)
+  id            String         @id @default(cuid())
+  kind          EventKind      @default(MEETING)
   title         String
   notes         String?
   start         DateTime
   end           DateTime
   // Событие на весь день: время в start и end не важно, только даты
-  allDay        Boolean     @default(false)
+  allDay        Boolean        @default(false)
   // Для задач: отметка о выполнении
-  done          Boolean     @default(false)
+  done          Boolean        @default(false)
   // За сколько минут до начала напомнить в Telegram; пусто — не напоминать
   remindMinutes Int?
   // Когда напоминание ушло: при переносе события сбрасывается
   remindedAt    DateTime?
-  company       Company?    @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  company       Company?       @relation(fields: [companyId], references: [id], onDelete: SetNull)
   companyId     String?
-  deal          Deal?       @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  deal          Deal?          @relation(fields: [dealId], references: [id], onDelete: SetNull)
   dealId        String?
-  task          Event?      @relation("EventTask", fields: [taskId], references: [id], onDelete: SetNull)
+  task          Event?         @relation("EventTask", fields: [taskId], references: [id], onDelete: SetNull)
   taskId        String?
-  linked        Event[]     @relation("EventTask")
+  linked        Event[]        @relation("EventTask")
   files         EventFile[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @updatedAt
+  comments      EventComment[]
+  // Задача на доске: столбец, место в нём и исполнитель
+  column        BoardColumn?   @relation(fields: [columnId], references: [id], onDelete: SetNull)
+  columnId      String?
+  position      Float          @default(0)
+  assignee      Employee?      @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  assigneeId    String?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
 
   @@index([start])
   @@index([companyId])
   @@index([dealId])
+  @@index([columnId, position])
 }
 
 // Файл, прикреплённый к задаче: хранится прямо в базе, чтобы CRM не зависела от папок на диске
@@ -667,4 +677,45 @@ model TrashItem {
   deletedAt DateTime @default(now())
 
   @@index([deletedAt])
+}
+
+// Доски задач: «Основная» (main) собирает задачи из календаря, ИИ-агентов и списка задач,
+// остальные доски команда заводит сама. Задача без столбца стоит в первом столбце основной доски
+model Board {
+  id        String        @id @default(cuid())
+  name      String
+  main      Boolean       @default(false)
+  order     Float
+  columns   BoardColumn[]
+  createdAt DateTime      @default(now())
+
+  @@index([order])
+}
+
+// Столбец (этап) доски: название и порядок команда меняет сама
+model BoardColumn {
+  id        String   @id @default(cuid())
+  board     Board    @relation(fields: [boardId], references: [id], onDelete: Cascade)
+  boardId   String
+  name      String
+  order     Float
+  tasks     Event[]
+  createdAt DateTime @default(now())
+
+  @@index([boardId, order])
+}
+
+// Комментарий команды к задаче
+model EventComment {
+  id         String    @id @default(cuid())
+  event      Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventId    String
+  author     Employee? @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  authorId   String?
+  // Имя на момент комментария: остаётся, даже если сотрудника удалят
+  authorName String
+  text       String
+  createdAt  DateTime  @default(now())
+
+  @@index([eventId, createdAt])
 }

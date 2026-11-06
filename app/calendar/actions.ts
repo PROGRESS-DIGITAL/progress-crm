@@ -7,6 +7,8 @@ import { addDays, fromKey, isDayKey, MIN_EVENT_MINUTES } from "@/lib/calendar";
 import { actorName } from "@/lib/auth/session";
 import { REMIND_OPTIONS } from "@/lib/reminders";
 import { trashEvent } from "@/lib/trash";
+import { logActivity } from "@/lib/activity";
+import { taskMoveActivity } from "@/lib/activity-text";
 
 export type EventInput = {
   kind: "MEETING" | "TASK";
@@ -25,6 +27,10 @@ export type EventInput = {
   taskId: string;
   // Минуты до начала для напоминания в Telegram; "" — не напоминать
   remindMinutes: string;
+  // Только у задачи из её карточки: столбец доски ("" — основная доска) и исполнитель (""— не назначен).
+  // Календарь их не передаёт и не меняет
+  columnId?: string;
+  assigneeId?: string;
 };
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Время в формате ЧЧ:ММ");
@@ -46,6 +52,8 @@ const schema = z.object({
   remindMinutes: z
     .string()
     .refine((v) => v === "" || REMIND_OPTIONS.some((o) => String(o.value) === v), "Неизвестное время напоминания"),
+  columnId: z.string().optional(),
+  assigneeId: z.string().optional(),
 });
 
 const minutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
@@ -114,6 +122,18 @@ export async function saveEvent(id: string | null, input: EventInput): Promise<{
     taskId = v.taskId;
   }
 
+  const placement: { columnId?: string | null; position?: number; assigneeId?: string | null } = {};
+  if (v.kind === "TASK" && v.columnId !== undefined) {
+    if (v.columnId && !(await db.boardColumn.findUnique({ where: { id: v.columnId }, select: { id: true } })))
+      return { error: "Столбец удалён, обновите страницу" };
+    placement.columnId = v.columnId || null;
+  }
+  if (v.kind === "TASK" && v.assigneeId !== undefined) {
+    if (v.assigneeId && !(await db.employee.findUnique({ where: { id: v.assigneeId }, select: { id: true } })))
+      return { error: "Сотрудник не найден, обновите страницу" };
+    placement.assigneeId = v.assigneeId || null;
+  }
+
   const data = {
     kind: v.kind,
     title: v.title,
@@ -128,14 +148,30 @@ export async function saveEvent(id: string | null, input: EventInput): Promise<{
     remindMinutes: v.remindMinutes === "" ? null : Number(v.remindMinutes),
   };
   const before = id
-    ? await db.event.findUnique({ where: { id }, select: { companyId: true, dealId: true, start: true, remindMinutes: true } })
+    ? await db.event.findUnique({ where: { id }, select: { companyId: true, dealId: true, start: true, remindMinutes: true, columnId: true } })
     : null;
   if (id && !before) return { error: "Событие уже удалено" };
+  // Задача, которую перевели в другой столбец, встаёт в нём наверх
+  // Без столбца задача и так стоит в первом столбце основной доски: выбор его — не перенос
+  const mainFirst =
+    placement.columnId === undefined
+      ? null
+      : ((await db.boardColumn.findFirst({ where: { board: { main: true } }, orderBy: { order: "asc" }, select: { id: true } }))?.id ?? null);
+  const moved = placement.columnId !== undefined && (placement.columnId ?? mainFirst) !== (before?.columnId ?? mainFirst);
+  if (moved) {
+    const top = await db.event.findFirst({ where: { columnId: placement.columnId }, orderBy: { position: "asc" }, select: { position: true } });
+    placement.position = (top?.position ?? 1) - 1;
+  }
   // Перенесли событие или поменяли напоминание — напомнить заново
   const remindAgain = !before || before.start.getTime() !== start.getTime() || before.remindMinutes !== data.remindMinutes;
   const saved = id
-    ? await db.event.update({ where: { id }, data: { ...data, ...(remindAgain && { remindedAt: null }) }, select: { id: true } })
-    : await db.event.create({ data, select: { id: true } });
+    ? await db.event.update({ where: { id }, data: { ...data, ...placement, ...(remindAgain && { remindedAt: null }) }, select: { id: true } })
+    : await db.event.create({ data: { ...data, ...placement }, select: { id: true } });
+  if (moved && id && placement.columnId) {
+    const column = await db.boardColumn.findUnique({ where: { id: placement.columnId }, select: { name: true, board: { select: { name: true } } } });
+    if (column) await logActivity(taskMoveActivity({ id, title: v.title }, column.name, column.board.name));
+  }
+  if (placement.columnId !== undefined || before?.columnId) revalidatePath("/", "layout");
   revalidate(companyId, dealId);
   revalidate(before?.companyId, before?.dealId);
   return { id: saved.id };

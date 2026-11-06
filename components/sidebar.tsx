@@ -1,16 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useState, useTransition } from "react";
 import { Icon, type IconName } from "@/components/icons";
 import { SIDEBAR_COOKIE } from "@/components/sidebar-cookie";
 import { signOut } from "@/app/login/actions";
+import { createBoard } from "@/app/tasks/board/actions";
 
-type Item = { href: string; label: string; icon: IconName; badge?: number };
+type Sub = { href: string; label: string };
+type Item = { href: string; label: string; icon: IconName; badge?: number; children?: Sub[] };
+type Board = { id: string; name: string };
 type Group = { title: string; items: Item[] };
 
-function menu(newLeads: number, unreadChats: number, dueTasks: number, unreadMail: number, isOwner: boolean): Group[] {
+// «Задачи» раскрываются: основные задачи (список и их доска) и доски команды по названиям
+function taskLinks(boards: Board[]): Sub[] {
+  return [{ href: "/tasks", label: "Основные" }, ...boards.map((b) => ({ href: `/tasks/board/${b.id}`, label: `Доска «${b.name}»` }))];
+}
+
+function menu(newLeads: number, unreadChats: number, dueTasks: number, unreadMail: number, isOwner: boolean, boards: Board[]): Group[] {
   return [
     {
       title: "Главное",
@@ -18,7 +26,7 @@ function menu(newLeads: number, unreadChats: number, dueTasks: number, unreadMai
         { href: "/deals", label: "Сделки", icon: "home" },
         { href: "/dashboard", label: "Дашборд", icon: "dashboard" },
         { href: "/leads", label: "Лиды", icon: "leads", badge: newLeads },
-        { href: "/tasks", label: "Задачи", icon: "tasks", badge: dueTasks },
+        { href: "/tasks", label: "Задачи", icon: "tasks", badge: dueTasks, children: taskLinks(boards) },
         { href: "/calendar", label: "Календарь", icon: "calendar" },
         { href: "/clients", label: "Клиенты", icon: "clients" },
         { href: "/chats", label: "Чаты", icon: "chat", badge: unreadChats },
@@ -76,6 +84,13 @@ function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+// «Основные» — список, основная доска и новая задача; доска команды — её адрес.
+// В карточке задачи по адресу не понять, чья она, поэтому там подсвечен только сам раздел
+function subActive(pathname: string, href: string) {
+  if (href !== "/tasks") return pathname === href;
+  return ["/tasks", "/tasks/board", "/tasks/new"].includes(pathname);
+}
+
 // Логотип: знак «>» и название PROGRESS CRM. На компьютере клик по нему сворачивает и разворачивает меню
 function Logo({ withName, onClick, title }: { withName: boolean; onClick?: () => void; title?: string }) {
   return (
@@ -108,6 +123,7 @@ function NavGroups({ groups, collapsed, pathname }: { groups: Group[]; collapsed
           <ul className="flex flex-col gap-1">
             {g.items.map((item) => {
               const active = isActive(pathname, item.href);
+              if (item.children && !collapsed) return <NavTree key={item.href} item={item} links={item.children} pathname={pathname} />;
               return (
                 <li key={item.href}>
                   <Link
@@ -147,6 +163,80 @@ function NavGroups({ groups, collapsed, pathname }: { groups: Group[]; collapsed
   );
 }
 
+function Badge({ n }: { n?: number }) {
+  if (!n) return null;
+  return <span className="rounded-full bg-blue-600 px-2 py-0.5 text-[11px] font-semibold text-white">{n}</span>;
+}
+
+// Пункт с вложенными ссылками: раскрыт, пока открыт его раздел; стрелка сворачивает и разворачивает вручную
+function NavTree({ item, links, pathname }: { item: Item; links: Sub[]; pathname: string }) {
+  const inside = isActive(pathname, item.href);
+  const [open, setOpen] = useState(inside);
+  useEffect(() => {
+    if (inside) setOpen(true);
+  }, [inside]);
+  const router = useRouter();
+  const [adding, start] = useTransition();
+
+  return (
+    <li>
+      <div className={`flex h-11 items-center rounded-xl text-[15px] transition-colors ${inside ? "bg-slate-100 font-medium text-slate-900" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"}`}>
+        <Link href={item.href} className="flex h-full min-w-0 flex-1 items-center gap-3 pl-3">
+          <Icon name={item.icon} />
+          <span className="flex-1 truncate">{item.label}</span>
+          <Badge n={item.badge} />
+        </Link>
+        <button
+          type="button"
+          onClick={() => setOpen(!open)}
+          aria-expanded={open}
+          aria-label={open ? `Свернуть «${item.label}»` : `Развернуть «${item.label}»`}
+          className="flex h-full w-10 shrink-0 items-center justify-center text-slate-400 hover:text-slate-700"
+        >
+          <Icon name="chevron" size={16} className={`transition-transform ${open ? "rotate-180" : ""}`} />
+        </button>
+      </div>
+      {open && (
+        <ul className="mt-1 ml-5 flex flex-col gap-0.5 border-l border-slate-200 pl-2">
+          {links.map((s) => {
+            const active = subActive(pathname, s.href);
+            return (
+              <li key={s.href}>
+                <Link
+                  href={s.href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex h-9 items-center gap-2.5 rounded-lg px-2.5 text-sm transition-colors ${
+                    active ? "bg-blue-600 font-medium text-white shadow-sm shadow-blue-600/30" : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
+                  }`}
+                >
+                  <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${active ? "bg-white" : "bg-slate-300"}`} />
+                  <span className="truncate">{s.label}</span>
+                </Link>
+              </li>
+            );
+          })}
+          <li>
+            <button
+              type="button"
+              disabled={adding}
+              onClick={() =>
+                start(async () => {
+                  const { id } = await createBoard();
+                  router.push(`/tasks/board/${id}?rename=1`);
+                })
+              }
+              className="flex h-9 w-full items-center gap-2.5 rounded-lg px-2.5 text-sm text-slate-500 hover:bg-slate-100 hover:text-blue-700 disabled:opacity-60"
+            >
+              <Icon name="plus" size={14} />
+              {adding ? "Создаю…" : "Новая доска"}
+            </button>
+          </li>
+        </ul>
+      )}
+    </li>
+  );
+}
+
 // На компьютере меню слева, свёрнутое до иконок или развёрнутое с названиями.
 // На телефоне снизу панель с главными разделами, остальные открываются кнопкой «Меню»
 export function Sidebar({
@@ -155,10 +245,12 @@ export function Sidebar({
   unreadChats,
   dueTasks,
   unreadMail,
+  boards,
   sections,
   isOwner,
 }: {
   initialCollapsed: boolean;
+  boards: Board[];
   newLeads: number;
   unreadChats: number;
   dueTasks: number;
@@ -169,7 +261,7 @@ export function Sidebar({
   const [collapsed, setCollapsed] = useState(initialCollapsed);
   const [drawer, setDrawer] = useState(false);
   const pathname = usePathname();
-  const groups = allowed(menu(newLeads, unreadChats, dueTasks, unreadMail, isOwner), sections);
+  const groups = allowed(menu(newLeads, unreadChats, dueTasks, unreadMail, isOwner, boards), sections);
 
   // Переход по ссылке закрывает мобильное меню
   useEffect(() => setDrawer(false), [pathname]);
