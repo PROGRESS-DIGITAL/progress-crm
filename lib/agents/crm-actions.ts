@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { addDays, dayKey, fromKey, isDayKey, minutesOfDay, REMIND_OPTIONS } from "@/lib/calendar";
 import { actorName } from "@/lib/auth/session";
 import { tool } from "@/lib/agents/tool";
+import { logDealMoved } from "@/lib/activity";
 
 // Инструменты, которые меняют CRM: создают лиды, клиентов, сделки, встречи и задачи, меняют
 // встречи и задачи и двигают сделки по воронке. Удалять агент не умеет. Каждый ответ содержит ссылку на созданную карточку,
@@ -196,6 +197,7 @@ const moveDeal = tool({
         ...(stage.kind === "LOST" && input.lost_reason ? { lostReason: input.lost_reason } : {}),
       },
     });
+    await logDealMoved(deal.id, deal.stage.id, stage.id);
     refresh("/deals", `/deals/${deal.id}`, `/clients/${deal.companyId}`, "/dashboard", "/sales-map");
     return { moved: true, deal: deal.title, from: deal.stage.name, to: stage.name, link: `/deals/${deal.id}` };
   },

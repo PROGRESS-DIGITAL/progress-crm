@@ -8,6 +8,7 @@ import { findBankByBic, findPartyByInn, getDadataKey, type BankInfo, type PartyI
 import { invalid, optionalEmail, optionalPhone, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 import { isSituation } from "@/lib/sales-map";
 import { findDuplicate, mergeCompanies, mergeFields } from "@/lib/company-merge";
+import { trashCompany, trashContact } from "@/lib/trash";
 
 // Счета и БИК часто копируют с пробелами: убираем их перед проверкой
 const digits = (n: number, message: string) =>
@@ -122,7 +123,7 @@ export async function deleteCompany(id: string) {
   const deals = await db.deal.count({ where: { companyId: id } });
   if (deals > 0) redirect(`/clients/${id}?error=has-deals`);
 
-  await db.company.delete({ where: { id } });
+  await trashCompany(id);
   revalidatePath("/clients");
   redirect("/clients");
 }
@@ -158,7 +159,8 @@ export async function updateContactInline(id: string, _prev: FormState, formData
 }
 
 export async function deleteContact(id: string) {
-  const contact = await db.contact.delete({ where: { id } });
+  const contact = await trashContact(id);
+  if (!contact) return;
   revalidatePath(`/clients/${contact.companyId}`);
   revalidatePath("/clients");
   revalidatePath("/deals");

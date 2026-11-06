@@ -6,6 +6,7 @@ import { Service } from "@prisma/client";
 import { db } from "@/lib/db";
 import { invalid, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 import { isSalesStep } from "@/lib/sales-map";
+import { trashProduct } from "@/lib/trash";
 
 const salesStep = optionalText.refine((v) => v === null || isSalesStep(v), "Нет такого шага планограммы");
 
@@ -102,6 +103,6 @@ export async function reorderProducts(category: string, ids: string[]): Promise<
 
 // Сделки с этой услугой остаются: у них сохраняются сумма и направление
 export async function deleteProduct(id: string) {
-  await db.product.delete({ where: { id } });
+  await trashProduct(id);
   revalidatePrice();
 }

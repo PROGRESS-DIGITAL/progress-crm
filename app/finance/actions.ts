@@ -8,6 +8,7 @@ import { DiadocError } from "@/lib/finance/diadoc";
 import { importCounteragents, sendActToDiadoc } from "@/lib/finance/diadoc-service";
 import { DocumentError, docTitle, getTochka, issueDocument, syncPayments } from "@/lib/finance/documents";
 import { sendDocumentEmail, TochkaError } from "@/lib/finance/tochka";
+import { trashDocument } from "@/lib/trash";
 
 function message(e: unknown) {
   if (e instanceof DocumentError || e instanceof DiadocError || e instanceof TochkaError) return e.message;
@@ -37,7 +38,7 @@ export async function issueDocumentAction(dealId: string, kind: DocumentKind): P
 export async function deleteDocumentAction(id: string) {
   const doc = await db.document.findUnique({ where: { id }, select: { dealId: true } });
   if (!doc) return;
-  await db.document.delete({ where: { id } });
+  await trashDocument(id);
   revalidateFinance(doc.dealId);
 }
 

@@ -16,6 +16,8 @@ import {
   type NdsKind,
   type TochkaAccount,
 } from "./tochka";
+import { logActivity, logDealMoved } from "@/lib/activity";
+import { documentActivity, paymentActivity } from "@/lib/activity-text";
 
 export const KIND_LABELS: Record<DocumentKind, string> = { INVOICE: "Счёт", ACT: "Акт" };
 
@@ -86,7 +88,9 @@ export async function issueDocument(dealId: string, kind: DocumentKind) {
       kind === "INVOICE"
         ? await createInvoice(tochka.token, input)
         : await createAct(tochka.token, input, invoice?.tochkaId);
-    return await db.document.update({ where: { id: doc.id }, data: { tochkaId } });
+    const issued = await db.document.update({ where: { id: doc.id }, data: { tochkaId } });
+    await logActivity(documentActivity(issued, deal.company.name));
+    return issued;
   } catch (e) {
     await db.document.delete({ where: { id: doc.id } });
     if (e instanceof TochkaError) throw new DocumentError(`Точка не приняла документ: ${e.message}`);
@@ -103,7 +107,10 @@ export async function markPaid(documentId: string, paidAt: Date) {
   });
   if (doc.deal.stage.kind === "OPEN") {
     const won = await db.stage.findFirst({ where: { kind: "WON" }, orderBy: { order: "asc" } });
-    if (won) await db.deal.update({ where: { id: doc.dealId }, data: { stageId: won.id, closedAt: paidAt } });
+    if (won) {
+      await db.deal.update({ where: { id: doc.dealId }, data: { stageId: won.id, closedAt: paidAt } });
+      await logDealMoved(doc.dealId, doc.deal.stageId, won.id, null);
+    }
   }
   return doc;
 }
@@ -124,6 +131,8 @@ export async function loadPaymentHistory() {
   await setSetting(BANK_HISTORY_SETTING, new Date().toISOString());
 }
 
+const PAYMENT_LOG_DAYS = 3;
+
 // Подтянуть поступления за последние дни и разнести их по счетам
 export async function syncPayments(days = 30) {
   const tochka = await getTochka();
@@ -136,9 +145,15 @@ export async function syncPayments(days = 30) {
   for (const p of incomingPayments(transactions)) {
     const exists = await db.bankPayment.findUnique({ where: { transactionId: p.transactionId } });
     if (exists) continue;
-    const invoiceId = matchInvoice(p, await openInvoices());
+    const invoices = await openInvoices();
+    const invoiceId = matchInvoice(p, invoices);
     await db.bankPayment.create({ data: { ...p, documentId: invoiceId } });
     added++;
+    // История за год при подключении Точки в журнал не идёт: только свежие поступления
+    if (p.date.getTime() > Date.now() - PAYMENT_LOG_DAYS * 86_400_000) {
+      const inv = invoiceId ? await db.document.findUnique({ where: { id: invoiceId }, select: { seq: true, dealId: true } }) : null;
+      await logActivity(paymentActivity(p, inv), null);
+    }
     if (invoiceId) {
       await markPaid(invoiceId, p.date);
       paid++;
