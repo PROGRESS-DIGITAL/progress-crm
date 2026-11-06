@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
-import { currentSession, type AuthUser } from "@/lib/auth/session";
+import type { AuthUser } from "@/lib/auth/session";
 import { Avatar } from "@/components/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { HeaderClock } from "@/components/header-clock";
@@ -21,8 +21,6 @@ function greeting(now: Date) {
 export async function TopBar({ unseenActivity, theme, user }: { unseenActivity: number; theme: Theme; user: AuthUser }) {
   const firstName = user.name.split(/\s+/)[0];
   const clients = user.sections.includes("clients");
-  // «Время в CRM» считается с момента входа: после выхода и нового входа отсчёт начинается заново
-  const loginAt = (await currentSession())?.session.createdAt.getTime() ?? Date.now();
   return (
     <header className="flex min-h-14 items-center gap-3 rounded-2xl bg-white px-3 py-2 shadow-card sm:min-h-16 sm:gap-4 sm:rounded-3xl sm:px-5 sm:py-3">
       <div className="min-w-0">
@@ -34,7 +32,7 @@ export async function TopBar({ unseenActivity, theme, user }: { unseenActivity: 
       <ThemeToggle initial={theme} />
 
       <div className="ml-auto flex shrink-0 items-center gap-5">
-        <HeaderClock serverNow={Date.now()} startedAt={loginAt} />
+        <HeaderClock serverNow={Date.now()} userId={user.id} />
         {clients && (
           <Suspense>
             <HeaderSearch />

@@ -3,7 +3,8 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { LEAD_SOURCE_LABELS, LEAD_STATUS_BADGE, LEAD_STATUS_LABELS, formatDateTime } from "@/lib/format";
 import { getProductOptions } from "@/lib/queries";
-import { convertLead, rejectLead, setLeadStatus } from "../actions";
+import { ConfirmDeleteButton } from "@/components/confirm-delete";
+import { convertLead, deleteLead, rejectLead, setLeadStatus } from "../actions";
 import { ConvertForm, RejectForm } from "./lead-actions";
 
 export const dynamic = "force-dynamic";
@@ -50,6 +51,13 @@ export default async function LeadPage({ params }: { params: Promise<{ id: strin
         <span className="text-sm text-slate-500">
           {LEAD_SOURCE_LABELS[lead.source]} · {formatDateTime(lead.createdAt)}
         </span>
+        <div className="ml-auto">
+          <ConfirmDeleteButton
+            action={deleteLead.bind(null, lead.id)}
+            what={`лид «${who}»`}
+            message="Он попадёт в корзину: оттуда его можно восстановить в течение 30 дней."
+          />
+        </div>
       </div>
 
       <section className="mb-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">

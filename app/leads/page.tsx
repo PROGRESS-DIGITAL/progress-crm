@@ -2,6 +2,10 @@ import Link from "next/link";
 import type { LeadStatus } from "@prisma/client";
 import { db } from "@/lib/db";
 import { LEAD_SOURCE_LABELS, LEAD_STATUS_BADGE, LEAD_STATUS_LABELS, formatDateTime } from "@/lib/format";
+import { ConfirmDeleteButton } from "@/components/confirm-delete";
+import { deleteLeadFromList } from "./actions";
+
+const TRASH_NOTE = "Он попадёт в корзину: оттуда его можно восстановить в течение 30 дней.";
 
 export const dynamic = "force-dynamic";
 
@@ -64,7 +68,10 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                   {l.name ?? l.phone ?? l.email ?? "Без имени"}
                   {l.companyName && <span className="font-normal text-slate-500"> · {l.companyName}</span>}
                 </Link>
-                <span className={`shrink-0 rounded px-2 py-0.5 text-xs ${LEAD_STATUS_BADGE[l.status]}`}>{LEAD_STATUS_LABELS[l.status]}</span>
+                <div className="relative z-10 -mt-1 -mr-2 flex shrink-0 items-center gap-1">
+                  <span className={`rounded px-2 py-0.5 text-xs ${LEAD_STATUS_BADGE[l.status]}`}>{LEAD_STATUS_LABELS[l.status]}</span>
+                  <ConfirmDeleteButton icon action={deleteLeadFromList.bind(null, l.id)} label="Удалить лид" what={`лид «${l.name ?? l.phone ?? l.email ?? "Без имени"}»`} message={TRASH_NOTE} />
+                </div>
               </div>
               {l.message && <p className="mt-1 line-clamp-2 text-sm text-slate-600">{l.message}</p>}
               <div className="mt-2 flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-slate-500">
@@ -89,6 +96,7 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                 <th className="px-4 py-3 font-medium">Контакты</th>
                 <th className="px-4 py-3 font-medium">Источник</th>
                 <th className="px-4 py-3 font-medium">Статус</th>
+                <th className="w-10" />
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -111,6 +119,9 @@ export default async function LeadsPage({ searchParams }: { searchParams: Promis
                     <span className={`rounded px-2 py-0.5 text-xs ${LEAD_STATUS_BADGE[l.status]}`}>
                       {LEAD_STATUS_LABELS[l.status]}
                     </span>
+                  </td>
+                  <td className="px-2 py-1.5">
+                    <ConfirmDeleteButton icon action={deleteLeadFromList.bind(null, l.id)} label="Удалить лид" what={`лид «${l.name ?? l.phone ?? l.email ?? "Без имени"}»`} message={TRASH_NOTE} />
                   </td>
                 </tr>
               ))}

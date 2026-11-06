@@ -81,9 +81,30 @@ export function formatChatTime(d: Date, now = new Date()) {
 const DAY = 86_400_000;
 const MSK_OFFSET = 3 * 3_600_000; // Москва без перехода на летнее время
 
-// «Время в CRM» за сегодня часами и минутами, 12:32. Отсчёт с запуска, а в полночь по Москве сбрасывается на 00:00
-export function crmTimeToday(now: number, startedAt: number) {
-  const midnight = Math.floor((now + MSK_OFFSET) / DAY) * DAY - MSK_OFFSET;
-  const minutes = Math.max(0, Math.floor((now - Math.max(startedAt, midnight)) / 60_000));
+// «Время в CRM»: сколько сегодня CRM была открыта на экране. Счёт копится в браузере и в 00:00 по Москве начинается заново
+export type CrmTime = { day: string; total: number; last: number };
+
+// Паузу дольше 5 секунд не считаем: CRM была закрыта или вкладка скрыта. Несколько вкладок не удваивают время,
+// потому что каждая добавляет только промежуток с последней отметки любой из них
+export const CRM_TIME_GAP = 5_000;
+
+export function moscowDayKey(now: number) {
+  return new Date(now + MSK_OFFSET).toISOString().slice(0, 10);
+}
+
+export function addCrmTime(prev: CrmTime | null, now: number): CrmTime {
+  const day = moscowDayKey(now);
+  if (!prev || prev.day !== day) {
+    const midnight = Math.floor((now + MSK_OFFSET) / DAY) * DAY - MSK_OFFSET;
+    // Вкладка была открыта в полночь: новый день считаем с 00:00
+    const carried = prev && now - prev.last < CRM_TIME_GAP ? now - midnight : 0;
+    return { day, total: carried, last: now };
+  }
+  const delta = now - prev.last;
+  return { day, total: prev.total + (delta > 0 && delta < CRM_TIME_GAP ? delta : 0), last: Math.max(now, prev.last) };
+}
+
+export function formatCrmTime(ms: number) {
+  const minutes = Math.floor(ms / 60_000);
   return `${String(Math.floor(minutes / 60)).padStart(2, "0")}:${String(minutes % 60).padStart(2, "0")}`;
 }
