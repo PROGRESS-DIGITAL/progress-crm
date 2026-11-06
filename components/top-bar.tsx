@@ -29,8 +29,6 @@ export async function TopBar({ unseenActivity, theme, user }: { unseenActivity: 
         </p>
         <p className="hidden truncate text-xs text-slate-500 sm:block">Сделки, клиенты и выручка PROGRESS Digital</p>
       </div>
-      <ThemeToggle initial={theme} />
-
       <div className="ml-auto flex shrink-0 items-center gap-5">
         <HeaderClock serverNow={Date.now()} userId={user.id} />
         {clients && (
@@ -42,6 +40,7 @@ export async function TopBar({ unseenActivity, theme, user }: { unseenActivity: 
 
       <div className="flex shrink-0 items-center gap-2">
         <ActivityBell unseen={unseenActivity} />
+        <ThemeToggle initial={theme} />
         <Link
           href="/profile"
           title="Личные данные"
