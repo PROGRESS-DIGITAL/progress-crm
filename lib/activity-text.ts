@@ -1,4 +1,5 @@
 import { formatRub } from "@/lib/format";
+import { knowledgeLabel } from "@/lib/knowledge";
 
 // Строка журнала событий: текст, ссылка и раздел, по которому решается, кому она видна
 export type ActivityEntry = { section: string; kind: ActivityKind; text: string; href: string | null };
@@ -54,6 +55,13 @@ export function createdActivity(model: string, data: Record<string, unknown>, id
     }
     case "Contract":
       return { section: "documents", kind: "create", text: `Создан договор № ${str(data.number) ?? "—"}`, href: `/documents/contracts/${id}` };
+    case "KnowledgeItem":
+      return {
+        section: "documents",
+        kind: "create",
+        text: `В базу знаний добавлен материал: ${knowledgeLabel(data.kind)} «${str(data.title) ?? "без названия"}»`,
+        href: `/documents/knowledge/${id}`,
+      };
     default:
       return null;
   }
