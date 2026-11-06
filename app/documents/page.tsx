@@ -13,9 +13,9 @@ export const dynamic = "force-dynamic";
 
 const TABS = [
   { tab: "contracts", label: "Договоры" },
-  { tab: "knowledge", label: "База знаний" },
   { tab: "templates", label: "Шаблоны" },
   { tab: "requisites", label: "Мои реквизиты" },
+  { tab: "knowledge", label: "База знаний" },
 ] as const;
 
 type Search = { tab?: string; kind?: string; q?: string };
