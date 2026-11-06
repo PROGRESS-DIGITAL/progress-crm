@@ -82,13 +82,38 @@ export function isSituation(value: unknown): value is Situation {
   return typeof value === "string" && value in SITUATION_LABELS;
 }
 
-// Ситуацию менеджер может указать сам; иначе понимаем её по тому, что клиент уже купил
+// Схема идёт по нарастающей: идея → логотип → сайт → сложный сервис
+const LADDER: Situation[] = ["idea", "noLogo", "hasLogo", "hasSite", "complex"];
+const BRAND: SalesStep[] = ["logo", "logoPassport", "brandbook", "brandPlatform"];
+
+// Что предлагаем клиенту в его ситуации, ещё до первой покупки
+export const SITUATION_OFFERS: Record<Situation, SalesStep[]> = {
+  idea: ["research", "naming"],
+  noLogo: ["research", "naming", "logo"],
+  hasLogo: ["logoPassport", "brandbook", "brandPlatform", ...SITES, "ai"],
+  // С сайтом — переделка сайта, продвижение, ИИ и сервис
+  hasSite: [...SITES, "promotion", "seo", "context", "ai", "service"],
+  complex: ["service", "ai"],
+};
+
+// Что левее ситуации клиента, ему уже не предлагаем: с сайтом логотип и брендинг скорее всего есть.
+// Продать их всё равно можно, сделка по такому шагу посчитается в ✓ и ◷
+const BEHIND: Record<Situation, SalesStep[]> = {
+  idea: [],
+  noLogo: [],
+  hasLogo: ["research", "naming", "logo"],
+  hasSite: ["research", "naming", ...BRAND],
+  complex: ["research", "naming", ...BRAND, ...SITES],
+};
+
+// Ситуация по покупкам; указанная менеджером ситуация важнее, если она не отстаёт от покупок
 export function inferSituation(done: Set<SalesStep>, manual?: string | null): Situation {
-  if (isSituation(manual)) return manual;
-  if (done.has("service")) return "complex";
-  if (SITES.some((s) => done.has(s))) return "hasSite";
-  if (done.has("logo") || done.has("logoPassport") || done.has("brandbook")) return "hasLogo";
-  return "idea";
+  let bought: Situation = "idea";
+  if (done.has("service")) bought = "complex";
+  else if (SITES.some((s) => done.has(s))) bought = "hasSite";
+  else if (BRAND.some((s) => done.has(s))) bought = "hasLogo";
+  if (!isSituation(manual)) return bought;
+  return LADDER.indexOf(manual) >= LADDER.indexOf(bought) ? manual : bought;
 }
 
 export type ClientPlan = {
@@ -112,13 +137,11 @@ export function clientPlan(
   }
   const situation = inferSituation(done, manualSituation);
 
-  const candidates = new Set<SalesStep>();
+  const candidates = new Set<SalesStep>(SITUATION_OFFERS[situation]);
   for (const step of done) NEXT_STEPS[step].forEach((s) => candidates.add(s));
-  // Пока ничего не куплено, предлагаем первые шаги колонки клиента
-  if (done.size === 0) {
-    const column = SALES_COLUMNS.find((c) => c.situation === situation)!;
-    column.steps.slice(0, situation === "hasLogo" || situation === "hasSite" ? 4 : 2).forEach((s) => candidates.add(s));
-  }
+  for (const s of BEHIND[situation]) candidates.delete(s);
+  // Сайт клиенту уже сделали мы: другой сайт следом не предлагаем
+  if (SITES.some((s) => done.has(s))) for (const s of SITES) candidates.delete(s);
   const next = STEP_KEYS.filter((s) => candidates.has(s) && !done.has(s) && !inProgress.has(s));
 
   return {

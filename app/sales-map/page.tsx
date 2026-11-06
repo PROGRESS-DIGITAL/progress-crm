@@ -33,7 +33,7 @@ function StepCard({
   plans: Plans;
   products: StepProducts;
   tone: string;
-  // Сайты стоят в двух колонках: кому предлагать, решает ситуация клиента
+  // Шаг, который стоит в нескольких колонках (сайты, ИИ): клиента показываем в колонке его ситуации
   situation?: Situation;
 }) {
   const done = plans.filter((c) => c.plan.done.includes(step));
@@ -75,6 +75,8 @@ function StepCard({
   );
 }
 
+const SHARED = new Set(SALES_COLUMNS.flatMap((c) => c.steps).filter((s, i, all) => all.indexOf(s) !== i));
+
 export default async function SalesMapPage() {
   const [plans, products] = await Promise.all([getAllPlans(), getStepProducts()]);
 
@@ -83,7 +85,7 @@ export default async function SalesMapPage() {
       <h1 className="text-2xl font-semibold tracking-tight">Планограмма продаж</h1>
       <p className="mt-1 mb-6 max-w-3xl text-sm text-slate-600">
         С чем клиент приходит и что ему продавать дальше. ✓ — оплатили, ◷ — в работе, «Предложить» — клиенты, которым
-        этот шаг следующий по схеме. Услуги прайса привязываются к шагам в «Прайсе», ситуация клиента — в его реквизитах.
+        этот шаг следующий по схеме. Схема идёт по нарастающей: то, что левее ситуации клиента, ему уже не предлагаем. Услуги прайса привязываются к шагам в «Прайсе», ситуация клиента — в его реквизитах.
       </p>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
@@ -106,7 +108,7 @@ export default async function SalesMapPage() {
                   step={step}
                   plans={plans}
                   products={products}
-                  situation={col.siteGroup ? col.situation : undefined}
+                  situation={SHARED.has(step) ? col.situation : undefined}
                   tone={STEP_TONE[step] ?? COLUMN_TONE[col.situation]}
                 />
               ))}
