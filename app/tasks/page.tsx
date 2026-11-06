@@ -2,7 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { Icon } from "@/components/icons";
 import { toggleDone } from "@/app/calendar/actions";
-import { BUCKET_LABELS, taskBucket, taskPeriod, type TaskBucket } from "@/lib/tasks";
+import { BUCKET_LABELS, mainTasks, taskBucket, taskPeriod, type TaskBucket } from "@/lib/tasks";
 import { TaskViewTabs } from "./view-tabs";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export default async function TasksPage({ searchParams }: { searchParams: Promis
   const raw = (await searchParams).show;
   const show: Show = raw === "done" || raw === "all" ? raw : "active";
   const tasks = await db.event.findMany({
-    where: { kind: "TASK", ...(show === "active" && { done: false }), ...(show === "done" && { done: true }) },
+    where: { kind: "TASK", ...mainTasks, ...(show === "active" && { done: false }), ...(show === "done" && { done: true }) },
     orderBy: show === "done" ? { end: "desc" } : { end: "asc" },
     take: 500,
     include: {

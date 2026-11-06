@@ -52,8 +52,6 @@ export function createdActivity(model: string, data: Record<string, unknown>, id
         href: `/calendar?${start ? `date=${dayOf(start)}&` : ""}open=${id}`,
       };
     }
-    case "BoardCard":
-      return { section: "tasks", kind: "create", text: `Новая карточка на доске: «${str(data.title) ?? "без названия"}»`, href: `/tasks/board?card=${id}` };
     case "Contract":
       return { section: "documents", kind: "create", text: `Создан договор № ${str(data.number) ?? "—"}`, href: `/documents/contracts/${id}` };
     default:
@@ -83,8 +81,9 @@ export function paymentActivity(p: { amount: number; payerName: string | null },
   };
 }
 
-export function cardMoveActivity(card: { id: string; title: string }, column: string): ActivityEntry {
-  return { section: "tasks", kind: "move", text: `Карточка «${card.title}» перешла в «${column}»`, href: `/tasks/board?card=${card.id}` };
+// Задачу перетащили на доске в другой столбец
+export function taskMoveActivity(task: { id: string; title: string }, column: string, board: string): ActivityEntry {
+  return { section: "tasks", kind: "move", text: `Задача «${task.title}» перешла в «${column}» на доске «${board}»`, href: `/tasks/${task.id}` };
 }
 
 export function moveActivity(deal: { id: string; title: string }, stage: string): ActivityEntry {

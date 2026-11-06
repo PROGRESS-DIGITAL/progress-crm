@@ -9,7 +9,9 @@ import { TimeField } from "@/components/time-field";
 import { REMIND_OPTIONS } from "@/lib/calendar";
 import { MAX_FILE_SIZE, fileSize } from "@/lib/tasks";
 import { deleteEvent, saveEvent, type EventInput } from "@/app/calendar/actions";
+import type { BoardChoice } from "@/lib/boards";
 import { deleteTaskFile, uploadTaskFiles } from "./actions";
+import { TaskComments, type CommentRow } from "./comments";
 
 const field =
   "mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
@@ -20,6 +22,8 @@ export type TaskOptions = {
   deals: { id: string; title: string; companyId: string; open: boolean }[];
 };
 export type TaskFileRow = { id: string; name: string; size: number };
+// Где задача стоит на досках и кто её делает
+export type TaskPlacement = { boards: BoardChoice[]; employees: { id: string; name: string }[] };
 
 // Карточка задачи: текст, сроки, клиент и сделка, файлы. Сохраняется тем же действием, что и окно в календаре
 export function TaskForm({
@@ -28,12 +32,21 @@ export function TaskForm({
   options,
   files,
   remindersOn,
+  placement,
+  comments,
+  me,
+  back,
 }: {
   id: string | null;
   initial: EventInput;
   options: TaskOptions;
   files: TaskFileRow[];
   remindersOn: boolean;
+  placement: TaskPlacement;
+  comments: CommentRow[];
+  me: { id: string; isOwner: boolean };
+  // Куда вернуться после сохранения: к списку или на доску, с которой открыли задачу
+  back: string;
 }) {
   const router = useRouter();
   const confirm = useConfirm();
@@ -84,7 +97,7 @@ export function TaskForm({
         setError(`Задача сохранена, но файлы не загрузились: ${err}`);
         return router.replace(`/tasks/${res.id}`);
       }
-      router.push("/tasks");
+      router.push(back);
     });
   }
 
@@ -94,7 +107,7 @@ export function TaskForm({
     if (!ok) return;
     start(async () => {
       await deleteEvent(id);
-      router.push("/tasks");
+      router.push(back);
     });
   }
 
@@ -130,6 +143,8 @@ export function TaskForm({
             />
           </label>
         </section>
+
+        <TaskComments taskId={id} comments={comments} me={me} />
 
         <section className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -182,6 +197,34 @@ export function TaskForm({
       </div>
 
       <aside className="flex flex-col gap-4">
+        <section className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card">
+          <label className={label}>
+            Доска и столбец
+            <select value={d.columnId ?? ""} onChange={(e) => set("columnId", e.target.value)} className={field} aria-label="Доска и столбец">
+              {placement.boards.map((b) => (
+                <optgroup key={b.id} label={b.main ? "Основные задачи" : `Доска «${b.name}»`}>
+                  {b.columns.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </label>
+          <label className={`${label} mt-3`}>
+            Исполнитель
+            <select value={d.assigneeId ?? ""} onChange={(e) => set("assigneeId", e.target.value)} className={field}>
+              <option value="">Не назначен</option>
+              {placement.employees.map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        </section>
+
         <section className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card">
           <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
             <input type="checkbox" checked={d.done} onChange={(e) => set("done", e.target.checked)} className="h-4 w-4 accent-emerald-600" />
@@ -313,7 +356,7 @@ export function TaskForm({
               Удалить
             </button>
           )}
-          <Link href="/tasks" className="ml-auto rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
+          <Link href={back} className="ml-auto rounded-xl px-4 py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50">
             Отмена
           </Link>
           <button

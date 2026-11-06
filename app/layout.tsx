@@ -8,6 +8,7 @@ import { TopBar } from "@/components/top-bar";
 import { ConfirmProvider } from "@/components/confirm-dialog";
 import { unreadChats } from "@/lib/chat/inbox";
 import { dueWhere } from "@/lib/tasks";
+import { teamBoards } from "@/lib/boards";
 import { currentUser } from "@/lib/auth/session";
 import { unseenActivity } from "@/lib/activity";
 import "./globals.css";
@@ -31,12 +32,13 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       </html>
     );
   }
-  const [newLeads, chats, dueTasks, unreadMail, unseen] = await Promise.all([
+  const [newLeads, chats, dueTasks, unreadMail, unseen, boards] = await Promise.all([
     db.lead.count({ where: { status: "NEW" } }),
     unreadChats(),
     db.event.count({ where: dueWhere() }),
     db.mailMessage.count({ where: { folder: "INBOX", seen: false } }),
     unseenActivity(user),
+    teamBoards(),
   ]);
   return (
     <html lang="ru" className={theme === "dark" ? "dark" : undefined}>
@@ -49,6 +51,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               unreadChats={chats}
               dueTasks={dueTasks}
               unreadMail={unreadMail}
+              boards={boards}
               sections={user.sections}
               isOwner={user.isOwner}
             />

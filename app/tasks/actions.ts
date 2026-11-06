@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { z } from "zod";
 import { db } from "@/lib/db";
+import { requireUser } from "@/lib/auth/session";
 import { MAX_FILE_SIZE, cleanFileName, fileSize } from "@/lib/tasks";
 
 // Файлы к задаче: приходят из формы, каждый до 15 МБ
@@ -34,4 +36,31 @@ export async function deleteTaskFile(id: string) {
   await db.eventFile.delete({ where: { id } });
   revalidatePath(`/tasks/${file.eventId}`);
   revalidatePath("/tasks");
+}
+
+const comment = z.string().trim().min(1, "Напишите комментарий").max(5000, "Слишком длинный комментарий");
+
+// Комментарий команды к задаче: автор — тот, кто вошёл в CRM
+export async function addTaskComment(eventId: string, text: string): Promise<{ error?: string }> {
+  const parsed = comment.safeParse(text);
+  if (!parsed.success) return { error: parsed.error.issues[0].message };
+  const user = await requireUser();
+  const event = await db.event.findUnique({ where: { id: eventId }, select: { kind: true } });
+  if (event?.kind !== "TASK") return { error: "Задача не найдена, обновите страницу" };
+  await db.eventComment.create({ data: { eventId, text: parsed.data, authorId: user.id, authorName: user.name } });
+  revalidatePath(`/tasks/${eventId}`);
+  revalidatePath("/tasks", "layout");
+  return {};
+}
+
+// Удалить комментарий может его автор или директор
+export async function deleteTaskComment(id: string): Promise<{ error?: string }> {
+  const user = await requireUser();
+  const found = await db.eventComment.findUnique({ where: { id }, select: { eventId: true, authorId: true } });
+  if (!found) return {};
+  if (!user.isOwner && found.authorId !== user.id) return { error: "Удалить можно только свой комментарий" };
+  await db.eventComment.delete({ where: { id } });
+  revalidatePath(`/tasks/${found.eventId}`);
+  revalidatePath("/tasks", "layout");
+  return {};
 }

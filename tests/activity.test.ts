@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { ago, cardMoveActivity, createdActivity, documentActivity, moveActivity, paymentActivity } from "../lib/activity-text";
+import { ago, createdActivity, documentActivity, moveActivity, paymentActivity, taskMoveActivity } from "../lib/activity-text";
 
 test("журнал: что пишется о новой записи и куда ведёт ссылка", () => {
   assert.deepEqual(createdActivity("Lead", { name: "Анна", source: "TILDA" }, "l1"), {
@@ -52,17 +52,11 @@ test("журнал: время события словами", () => {
   assert.match(ago(new Date("2026-11-03T11:00:00Z"), now), /^3 нояб\.?, 14:00$/);
 });
 
-test("карточки доски задач попадают в журнал со ссылкой на доску", () => {
-  assert.deepEqual(createdActivity("BoardCard", { title: " Сверстать лендинг ", columnId: "c1" }, "k1"), {
-    section: "tasks",
-    kind: "create",
-    text: "Новая карточка на доске: «Сверстать лендинг»",
-    href: "/tasks/board?card=k1",
-  });
-  assert.deepEqual(cardMoveActivity({ id: "k1", title: "Сверстать лендинг" }, "В работе"), {
+test("перенос задачи на доске попадает в журнал со ссылкой на задачу", () => {
+  assert.deepEqual(taskMoveActivity({ id: "t1", title: "Сверстать лендинг" }, "В работе", "Команда"), {
     section: "tasks",
     kind: "move",
-    text: "Карточка «Сверстать лендинг» перешла в «В работе»",
-    href: "/tasks/board?card=k1",
+    text: "Задача «Сверстать лендинг» перешла в «В работе» на доске «Команда»",
+    href: "/tasks/t1",
   });
 });
