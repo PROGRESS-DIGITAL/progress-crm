@@ -140,6 +140,22 @@ export const REMIND_OPTIONS: { value: number; label: string }[] = [
 ];
 export const DEFAULT_REMIND = 15;
 
+// У события на весь день времени нет: напомнить можно только в 9:00 в его день или накануне
+const ALL_DAY_REMIND = [
+  { value: 0, label: "В 9:00 в день начала" },
+  { value: 1440, label: "Накануне в 9:00" },
+];
+
+export function remindOptions(allDay: boolean) {
+  return allDay ? ALL_DAY_REMIND : REMIND_OPTIONS;
+}
+
+// Переключили «весь день»: выбранное напоминание переводится в ближайший вариант нового списка
+export function remindForAllDay(value: string, allDay: boolean) {
+  if (value === "" || !allDay) return value;
+  return Number(value) >= 1440 ? "1440" : "0";
+}
+
 export const MIN_EVENT_MINUTES = 15;
 
 // Растягивание карточки за верх или низ: край сдвигается на delta минут, но событие не короче 15 минут

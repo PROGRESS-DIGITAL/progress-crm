@@ -1,7 +1,7 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { fromKey } from "../lib/calendar";
 import { linkCode, reminderText, remindAt } from "../lib/reminders";
+import { fromKey, remindForAllDay, remindOptions } from "../lib/calendar";
 
 test("время напоминания", () => {
   const start = fromKey("2026-10-27", 11 * 60);
@@ -33,4 +33,13 @@ test("текст напоминания", () => {
     start,
   );
   assert.equal(task, "⏰ Сейчас: задача «Подготовить КП»\nвт, 27 октября, 11:00–11:00\n\nЦены из прайса");
+});
+
+test("у события на весь день в списке напоминаний только два варианта без повторов", () => {
+  assert.deepEqual(remindOptions(true).map((o) => o.label), ["В 9:00 в день начала", "Накануне в 9:00"]);
+  assert.equal(new Set(remindOptions(false).map((o) => o.label)).size, remindOptions(false).length);
+  assert.equal(remindForAllDay("15", true), "0");
+  assert.equal(remindForAllDay("1440", true), "1440");
+  assert.equal(remindForAllDay("", true), "");
+  assert.equal(remindForAllDay("15", false), "15");
 });
