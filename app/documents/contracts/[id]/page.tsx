@@ -44,7 +44,7 @@ export default async function ContractPage({
         <ConfirmDeleteButton
           action={deleteContract.bind(null, contract.id)}
           what={`договор № ${contract.number}`}
-          message="Это действие нельзя отменить."
+          message="Он попадёт в корзину: оттуда его можно восстановить в течение 30 дней."
         />
       </div>
       {gaps.length > 0 && (

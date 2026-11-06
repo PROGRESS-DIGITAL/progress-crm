@@ -123,7 +123,7 @@ async function Contracts() {
                   action={deleteContractFromList.bind(null, c.id)}
                   label={`Удалить договор № ${c.number}`}
                   what={`договор № ${c.number} от ${shortDate(c.date)}`}
-                  message="Это действие нельзя отменить."
+                  message="Он попадёт в корзину: оттуда его можно восстановить в течение 30 дней."
                 />
               </td>
             </tr>

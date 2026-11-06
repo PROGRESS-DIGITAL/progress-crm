@@ -6,9 +6,10 @@ import { logActivity } from "@/lib/activity";
 // и со списком связей, которые база обнуляет (встречи сделки, оплаты счёта). Восстановление
 // создаёт записи заново с теми же id и возвращает связи, если связанная запись ещё есть
 
-export type TrashKind = "deal" | "company" | "contact" | "event" | "document" | "contract" | "product";
+export type TrashKind = "lead" | "deal" | "company" | "contact" | "event" | "document" | "contract" | "product";
 
 export const TRASH_KINDS: Record<TrashKind, { label: string; deleted: string; restored: string; section: string }> = {
+  lead: { label: "Лид", deleted: "Удалён лид", restored: "Восстановлен лид", section: "leads" },
   deal: { label: "Сделка", deleted: "Удалена сделка", restored: "Восстановлена сделка", section: "deals" },
   company: { label: "Клиент", deleted: "Удалён клиент", restored: "Восстановлен клиент", section: "clients" },
   contact: { label: "Контакт", deleted: "Удалён контакт", restored: "Восстановлен контакт", section: "clients" },
@@ -159,6 +160,13 @@ export async function trashContract(id: string) {
   return contract;
 }
 
+export async function trashLead(id: string) {
+  const lead = await db.lead.findUnique({ where: { id } });
+  if (!lead) return null;
+  await put("lead", lead.name ?? lead.phone ?? lead.email ?? lead.companyName ?? "Без имени", { row: lead }, (tx) => tx.lead.delete({ where: { id } }));
+  return lead;
+}
+
 export async function trashProduct(id: string) {
   const product = await db.product.findUnique({ where: { id }, include: { deals: { select: { id: true } } } });
   if (!product) return null;
@@ -273,6 +281,15 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
         },
       });
       return `/documents/contracts/${id}`;
+    }
+    case "lead": {
+      // Сделка из лида возвращается к нему, только если её ещё не связали с другим лидом
+      const dealId = await keep(row.dealId, (v) => tx.deal.findFirst({ where: { id: v, lead: null }, select: { id: true } }));
+      const { raw, ...rest } = row;
+      await tx.lead.create({
+        data: { ...(rest as Prisma.LeadUncheckedCreateInput), dealId, ...(raw !== null && { raw: raw as Prisma.InputJsonValue }) },
+      });
+      return `/leads/${id}`;
     }
     case "product": {
       await tx.product.create({ data: row as Prisma.ProductUncheckedCreateInput });

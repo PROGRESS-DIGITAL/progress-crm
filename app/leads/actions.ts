@@ -7,6 +7,7 @@ import { LeadStatus, Service } from "@prisma/client";
 import { db } from "@/lib/db";
 import { invalid, optionalEmail, optionalPhone, optionalText, parseForm, toErrors, type FormState } from "@/lib/forms";
 import { isSalesStep } from "@/lib/sales-map";
+import { trashLead } from "@/lib/trash";
 
 const leadSchema = z
   .object({
@@ -135,4 +136,16 @@ export async function convertLead(id: string, _prev: FormState, formData: FormDa
   revalidatePath("/deals");
   revalidatePath("/clients");
   redirect(`/deals/${deal.id}`);
+}
+
+// Лид уходит в корзину: оттуда его можно вернуть
+export async function deleteLead(id: string) {
+  await trashLead(id);
+  revalidatePath("/leads");
+  redirect("/leads");
+}
+
+export async function deleteLeadFromList(id: string) {
+  await trashLead(id);
+  revalidatePath("/leads");
 }
