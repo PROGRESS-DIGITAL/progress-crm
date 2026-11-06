@@ -60,20 +60,13 @@ export async function KnowledgeList({ kind, q }: { kind: KnowledgeKind | null; q
             className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none"
           />
         </form>
-        <Link
-          href={`/documents/knowledge/new${kind ? `?kind=${kind}` : ""}`}
-          className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm shadow-blue-600/25 hover:bg-blue-700"
-        >
-          <Icon name="plus" size={16} />
-          Добавить материал
-        </Link>
       </div>
 
       {items.length === 0 ? (
         <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
           {q
             ? "Ничего не нашлось. Попробуйте другое слово."
-            : "Здесь пока пусто. Добавьте бриф, договор, КП, ТЗ, стандарт работы или скрипт кнопкой «Добавить материал»."}
+            : "Здесь пока пусто. Добавьте бриф, договор, КП, ТЗ, стандарт работы или скрипт ссылкой «+ Добавить материал» рядом с заголовком."}
         </p>
       ) : (
         <ul className="divide-y divide-slate-100 rounded-2xl border border-slate-200/60 bg-white shadow-card">

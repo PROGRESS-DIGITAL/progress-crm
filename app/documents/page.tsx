@@ -31,7 +31,17 @@ export default async function DocumentsPage({ searchParams }: { searchParams: Pr
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Документы</h1>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Документы</h1>
+            {tab === "knowledge" && (
+              <Link
+                href={`/documents/knowledge/new${isKnowledgeKind(sp.kind) ? `?kind=${sp.kind}` : ""}`}
+                className="text-xs text-slate-500 hover:text-slate-800 hover:underline"
+              >
+                + Добавить материал
+              </Link>
+            )}
+          </div>
           <p className="mt-1 text-sm text-slate-600">
             {tab === "knowledge" ? "Брифы, договоры, КП, ТЗ, стандарты работы и скрипты компании" : "Договоры создаются из карточки сделки по шаблону"}
           </p>
