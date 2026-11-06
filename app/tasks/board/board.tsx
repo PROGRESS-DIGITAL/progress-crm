@@ -459,8 +459,35 @@ function QuickTask({ columnId }: { columnId: string }) {
 }
 
 // Шапка доски команды: название меняется кликом, корзинка удаляет доску, задачи уходят на основную
-export function BoardTitle({ id, name, tasks, rename }: { id: string; name: string; tasks: number; rename: boolean }) {
+export function BoardTitle({ id, name, rename }: { id: string; name: string; rename: boolean }) {
   const [editing, setEditing] = useState(rename);
+  const router = useRouter();
+
+  return editing ? (
+    <TitleInput
+      big
+      value={name}
+      label="Название доски"
+      save={(v) => renameBoard(id, v)}
+      onDone={() => {
+        setEditing(false);
+        if (rename) router.replace(`/tasks/board/${id}`, { scroll: false });
+      }}
+    />
+  ) : (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      title="Изменить название"
+      className="min-w-0 truncate rounded-lg px-1 text-left text-2xl font-semibold tracking-tight hover:bg-slate-200/60"
+    >
+      {name}
+    </button>
+  );
+}
+
+// Удаление доски стоит в правом краю шапки, подальше от названия, чтобы не нажать случайно
+export function DeleteBoardButton({ id, name, tasks }: { id: string; name: string; tasks: number }) {
   const [pending, start] = useTransition();
   const confirm = useConfirm();
   const router = useRouter();
@@ -479,39 +506,15 @@ export function BoardTitle({ id, name, tasks, rename }: { id: string; name: stri
   }
 
   return (
-    <div className={`flex min-w-0 items-center gap-1 ${pending ? "opacity-60" : ""}`}>
-      {editing ? (
-        <TitleInput
-          big
-          value={name}
-          label="Название доски"
-          save={(v) => renameBoard(id, v)}
-          onDone={() => {
-            setEditing(false);
-            if (rename) router.replace(`/tasks/board/${id}`, { scroll: false });
-          }}
-        />
-      ) : (
-        <button
-          type="button"
-          onClick={() => setEditing(true)}
-          title="Изменить название"
-          className="min-w-0 truncate rounded-lg px-1 text-left text-2xl font-semibold tracking-tight hover:bg-slate-200/60"
-        >
-          {name}
-        </button>
-      )}
-      {!editing && (
-        <button
-          type="button"
-          onClick={remove}
-          title="Удалить доску"
-          aria-label={`Удалить доску «${name}»`}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600"
-        >
-          <Icon name="trash" size={17} />
-        </button>
-      )}
-    </div>
+    <button
+      type="button"
+      onClick={remove}
+      disabled={pending}
+      title="Удалить доску"
+      aria-label={`Удалить доску «${name}»`}
+      className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-slate-400 hover:bg-rose-50 hover:text-rose-600 disabled:opacity-60"
+    >
+      <Icon name="trash" size={17} />
+    </button>
   );
 }

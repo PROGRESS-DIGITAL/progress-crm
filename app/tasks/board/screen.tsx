@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { loadBoard } from "@/lib/boards";
 import { TaskViewTabs } from "../view-tabs";
-import { BoardTitle, TaskBoard } from "./board";
+import { BoardTitle, DeleteBoardButton, TaskBoard } from "./board";
 
 // Доска задач: основная (вкладка «Доска» у основных задач) или доска команды со своим названием
 export async function BoardScreen({ id, rename = false }: { id: string | null; rename?: boolean }) {
@@ -22,9 +22,10 @@ export async function BoardScreen({ id, rename = false }: { id: string | null; r
             <TaskViewTabs current="board" />
           </>
         ) : (
-          <BoardTitle key={board.name} id={board.id} name={board.name} tasks={total} rename={rename} />
+          <BoardTitle key={board.name} id={board.id} name={board.name} rename={rename} />
         )}
         <span className="text-sm text-slate-500">Задач на доске: {total}</span>
+        {!board.main && <DeleteBoardButton id={board.id} name={board.name} tasks={total} />}
       </div>
       <TaskBoard boardId={board.id} columns={board.columns} employees={employees} />
     </div>
