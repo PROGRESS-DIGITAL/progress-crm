@@ -101,6 +101,10 @@ export function startPolling() {
   loop("Max", pollMaxOnce);
   loop("VK", pollVkOnce);
   every("Напоминания", 60_000, sendDueReminders);
+  every("Забытые сделки", 15 * 60_000, async () => {
+    const { sendStaleDigest } = await import("@/lib/stale-deals");
+    await sendStaleDigest();
+  });
   every("AI в чатах", 10_000, async () => {
     const { answerPendingChats } = await import("@/lib/agents/client-chat");
     await answerPendingChats();
