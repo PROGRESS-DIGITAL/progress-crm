@@ -61,6 +61,8 @@ function allowed(groups: Group[], sections: string[]) {
   return groups.map((g) => ({ ...g, items: g.items.filter((i) => open(i.href)) })).filter((g) => g.items.length > 0);
 }
 
+const TAB_HREFS = ["/deals", "/tasks", "/finance", "/clients"];
+
 function isActive(pathname: string, href: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
@@ -253,13 +255,14 @@ export function Sidebar({
     document.cookie = `${SIDEBAR_COOKIE}=${next ? "collapsed" : "expanded"}; path=/; max-age=31536000; samesite=lax`;
   }
 
-  // Снизу на телефоне помещается пять кнопок: четыре раздела и «Меню». У директора дашборд, задачи, почта
-  // и агенты остаются в «Меню»; у сотрудника с урезанной ролью их место занимают его разделы
+  // Снизу на телефоне помещается пять кнопок: Сделки, Задачи, Финансы, Клиенты и «Меню».
+  // У сотрудника без какого-то из этих разделов его место занимают другие разделы из «Главного»
+  const all = groups.flatMap((g) => g.items);
   const main = groups[0]?.title === "Главное" ? groups[0].items : [];
-  const preferred = main.filter((t) => !["/dashboard", "/tasks", "/mail", "/agents"].includes(t.href));
+  const preferred = TAB_HREFS.flatMap((href) => all.filter((t) => t.href === href));
   const tabs = [...preferred, ...main.filter((t) => !preferred.includes(t))].slice(0, 4);
   const inTabs = tabs.some((t) => isActive(pathname, t.href));
-  const hiddenBadge = main.some((t) => !tabs.includes(t) && t.badge);
+  const hiddenBadge = all.some((t) => !tabs.includes(t) && t.badge);
 
   return (
     <>
