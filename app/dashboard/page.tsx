@@ -2,25 +2,27 @@ import Link from "next/link";
 import { BankView } from "./bank-view";
 import { ClientsView } from "./clients-view";
 import { FinModelView } from "./finmodel-view";
+import { FunnelView } from "./funnel-view";
 import { MonthsView } from "./months-view";
 
 export const dynamic = "force-dynamic";
 
 const TABS = [
   { view: "months", label: "По месяцам" },
+  { view: "funnel", label: "Воронка" },
   { view: "clients", label: "По клиентам" },
   { view: "bank", label: "По банку" },
   { view: "plan", label: "Финмодель" },
 ] as const;
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
-  const requested = (await searchParams).view;
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ view?: string; period?: string }> }) {
+  const { view: requested, period } = await searchParams;
   const view = TABS.find((t) => t.view === requested)?.view ?? "months";
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Дашборд</h1>
-        <nav className="grid w-full grid-cols-2 rounded-xl bg-white p-1 text-sm shadow-card sm:flex sm:w-auto" aria-label="Вид дашборда">
+        <nav className="grid w-full grid-cols-3 rounded-xl bg-white p-1 text-sm shadow-card sm:flex sm:w-auto" aria-label="Вид дашборда">
           {TABS.map((t) => (
             <Link
               key={t.view}
@@ -33,7 +35,17 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
           ))}
         </nav>
       </div>
-      {view === "months" ? <MonthsView /> : view === "clients" ? <ClientsView /> : view === "bank" ? <BankView /> : <FinModelView />}
+      {view === "months" ? (
+        <MonthsView />
+      ) : view === "funnel" ? (
+        <FunnelView period={period} />
+      ) : view === "clients" ? (
+        <ClientsView />
+      ) : view === "bank" ? (
+        <BankView />
+      ) : (
+        <FinModelView />
+      )}
     </div>
   );
 }
