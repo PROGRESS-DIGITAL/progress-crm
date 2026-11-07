@@ -5,6 +5,7 @@ import { Board } from "./board";
 import { getAvatars } from "@/lib/profile";
 import { currentUser } from "@/lib/auth/session";
 import { accessForPath, canAccess } from "@/lib/auth/sections";
+import { daysLabel, findStaleDeals, STALE_DAYS } from "@/lib/stale-deals";
 
 export const dynamic = "force-dynamic";
 
@@ -20,6 +21,7 @@ export default async function DealsPage() {
     },
   });
 
+  const stale = await findStaleDeals();
   const open = stages.filter((s) => s.kind === "OPEN").flatMap((s) => s.deals);
   const won = stages.filter((s) => s.kind === "WON").flatMap((s) => s.deals);
   const sum = (ds: { amount: number }[]) => ds.reduce((acc, d) => acc + d.amount, 0);
@@ -40,6 +42,12 @@ export default async function DealsPage() {
           <p className="mt-1 text-sm text-slate-600">
             Открыто: {open.length} на {formatRub(sum(open))} · Оплачено: {won.length} на{" "}
             {formatRub(sum(won))}
+            {stale.size > 0 && (
+              <span className="text-amber-700" title={`Неделю и дольше нет ни задач, ни переписки. Самая давняя: ${daysLabel(Math.max(...stale.values()))}`}>
+                {" "}
+                · Без движения {STALE_DAYS}+ дней: {stale.size}
+              </span>
+            )}
           </p>
         </div>
         <Link
@@ -67,6 +75,7 @@ export default async function DealsPage() {
             startDate: d.startDate.toISOString(),
             expectedCloseDate: d.expectedCloseDate?.toISOString() ?? null,
             position: d.position,
+            staleDays: stale.get(d.id) ?? null,
           })),
         }))}
       />

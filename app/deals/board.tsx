@@ -20,7 +20,7 @@ import {
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { Service, StageKind } from "@prisma/client";
-import { SERVICE_LABELS, formatRub } from "@/lib/format";
+import { SERVICE_LABELS, daysLabel, formatRub } from "@/lib/format";
 import { burstConfetti } from "@/components/confetti";
 import { moveDeal, quickCreateDeal } from "./actions";
 import { Avatar } from "@/components/avatar";
@@ -36,6 +36,8 @@ type DealCard = {
   startDate: string;
   expectedCloseDate: string | null;
   position: number;
+  // Сколько дней по открытой сделке ничего не происходило; null — всё в порядке
+  staleDays?: number | null;
 };
 
 const shortDate = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "short", timeZone: "Europe/Moscow" });
@@ -243,7 +245,7 @@ function DealItem({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean;
 function DealCardBody({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean; avatar: string | null }) {
   return (
     <div
-      className={`rounded-xl border bg-white p-3 shadow-card ${overdue ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200/70"}`}
+      className={`rounded-xl border bg-white p-3 shadow-card ${overdue ? "border-rose-500 ring-1 ring-rose-500" : deal.staleDays ? "border-amber-400 ring-1 ring-amber-400" : "border-slate-200/70"}`}
     >
       <Link href={`/deals/${deal.id}`} className="block text-sm font-medium hover:text-blue-700">
         {deal.title}
@@ -258,6 +260,11 @@ function DealCardBody({ deal, overdue, avatar }: { deal: DealCard; overdue: bool
       {overdue && (
         <p className="mt-1.5 text-[11px] font-medium text-rose-600">
           Просрочено: закрыть до {shortDate.format(new Date(deal.expectedCloseDate!))}
+        </p>
+      )}
+      {!!deal.staleDays && (
+        <p className="mt-1.5 text-[11px] font-medium text-amber-700" title="Нет ни задач, ни переписки. Поставьте задачу или закройте сделку">
+          Без движения {daysLabel(deal.staleDays)}
         </p>
       )}
       <div className="mt-1 flex items-center justify-between gap-2 text-[11px] text-slate-500">
