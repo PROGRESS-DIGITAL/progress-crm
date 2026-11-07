@@ -11,7 +11,7 @@ export async function notifyOwner(text: string) {
     await sendTelegram(token, chat.chatId, text);
     return true;
   } catch (e) {
-    console.error("Не удалось отправить уведомление о входе", e);
+    console.error("Не удалось отправить уведомление в Telegram", e);
     return false;
   }
 }

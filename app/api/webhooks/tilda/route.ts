@@ -1,9 +1,11 @@
 import { timingSafeEqual } from "node:crypto";
 import { Prisma } from "@prisma/client";
 import { revalidatePath } from "next/cache";
+import { after } from "next/server";
 import { db } from "@/lib/db";
 import { isTildaTest, parseTildaLead, withoutSecrets } from "@/lib/tilda";
 import { getTildaSettings } from "@/lib/tilda-settings";
+import { notifyNewLead, requestOrigin } from "@/lib/lead-notify";
 
 async function readFields(req: Request): Promise<Record<string, string>> {
   const type = req.headers.get("content-type") ?? "";
@@ -73,6 +75,9 @@ export async function POST(req: Request) {
   try {
     const created = await db.lead.create({ data: { ...lead, raw, source: "TILDA" } });
     await log("ok", fields, created.id);
+    // Тильда ждёт ответ не дольше 5 секунд, поэтому пишем в Telegram уже после ответа
+    const origin = requestOrigin(req);
+    after(() => notifyNewLead(created, origin));
   } catch (e) {
     // Повторная доставка той же заявки — не ошибка
     if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e;
