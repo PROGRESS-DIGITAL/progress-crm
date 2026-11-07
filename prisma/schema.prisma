@@ -126,6 +126,7 @@ model Company {
   contracts   Contract[]
   // Ящик клиента в Диадоке: туда уходят акты
   diadocBoxId String?
+  subscriptions Subscription[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt
 
@@ -177,6 +178,8 @@ model Deal {
   documents         Document[]
   events            Event[]
   contracts         Contract[]
+  // Сделка месяца по абонементу: создаётся сама в день счёта
+  subscriptionPeriod SubscriptionPeriod?
   stage             Stage      @relation(fields: [stageId], references: [id])
   stageId           String
   createdAt         DateTime   @default(now())
@@ -758,4 +761,42 @@ model KnowledgeFile {
   createdAt DateTime      @default(now())
 
   @@index([itemId])
+}
+
+// Абонемент: клиент платит каждый месяц (SEO, контекст, поддержка). В день счёта CRM сама заводит
+// сделку месяца и задачу «Выставить счёт», а оплата сделки попадает в выручку месяца
+model Subscription {
+  id         String               @id @default(cuid())
+  title      String
+  service    Service              @default(SEO)
+  // Сумма в месяц, рубли
+  amount     Int
+  // Число месяца, когда выставлять счёт: 1–28
+  billingDay Int                  @default(1)
+  company    Company              @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  companyId  String
+  // С какого месяца выставлять счета и до какого включительно (YYYY-MM); пусто — бессрочно
+  startMonth String
+  endMonth   String?
+  active     Boolean              @default(true)
+  notes      String?
+  periods    SubscriptionPeriod[]
+  createdAt  DateTime             @default(now())
+  updatedAt  DateTime             @updatedAt
+
+  @@index([companyId])
+}
+
+// Месяц абонемента: какая сделка заведена под счёт за этот месяц
+model SubscriptionPeriod {
+  id             String       @id @default(cuid())
+  subscription   Subscription @relation(fields: [subscriptionId], references: [id], onDelete: Cascade)
+  subscriptionId String
+  month          String
+  amount         Int
+  deal           Deal?        @relation(fields: [dealId], references: [id], onDelete: SetNull)
+  dealId         String?      @unique
+  createdAt      DateTime     @default(now())
+
+  @@unique([subscriptionId, month])
 }
