@@ -79,6 +79,8 @@ model Product {
   service     Service  @default(OTHER)
   // Шаг планограммы продаж (ключ из lib/sales-map.ts)
   salesStep   String?
+  // Текст слайда услуги в КП: «Этапы работы», «Состав проекта»; строка с двоеточием в конце — подзаголовок
+  kpText      String?
   sortOrder   Int      @default(0)
   deals       Deal[]
   createdAt   DateTime @default(now())
@@ -178,6 +180,7 @@ model Deal {
   documents         Document[]
   events            Event[]
   contracts         Contract[]
+  proposals         Proposal[]
   // Сделка месяца по абонементу: создаётся сама в день счёта
   subscriptionPeriod SubscriptionPeriod?
   stage             Stage      @relation(fields: [stageId], references: [id])
@@ -799,4 +802,42 @@ model SubscriptionPeriod {
   createdAt      DateTime     @default(now())
 
   @@unique([subscriptionId, month])
+}
+
+// Коммерческое предложение по сделке: обложка и услуги; PDF собирается по шаблону студии при скачивании
+model Proposal {
+  id        String   @id @default(cuid())
+  deal      Deal     @relation(fields: [dealId], references: [id], onDelete: Cascade)
+  dealId    String
+  // Обложка: «Клиент / отрасль» и «Месяц, год»
+  client    String
+  period    String
+  // Логотип клиента на обложке, PNG или JPEG
+  logo      Bytes?
+  logoMime  String?
+  // Услуги по порядку: [{ title, text, price, from, monthly, note }] (lib/proposals/text.ts)
+  items     Json
+  // Под итогом на слайде стоимости, например «Рассрочка платежей 50/50%»
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([dealId])
+}
+
+// Шаблон КП: презентация студии в PDF, одна строка с id = 1. Слайды о студии и контакты копируются из неё как есть
+model ProposalTemplate {
+  id        Int      @id @default(1)
+  name      String
+  size      Int
+  data      Bytes
+  pages     Int
+  // Обложка: с неё берётся левая часть с логотипом студии
+  cover     Int      @default(1)
+  // Слайд-образец услуги: с него берётся шапка с логотипом; null — без шапки
+  sample    Int?
+  // Слайды о студии после обложки и слайды в конце, например «2-14» и «21»
+  intro     String   @default("")
+  outro     String   @default("")
+  updatedAt DateTime @updatedAt
 }

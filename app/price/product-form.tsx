@@ -15,6 +15,7 @@ export type ProductValues = {
   unit: string | null;
   service: string;
   salesStep: string | null;
+  kpText: string | null;
 };
 
 // Одна форма на добавление и на правку услуги целиком (кнопка-карандаш в строке прайса)
@@ -90,6 +91,20 @@ export function ProductForm({
       <div className="sm:col-span-2">
         <Field label="Описание" error={err.description}>
           <input name="description" defaultValue={v("description")} className={inputClass} />
+        </Field>
+      </div>
+      <div className="sm:col-span-4">
+        <Field label="Текст слайда в КП" error={err.kpText}>
+          <textarea
+            name="kpText"
+            rows={6}
+            defaultValue={v("kpText")}
+            placeholder={"Этапы работы:\n1. Исследование и анализ конкурентов.\n2. Прототип.\n\nСостав проекта:\n• Главная страница"}
+            className={`${inputClass} font-normal`}
+          />
+          <span className="text-xs text-slate-500">
+            Строка с двоеточием в конце станет подзаголовком, «1.» и «•» — пунктами списка. Из этого текста собирается слайд услуги.
+          </span>
         </Field>
       </div>
       <div className="flex items-center gap-3 sm:col-span-4">

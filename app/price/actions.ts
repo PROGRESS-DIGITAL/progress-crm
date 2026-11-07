@@ -14,6 +14,7 @@ const price = z.coerce.number().int("Цена в целых рублях").min(0
 
 function revalidatePrice() {
   revalidatePath("/price");
+  revalidatePath("/price/kp");
   revalidatePath("/deals/new");
 }
 
@@ -63,6 +64,11 @@ const productSchema = z.object({
   unit: optionalText,
   service: z.nativeEnum(Service),
   salesStep,
+  kpText: z
+    .string()
+    .max(6000, "Слишком длинный текст слайда")
+    .transform((v) => (v.trim() === "" ? null : v.replace(/\r/g, "").replace(/\s+$/, "")))
+    .nullable(),
 });
 
 export async function createProduct(_prev: FormState, formData: FormData): Promise<FormState> {

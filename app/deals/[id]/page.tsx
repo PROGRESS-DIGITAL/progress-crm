@@ -6,6 +6,7 @@ import { getCompanyOptions, getProductOptions, getStageOptions } from "@/lib/que
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { DealContracts } from "@/components/deal-contracts";
 import { DealDocuments } from "@/components/deal-documents";
+import { DealProposals } from "@/components/deal-proposals";
 import { LinkedEvents } from "@/components/linked-events";
 import { deleteDeal, updateDeal } from "../actions";
 import { DealForm } from "../deal-form";
@@ -60,6 +61,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
         />
       </div>
       <LinkedEvents dealId={deal.id} />
+      <DealProposals dealId={deal.id} />
       <DealContracts dealId={deal.id} />
       <DealDocuments dealId={deal.id} hasEmail={!!deal.company.email} />
     </div>
