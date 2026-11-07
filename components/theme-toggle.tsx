@@ -30,6 +30,8 @@ export function ThemeToggle({ initial }: { initial: Theme }) {
     setTheme(next);
     document.documentElement.classList.toggle("dark", next === "dark");
     document.cookie = `${THEME_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
+    // Строка состояния приложения с экрана «Домой» перекрашивается сразу, без перезагрузки
+    document.querySelector('meta[name="theme-color"]')?.setAttribute("content", next === "dark" ? "#171717" : "#f1f3f8");
   }
 
   return (
