@@ -3,6 +3,7 @@ import { BankView } from "./bank-view";
 import { ClientsView } from "./clients-view";
 import { FinModelView } from "./finmodel-view";
 import { FunnelView } from "./funnel-view";
+import { ManagersView } from "./managers-view";
 import { MonthsView } from "./months-view";
 
 export const dynamic = "force-dynamic";
@@ -10,13 +11,14 @@ export const dynamic = "force-dynamic";
 const TABS = [
   { view: "months", label: "По месяцам" },
   { view: "funnel", label: "Воронка" },
+  { view: "managers", label: "Менеджеры" },
   { view: "clients", label: "По клиентам" },
   { view: "bank", label: "По банку" },
   { view: "plan", label: "Финмодель" },
 ] as const;
 
-export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ view?: string; period?: string }> }) {
-  const { view: requested, period } = await searchParams;
+export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ view?: string; period?: string; month?: string }> }) {
+  const { view: requested, period, month } = await searchParams;
   const view = TABS.find((t) => t.view === requested)?.view ?? "months";
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
@@ -39,6 +41,8 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <MonthsView />
       ) : view === "funnel" ? (
         <FunnelView period={period} />
+      ) : view === "managers" ? (
+        <ManagersView month={month} />
       ) : view === "clients" ? (
         <ClientsView />
       ) : view === "bank" ? (

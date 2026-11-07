@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { setSetting } from "@/lib/settings";
+import { getSetting, setSetting } from "@/lib/settings";
+import { MAX_PLAN, NO_OWNER, PLAN_SETTING, isMonthKey, parsePlans, setPlan } from "@/lib/managers";
 import { FINMODEL_SETTING, finModelFromTable, finModelSchema, normalizeFinModel, type FinModel } from "@/lib/finmodel";
 import { xlsxFirstSheetAsTable } from "@/lib/xlsx-table";
 
@@ -25,4 +26,20 @@ export async function readFinModelFile(formData: FormData): Promise<{ model?: Fi
   } catch {
     return { error: "Не получилось прочитать файл. Нужен .xlsx из Excel или Google Таблиц" };
   }
+}
+
+// План менеджера на месяц: действует с этого месяца и дальше, пока его не поменяют. Пустая сумма или 0 снимает план
+export async function saveManagerPlan(_prev: unknown, formData: FormData): Promise<{ error?: string; ok?: boolean }> {
+  const owner = String(formData.get("owner") ?? "").trim();
+  const month = formData.get("month");
+  const raw = String(formData.get("amount") ?? "").replace(/[\s\u00a0₽]/g, "");
+  const amount = raw === "" ? 0 : Number(raw);
+  if (!owner || owner === NO_OWNER || owner.length > 200) return { error: "Выберите менеджера" };
+  if (!isMonthKey(month)) return { error: "Неверный месяц" };
+  if (!Number.isInteger(amount) || amount < 0) return { error: "Введите сумму в целых рублях" };
+  if (amount > MAX_PLAN) return { error: "Слишком большая сумма" };
+  const plans = parsePlans(await getSetting(PLAN_SETTING));
+  await setSetting(PLAN_SETTING, JSON.stringify(setPlan(plans, owner, month, amount)));
+  revalidatePath("/dashboard");
+  return { ok: true };
 }
