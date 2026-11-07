@@ -114,6 +114,10 @@ export function startPolling() {
     await syncPayments(14);
     await loadPaymentHistory();
   });
+  every("LTV-платежи", 15 * 60_000, async () => {
+    const { runSubscriptions } = await import("@/lib/subscriptions");
+    await runSubscriptions();
+  });
   every("Почта", 2 * 60_000, async () => {
     const { syncAllMail } = await import("@/lib/mail/sync");
     await syncAllMail();

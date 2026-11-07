@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { useConfirm } from "@/components/confirm-dialog";
 import { Icon } from "@/components/icons";
 import { primaryButton } from "@/components/field";
@@ -15,7 +16,8 @@ import {
 } from "@/lib/finmodel";
 import { readFinModelFile, saveFinModel } from "./actions";
 
-type FactMonth = { label: string; revenue: number; bank: number };
+// subs — абонементы месяца: сколько должны принести и сколько из этого ещё не оплачено
+type FactMonth = { label: string; revenue: number; bank: number; subs?: { expected: number; waiting: number } };
 
 const fmt = (n: number) => (n ? Math.round(n).toLocaleString("ru-RU") : "—");
 const rub = (n: number) => formatRub(Math.round(n));
@@ -229,6 +231,14 @@ export function FinModelEditor({
               </p>
               <p className="mt-1 text-[26px] font-semibold tracking-tight tabular-nums">{rub(f.revenue)}</p>
               <p className="text-xs text-slate-500">по оплаченным сделкам · на счёт пришло {rub(f.bank)}</p>
+              {f.subs && f.subs.expected > 0 && (
+                <p className="text-xs text-slate-500">
+                  <Link href="/finance?view=subscriptions" className="hover:underline">
+                    LTV-платежи: {rub(f.subs.expected)} в месяц
+                  </Link>
+                  {f.subs.waiting > 0 ? `, ещё ждём ${rub(f.subs.waiting)}` : ", всё оплачено"}
+                </p>
+              )}
               <FactScale fact={f} scenarios={model.scenarios} revenue={t.revenue} />
             </div>
           ))}

@@ -6,6 +6,7 @@ import { docTitle, getTochka } from "@/lib/finance/documents";
 import { formatDateTime, formatRub } from "@/lib/format";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { BankView } from "@/app/dashboard/bank-view";
+import { Subscriptions } from "./subscriptions";
 import { deleteDocumentAction, syncPaymentsAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -15,13 +16,14 @@ const TABS = [
   { view: "payments", label: "Поступления" },
   { view: "invoices", label: "Счета" },
   { view: "acts", label: "Акты" },
+  { view: "subscriptions", label: "LTV-платежи" },
   { view: "bank", label: "Дашборд" },
 ] as const;
 
 const day = (d: Date) => d.toLocaleDateString("ru-RU", { timeZone: "Europe/Moscow" });
 
-export default async function FinancePage({ searchParams }: { searchParams: Promise<{ view?: string }> }) {
-  const requested = (await searchParams).view;
+export default async function FinancePage({ searchParams }: { searchParams: Promise<{ view?: string; edit?: string }> }) {
+  const { view: requested, edit } = await searchParams;
   const view = TABS.find((t) => t.view === requested)?.view ?? TABS[0].view;
   const [tochka, waiting] = await Promise.all([
     getTochka(),
@@ -48,7 +50,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
               Подключить Точку
             </Link>
           )}
-          <nav className="grid w-full grid-cols-2 rounded-xl bg-white p-1 text-sm shadow-card sm:flex sm:w-auto" aria-label="Раздел финансов">
+          <nav className="grid w-full grid-cols-3 rounded-xl bg-white p-1 text-sm shadow-card sm:flex sm:w-auto" aria-label="Раздел финансов">
             {TABS.map((t) => (
               <Link
                 key={t.view}
@@ -62,7 +64,15 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
           </nav>
         </div>
       </div>
-      {view === "payments" ? <Payments /> : view === "bank" ? <BankView /> : <Documents kind={view === "acts" ? "ACT" : "INVOICE"} />}
+      {view === "payments" ? (
+        <Payments />
+      ) : view === "bank" ? (
+        <BankView />
+      ) : view === "subscriptions" ? (
+        <Subscriptions edit={edit} />
+      ) : (
+        <Documents kind={view === "acts" ? "ACT" : "INVOICE"} />
+      )}
     </div>
   );
 }
