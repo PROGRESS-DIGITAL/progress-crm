@@ -2,6 +2,9 @@ import Link from "next/link";
 import { formatPrice } from "@/lib/format";
 import { GROWTH_STEPS, SALES_COLUMNS, SALES_STEPS, type SalesStep, type Situation } from "@/lib/sales-map";
 import { getAllPlans, getStepProducts } from "@/lib/sales-map-data";
+import { FOLLOW_UP_OPTIONS, followUpDays } from "@/lib/follow-ups";
+import { saveFollowUpDays } from "./actions";
+import { FollowUpForm } from "./follow-up-form";
 
 export const dynamic = "force-dynamic";
 
@@ -78,15 +81,23 @@ function StepCard({
 const SHARED = new Set(SALES_COLUMNS.flatMap((c) => c.steps).filter((s, i, all) => all.indexOf(s) !== i));
 
 export default async function SalesMapPage() {
-  const [plans, products] = await Promise.all([getAllPlans(), getStepProducts()]);
+  const [plans, products, days] = await Promise.all([getAllPlans(), getStepProducts(), followUpDays()]);
 
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <h1 className="text-2xl font-semibold tracking-tight">Планограмма продаж</h1>
-      <p className="mt-1 mb-6 max-w-3xl text-sm text-slate-600">
+      <p className="mt-1 mb-4 max-w-3xl text-sm text-slate-600">
         С чем клиент приходит и что ему продавать дальше. ✓ — оплатили, ◷ — в работе, «Предложить» — клиенты, которым
         этот шаг следующий по схеме. Схема идёт по нарастающей: то, что левее ситуации клиента, ему уже не предлагаем. Услуги прайса привязываются к шагам в «Прайсе», ситуация клиента — в его реквизитах.
       </p>
+      <div className="mb-6 rounded-2xl border border-slate-200/60 bg-white p-4 shadow-card">
+        <FollowUpForm action={saveFollowUpDays} days={days} options={FOLLOW_UP_OPTIONS} />
+        <p className="mt-2 text-xs text-slate-500">
+          {days
+            ? `Через ${days} дней после оплаты CRM поставит задачу «Предложить следующий шаг» с подсказкой из схемы и напишет вам в Telegram. Если клиенту уже что-то продаём, напоминания не будет.`
+            : "Напоминания выключены."}
+        </p>
+      </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {SALES_COLUMNS.map((col) => {
