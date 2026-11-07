@@ -6,6 +6,7 @@ import { SIDEBAR_COOKIE } from "@/components/sidebar-cookie";
 import { THEME_COOKIE } from "@/components/theme-cookie";
 import { TopBar } from "@/components/top-bar";
 import { ConfirmProvider } from "@/components/confirm-dialog";
+import { PullToRefresh } from "@/components/pull-to-refresh";
 import { unreadChats } from "@/lib/chat/inbox";
 import { dueWhere } from "@/lib/tasks";
 import { teamBoards } from "@/lib/boards";
@@ -44,6 +45,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
     <html lang="ru" className={theme === "dark" ? "dark" : undefined}>
       <body className="min-h-screen">
         <ConfirmProvider>
+          <PullToRefresh />
           <div className="flex min-h-screen gap-3 p-2 pb-24 sm:p-3 md:pb-3">
             <Sidebar
               initialCollapsed={collapsed}
