@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { cookies } from "next/headers";
 import { db } from "@/lib/db";
 import { Sidebar } from "@/components/sidebar";
@@ -17,7 +17,15 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "PROGRESS CRM",
   description: "CRM агентства PROGRESS Digital",
+  // На iPhone «Поделиться» → «На экран Домой»: открывается на весь экран, без строки адреса Safari
+  appleWebApp: { capable: true, title: "PROGRESS", statusBarStyle: "default" },
 };
+
+// Цвет строки состояния в приложении с экрана «Домой» совпадает с фоном выбранной темы
+export async function generateViewport(): Promise<Viewport> {
+  const dark = (await cookies()).get(THEME_COOKIE)?.value === "dark";
+  return { themeColor: dark ? "#171717" : "#f1f3f8" };
+}
 
 // cookies() делает шапку динамической: меню и счётчик лидов читаются на каждый запрос, а не при сборке
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

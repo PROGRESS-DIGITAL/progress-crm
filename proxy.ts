@@ -52,6 +52,7 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-  // Статика сборки не содержит данных; webhook Тильды защищён своим ключом и пропускается в accessForPath
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png).*)"],
+  // Статика сборки и иконки приложения не содержат данных; webhook Тильды защищён своим ключом и пропускается в accessForPath.
+  // Манифест отдаётся без входа: телефон читает его, когда CRM ставят на экран «Домой»
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|icon.svg|apple-icon.png|manifest.webmanifest|icons/).*)"],
 };
