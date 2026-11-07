@@ -6,7 +6,10 @@ import { CopyField } from "@/components/copy-field";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { SERVICE_FIELDS, TILDA_FIELDS, type TildaField, type TildaFieldMap } from "@/lib/tilda";
 import { getTildaSettings } from "@/lib/tilda-settings";
-import { regenerateWebhookKey, resetFieldMap, setTildaEnabled } from "./actions";
+import { ActionButton } from "@/components/action-button";
+import { ownerTelegramReady } from "@/lib/auth/notify";
+import { leadNotifyEnabled } from "@/lib/lead-notify";
+import { regenerateWebhookKey, resetFieldMap, sendTestLeadNotice, setLeadNotify, setTildaEnabled } from "./actions";
 import { FieldMapForm } from "./field-map-form";
 
 export const dynamic = "force-dynamic";
@@ -30,10 +33,12 @@ function destination(name: string, fieldMap: TildaFieldMap) {
 }
 
 export default async function TildaPage() {
-  const [settings, logs, h] = await Promise.all([
+  const [settings, logs, h, notifyOn, telegramReady] = await Promise.all([
     getTildaSettings(),
     db.webhookLog.findMany({ where: { source: "tilda" }, orderBy: { createdAt: "desc" }, take: 30 }),
     headers(),
+    leadNotifyEnabled(),
+    ownerTelegramReady(),
   ]);
   const host = h.get("x-forwarded-host") ?? h.get("host") ?? "localhost:3000";
   const proto = h.get("x-forwarded-proto") ?? (host.startsWith("localhost") ? "http" : "https");
@@ -109,9 +114,50 @@ export default async function TildaPage() {
       </section>
 
       <section className="mb-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-5">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="flex flex-wrap items-center gap-2 font-semibold">
+              2. Уведомления в Telegram
+              {notifyOn && telegramReady && (
+                <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-xs font-normal text-emerald-700">Включены</span>
+              )}
+            </h2>
+            <p className="mt-1 text-sm text-slate-600">
+              О каждой новой заявке бот сразу пишет вам в Telegram: имя, телефон, текст и ссылку на лид в CRM.
+            </p>
+          </div>
+          {telegramReady && (
+            <form action={setLeadNotify.bind(null, !notifyOn)}>
+              <button
+                type="submit"
+                className={`rounded-lg px-4 py-2 text-sm font-medium ${notifyOn ? "border border-slate-300 bg-white text-slate-700 hover:bg-slate-50" : "bg-blue-600 text-white hover:bg-blue-700"}`}
+              >
+                {notifyOn ? "Выключить уведомления" : "Включить уведомления"}
+              </button>
+            </form>
+          )}
+        </div>
+        {telegramReady ? (
+          notifyOn && (
+            <div className="mt-4">
+              <ActionButton action={sendTestLeadNotice} label="Прислать пример" pendingLabel="Отправляю…" />
+            </div>
+          )
+        ) : (
+          <p className="mt-4 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Чтобы получать уведомления, подключите бота и привяжите свой Telegram в{" "}
+            <Link href="/integrations/telegram#reminders" className="font-medium underline">
+              «Интеграции» → Telegram
+            </Link>
+            . Уведомления придут в тот же чат, что и напоминания.
+          </p>
+        )}
+      </section>
+
+      <section className="mb-6 rounded-2xl border border-slate-200/60 bg-white shadow-card p-5">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
-            <h2 className="font-semibold">2. Поля формы</h2>
+            <h2 className="font-semibold">3. Поля формы</h2>
             <p className="mt-1 text-sm text-slate-600">
               Для каждого поля лида перечислите через запятую названия полей формы в Тильде (как в редакторе: «Имя
               переменной»). Регистр не важен. Поля, которых здесь нет, попадут в текст сообщения лида.
@@ -141,7 +187,7 @@ export default async function TildaPage() {
       </section>
 
       <section className="rounded-2xl border border-slate-200/60 bg-white shadow-card">
-        <h2 className="border-b border-slate-200 px-5 py-4 font-semibold">3. Журнал запросов</h2>
+        <h2 className="border-b border-slate-200 px-5 py-4 font-semibold">4. Журнал запросов</h2>
         {logs.length === 0 ? (
           <p className="px-5 py-8 text-center text-sm text-slate-500">Запросов от Тильды ещё не было</p>
         ) : (
