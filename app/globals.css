@@ -34,6 +34,42 @@ select:not([multiple]) {
   }
 }
 
+/* На телефоне экраны плотнее: крупные отступы между блоками и внутри карточек уменьшаются.
+   Правило вне слоёв Tailwind, поэтому перебивает утилиты; с ширины sm (640px) всё как было */
+@media (max-width: 639.98px) {
+  main .gap-4,
+  main .gap-5 {
+    gap: 0.75rem;
+  }
+  main .gap-6 {
+    gap: 1rem;
+  }
+  main .mb-5 {
+    margin-bottom: 0.75rem;
+  }
+  main .mb-6 {
+    margin-bottom: 1rem;
+  }
+  main .mt-5 {
+    margin-top: 0.75rem;
+  }
+  main .mt-6 {
+    margin-top: 1rem;
+  }
+  main .mt-8 {
+    margin-top: 1.25rem;
+  }
+  main .p-5 {
+    padding: 1rem;
+  }
+  main .p-6 {
+    padding: 1rem;
+  }
+  main > .py-4 {
+    padding-top: 0.75rem;
+  }
+}
+
 /* Договоры и шаблоны: лист как в Word */
 .contract-doc {
   font-family: Calibri, Carlito, "Segoe UI", Arial, sans-serif;
