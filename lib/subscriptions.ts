@@ -94,7 +94,7 @@ export async function createPeriod(
           stageId: stage.id,
           startDate: fromKey(day),
           expectedCloseDate: fromKey(addDays(day, 7)),
-          notes: "Сделка месяца по абонементу",
+          notes: "Сделка месяца по LTV-платежу",
         },
       });
       await tx.subscriptionPeriod.update({
@@ -105,7 +105,7 @@ export async function createPeriod(
         data: {
           kind: "TASK",
           title: `Выставить счёт: ${sub.company.name}, ${sub.title} за ${monthLabel(month).toLowerCase()}`,
-          notes: `Абонемент ${formatRub(sub.amount)} в месяц. Счёт выставляется в карточке сделки.`,
+          notes: `LTV-платёж ${formatRub(sub.amount)} в месяц. Счёт выставляется в карточке сделки.`,
           start: fromKey(day),
           end: fromKey(addDays(day, 1)),
           allDay: true,
@@ -134,8 +134,8 @@ export function invoiceReminderText(created: CreatedPeriod[]) {
   );
   return [
     created.length === 1
-      ? "🧾 Пора выставить счёт по абонементу"
-      : `🧾 Пора выставить счета по абонементам: ${created.length}`,
+      ? "🧾 Пора выставить счёт по LTV-платежу"
+      : `🧾 Пора выставить счета по LTV-платежам: ${created.length}`,
     ...lines,
     "",
     "Сделки месяца и задачи уже заведены в CRM.",

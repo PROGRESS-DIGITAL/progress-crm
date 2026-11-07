@@ -16,7 +16,7 @@ const TABS = [
   { view: "payments", label: "Поступления" },
   { view: "invoices", label: "Счета" },
   { view: "acts", label: "Акты" },
-  { view: "subscriptions", label: "Абонементы" },
+  { view: "subscriptions", label: "LTV-платежи" },
   { view: "bank", label: "Дашборд" },
 ] as const;
 

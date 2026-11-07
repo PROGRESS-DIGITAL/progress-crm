@@ -36,6 +36,6 @@ test("сумма абонементов за месяц", () => {
 test("названия и текст напоминания", () => {
   assert.equal(periodTitle("SEO-продвижение", "2026-11"), "SEO-продвижение · ноябрь 2026");
   const text = invoiceReminderText([{ company: "ООО «Пример»", title: "SEO", amount: 30000, month: "2026-11", dealId: "d1" }]);
-  assert.match(text, /Пора выставить счёт по абонементу/);
+  assert.match(text, /Пора выставить счёт по LTV-платежу/);
   assert.match(text, /ООО «Пример»: SEO, 30\s000\s₽/);
 });

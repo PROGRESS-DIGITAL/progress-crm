@@ -234,7 +234,7 @@ export function FinModelEditor({
               {f.subs && f.subs.expected > 0 && (
                 <p className="text-xs text-slate-500">
                   <Link href="/finance?view=subscriptions" className="hover:underline">
-                    Абонементы: {rub(f.subs.expected)} в месяц
+                    LTV-платежи: {rub(f.subs.expected)} в месяц
                   </Link>
                   {f.subs.waiting > 0 ? `, ещё ждём ${rub(f.subs.waiting)}` : ", всё оплачено"}
                 </p>

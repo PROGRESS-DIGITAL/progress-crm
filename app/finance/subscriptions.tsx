@@ -118,8 +118,8 @@ export async function Subscriptions({ edit }: { edit?: string }) {
       <ConfirmDeleteButton
         icon
         action={deleteSubscription.bind(null, sub.id)}
-        label={`Удалить абонемент ${sub.company.name}`}
-        what={`абонемент «${sub.title}» клиента ${sub.company.name}`}
+        label={`Удалить LTV-платёж ${sub.company.name}`}
+        what={`LTV-платёж «${sub.title}» клиента ${sub.company.name}`}
         message="Новые сделки по нему заводиться не будут. Уже заведённые сделки и счета останутся."
       />
     </div>
@@ -140,7 +140,7 @@ export async function Subscriptions({ edit }: { edit?: string }) {
           <p className="text-xs text-slate-600 sm:text-sm">В месяц</p>
           <p className={big}>{formatRub(expected)}</p>
           <p className="text-xs text-slate-500">
-            абонементов: {thisMonth.length}
+            LTV-платежей: {thisMonth.length}
           </p>
         </div>
         <div className={card}>
@@ -249,8 +249,8 @@ export async function Subscriptions({ edit }: { edit?: string }) {
       >
         <h2 className="font-semibold">
           {editing
-            ? `Изменить абонемент: ${editing.company.name}`
-            : "Новый абонемент"}
+            ? `Изменить LTV-платёж: ${editing.company.name}`
+            : "Новый LTV-платёж"}
         </h2>
         <p className="mt-1 mb-4 text-sm text-slate-600">
           В день счёта CRM сама заведёт сделку месяца на этапе счёта и задачу

@@ -110,7 +110,7 @@ export function startPolling() {
     await syncPayments(14);
     await loadPaymentHistory();
   });
-  every("Абонементы", 15 * 60_000, async () => {
+  every("LTV-платежи", 15 * 60_000, async () => {
     const { runSubscriptions } = await import("@/lib/subscriptions");
     await runSubscriptions();
   });

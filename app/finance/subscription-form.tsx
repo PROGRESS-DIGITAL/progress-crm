@@ -126,7 +126,7 @@ export function SubscriptionForm({
       </Field>
       <div className="flex flex-wrap items-center gap-3 sm:col-span-2 lg:col-span-4">
         <button type="submit" disabled={pending} className={primaryButton}>
-          {pending ? "Сохраняю…" : editing ? "Сохранить" : "Добавить абонемент"}
+          {pending ? "Сохраняю…" : editing ? "Сохранить" : "Добавить LTV-платёж"}
         </button>
         {editing && (
           <Link
