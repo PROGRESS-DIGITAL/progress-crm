@@ -101,6 +101,10 @@ export function startPolling() {
   loop("Max", pollMaxOnce);
   loop("VK", pollVkOnce);
   every("Напоминания", 60_000, sendDueReminders);
+  every("Повторные продажи", 15 * 60_000, async () => {
+    const { runFollowUps } = await import("@/lib/follow-ups");
+    await runFollowUps();
+  });
   every("Забытые сделки", 15 * 60_000, async () => {
     const { sendStaleDigest } = await import("@/lib/stale-deals");
     await sendStaleDigest();
