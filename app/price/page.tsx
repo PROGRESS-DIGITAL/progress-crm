@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { db } from "@/lib/db";
 import { sortByCategory } from "@/lib/format";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
@@ -21,7 +22,12 @@ export default async function PricePage() {
 
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
-      <h1 className="text-2xl font-semibold tracking-tight">Прайс</h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight">Прайс</h1>
+        <Link href="/price/kp" className="rounded-xl bg-white px-4 py-2 text-sm font-medium text-blue-700 shadow-card hover:bg-blue-50">
+          Шаблон КП
+        </Link>
+      </div>
       <p className="mt-1 mb-6 text-sm text-slate-600">
         Услуги для выбора в сделке. Название, описание и цену можно изменить кликом, всё остальное — карандашом слева;
         сумма в уже созданных сделках при этом не меняется. Порядок услуг меняется перетаскиванием за точки слева. Шаг
@@ -52,6 +58,7 @@ export default async function PricePage() {
                         unit: p.unit,
                         service: p.service,
                         salesStep: p.salesStep,
+                        kpText: p.kpText,
                       }}
                     >
                       <div className="min-w-0 flex-1">

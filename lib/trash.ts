@@ -69,6 +69,7 @@ export async function trashDeal(id: string) {
       lead: { select: { id: true } },
       events: { select: { id: true } },
       contracts: { select: { id: true } },
+      proposals: true,
     },
   });
   if (!deal) return null;
@@ -77,9 +78,13 @@ export async function trashDeal(id: string) {
     "deal",
     deal.title,
     {
-      row: pick(deal, ["documents", "lead", "events", "contracts"]),
-      // Счета раньше актов: акт ссылается на свой счёт
-      children: { documents: [...deal.documents].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "INVOICE" ? -1 : 1)).map((d) => pick(d, ["payments"])) },
+      row: pick(deal, ["documents", "lead", "events", "contracts", "proposals"]),
+      children: {
+        // Счета раньше актов: акт ссылается на свой счёт
+        documents: [...deal.documents].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "INVOICE" ? -1 : 1)).map((d) => pick(d, ["payments"])),
+        // КП удаляются вместе со сделкой; логотип клиента хранится в корзине строкой base64
+        proposals: deal.proposals.map((p) => ({ ...p, logo: p.logo ? Buffer.from(p.logo).toString("base64") : null })),
+      },
       links: { lead: deal.lead ? [deal.lead.id] : [], events: ids(deal.events), contracts: ids(deal.contracts), ...prefixed("payments:", payments) },
     },
     (tx) => tx.deal.delete({ where: { id } }),
@@ -240,6 +245,10 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
         },
       });
       for (const d of s.children?.documents ?? []) await restoreDocument(tx, d, links[`payments:${d.id}`] ?? [], []);
+      for (const p of s.children?.proposals ?? [])
+        await tx.proposal.create({
+          data: { ...(p as Prisma.ProposalUncheckedCreateInput), logo: typeof p.logo === "string" ? Buffer.from(p.logo, "base64") : null },
+        });
       await relink(links.lead, (v) => tx.lead.updateMany({ where: { id: { in: v }, dealId: null }, data: { dealId: id } }));
       await relink(links.events, (v) => tx.event.updateMany({ where: { id: { in: v }, dealId: null }, data: { dealId: id } }));
       await relink(links.contracts, (v) => tx.contract.updateMany({ where: { id: { in: v }, dealId: null }, data: { dealId: id } }));
