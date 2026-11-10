@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { accessForActionFile, accessForPath, canAccess, type Access } from "@/lib/auth/sections";
 import { SESSION_COOKIE, homeFor, sessionByToken } from "@/lib/auth/session-core";
 import { actionFile } from "@/lib/auth/action-files";
+import { DEMO_READ_ONLY_MESSAGE, demoReadOnly, isDemo } from "@/lib/demo";
 
 // Вход в CRM проверяется здесь, до страниц и серверных действий: без входа открывается только /login,
 // а закрытые роли разделы не отдаются даже по прямой ссылке или запросом в обход меню
@@ -27,6 +28,10 @@ export async function proxy(req: NextRequest) {
     else if (file === null) action = { kind: "owner" };
     // Манифеста нет только при разработке без сборки: проверяем по адресу страницы
     else action = page;
+    // Демо-версия: настройки интеграций, сотрудников и профиля открываются, но не сохраняются
+    if (user && isDemo() && demoReadOnly(file ?? (file === undefined ? pathname : ""))) {
+      return new NextResponse(DEMO_READ_ONLY_MESSAGE, { status: 403 });
+    }
     if (canAccess(page, user) && canAccess(action, user)) return NextResponse.next();
     return new NextResponse(user ? "Нет доступа к этому разделу" : "Нужно войти в CRM", { status: user ? 403 : 401 });
   }

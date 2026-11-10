@@ -1,0 +1,46 @@
+# Демо-версия CRM для клиентов: отдельная база с вымышленными данными на своём поддомене.
+# Подключается скриптом deploy/demo.sh (он дописывает этот файл в COMPOSE_FILE в deploy/.env).
+# Демо живёт в своей сети и не знает пароля рабочей базы: добраться до настоящих данных из неё нельзя
+services:
+  # Рабочая CRM и демо собираются в один образ, чтобы на сервере с 2 ГБ не шли две сборки сразу
+  app:
+    image: progress-crm-app:latest
+
+  demo-db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: crm
+      POSTGRES_PASSWORD: demo
+      POSTGRES_DB: progress_crm
+    # База в памяти: при перезапуске контейнера пустеет, и CRM заново наполняет её демо-данными
+    tmpfs:
+      - /var/lib/postgresql/data
+    networks: [demo]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crm -d progress_crm"]
+      interval: 5s
+      retries: 10
+
+  demo-app:
+    image: progress-crm-app:latest
+    pull_policy: never
+    restart: unless-stopped
+    depends_on:
+      demo-db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://crm:demo@demo-db:5432/progress_crm
+      DEMO_MODE: "1"
+      CHAT_POLLING: "off"
+    networks: [demo]
+
+  caddy:
+    environment:
+      DEMO_DOMAIN: ${DEMO_DOMAIN:?задайте DEMO_DOMAIN в deploy/.env}
+    volumes:
+      - ./Caddyfile.demo:/etc/caddy/Caddyfile:ro
+    networks: [default, demo]
+
+networks:
+  demo:

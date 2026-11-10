@@ -12,6 +12,8 @@ import { dueWhere } from "@/lib/tasks";
 import { teamBoards } from "@/lib/boards";
 import { currentUser } from "@/lib/auth/session";
 import { unseenActivity } from "@/lib/activity";
+import { isDemo } from "@/lib/demo";
+import { DemoBanner } from "@/components/demo-banner";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -66,6 +68,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               isOwner={user.isOwner}
             />
             <div className="flex min-w-0 flex-1 flex-col gap-2 sm:gap-3">
+              {isDemo() && <DemoBanner />}
               <TopBar unseenActivity={unseen} theme={theme} user={user} />
               <main className="flex flex-1 flex-col *:w-full">{children}</main>
             </div>

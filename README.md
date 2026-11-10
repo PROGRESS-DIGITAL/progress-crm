@@ -99,6 +99,8 @@ Codespace предназначен для проверки: данные жив�
 ## Развёртывание
 
 См. [deploy/README.md](deploy/README.md): Docker Compose с PostgreSQL, Caddy (HTTPS) и ежедневными копиями базы.
+Там же — как включить демо-версию для клиентов: отдельная CRM с вымышленными данными и входом без пароля
+(`DEMO_MODE=1`, `lib/demo.ts`, `prisma/demo-seed.ts`).
 
 ## Тесты
 
