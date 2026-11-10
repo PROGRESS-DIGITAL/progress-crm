@@ -126,6 +126,8 @@ export async function seedDemo(prisma: PrismaClient, stages: Stage[]) {
         email: `info@${c.key}.example.ru`,
         website: `https://${c.key}.example.ru`,
         address: `г. ${c.city}`,
+        // Вымышленный ИНН: по нему поступления из банка сопоставляются со счетами
+        inn: `77000000${n}`,
         situation: c.situation,
         notes: i % 3 === 0 ? "Постоянный клиент, решения принимает быстро" : null,
         createdAt: daysFromNow(-380 + i * 20),
@@ -177,12 +179,13 @@ export async function seedDemo(prisma: PrismaClient, stages: Stage[]) {
 
   // Счета по оплаченным сделкам: нумерация по году, как в «Финансах»
   const seqByYear = new Map<number, number>();
+  const paidInvoices: { id: string; seq: number; date: Date; amount: number; paidAt: Date; company: CompanyKey }[] = [];
   for (const d of deals.filter((x) => x.stage === 7 && x.closedAt)) {
     const date = new Date(d.closedAt!.getTime() - 5 * DAY);
     const year = date.getFullYear();
     const seq = (seqByYear.get(year) ?? 0) + 1;
     seqByYear.set(year, seq);
-    await prisma.document.create({
+    const invoice = await prisma.document.create({
       data: {
         kind: "INVOICE",
         year,
@@ -196,6 +199,7 @@ export async function seedDemo(prisma: PrismaClient, stages: Stage[]) {
         paidAt: d.closedAt,
       },
     });
+    paidInvoices.push({ id: invoice.id, seq, date, amount: d.amount, paidAt: d.closedAt!, company: d.company });
   }
   // Счёт по сделке на этапе «Счет на оплату» ещё не оплачен
   const awaiting = deals.find((d) => d.stage === 4);
@@ -215,6 +219,8 @@ export async function seedDemo(prisma: PrismaClient, stages: Stage[]) {
       },
     });
   }
+
+  await seedDemoBank(prisma, paidInvoices);
 
   for (const l of LEADS) {
     const { daysAgo, status, ...data } = l;
@@ -358,6 +364,64 @@ export async function seedDemo(prisma: PrismaClient, stages: Stage[]) {
       { section: "deals", kind: "move", text: "Сделка «Яндекс Директ, ведение» перенесена в «Оплачен»", actor: MAX, createdAt: daysFromNow(-2, 16) },
       { section: "leads", kind: "create", text: "Новый лид с Тильды: Роман Гусев", actor: null, createdAt: daysFromNow(0, 9, 5) },
       { section: "clients", kind: "create", text: "Добавлен клиент «Салон красоты «Лаванда»»", actor: ANNA, createdAt: daysFromNow(-2, 11) },
+    ],
+  });
+}
+
+// Сбер в демо-версии: счёт выглядит подключённым, поступления за год лежат в «Финансах» и на дашборде банка.
+// Ключей и сертификата нет, поэтому в банк демо не ходит: syncSber в демо ничего не запрашивает
+export const DEMO_SBER_ACCOUNT = "40702810900000000001";
+
+async function seedDemoBank(
+  prisma: PrismaClient,
+  paid: { id: string; seq: number; date: Date; amount: number; paidAt: Date; company: CompanyKey }[],
+) {
+  const name = (key: CompanyKey) => COMPANIES.find((c) => c.key === key)!.name;
+  const inn = (key: CompanyKey) => `77000000${String(COMPANIES.findIndex((c) => c.key === key) + 10).padStart(2, "0")}`;
+  const ru = (d: Date) => d.toLocaleDateString("ru-RU", { timeZone: "Europe/Moscow" });
+  let n = 0;
+  for (const p of paid) {
+    await prisma.bankPayment.create({
+      data: {
+        transactionId: `demo-sber-${++n}`,
+        date: p.paidAt,
+        amount: p.amount,
+        payerName: name(p.company),
+        payerInn: inn(p.company),
+        purpose: `Оплата по счету № ${p.seq} от ${ru(p.date)}. Без НДС`,
+        documentId: p.id,
+      },
+    });
+  }
+  // Поступления без счёта из CRM: LTV-платежи по договору и возврат
+  const other = [
+    { daysAgo: 35, amount: 40000, company: "stroy", purpose: "Оплата за SEO-продвижение по договору, ежемесячный платёж. Без НДС" },
+    { daysAgo: 5, amount: 40000, company: "stroy", purpose: "Оплата за SEO-продвижение по договору, ежемесячный платёж. Без НДС" },
+    { daysAgo: 9, amount: 25000, company: "fitness", purpose: "Ведение рекламы в Яндекс Директ. Без НДС" },
+  ] as const;
+  for (const o of other) {
+    await prisma.bankPayment.create({
+      data: {
+        transactionId: `demo-sber-${++n}`,
+        date: new Date(Date.now() - o.daysAgo * DAY),
+        amount: o.amount,
+        payerName: name(o.company),
+        payerInn: inn(o.company),
+        purpose: o.purpose,
+      },
+    });
+  }
+  const now = Date.now();
+  await prisma.appSetting.createMany({
+    data: [
+      {
+        key: "sber.client",
+        value: JSON.stringify({ clientId: "demo", clientSecret: "", redirectUri: "https://demo.example.ru/integrations/sber/callback", pfx: "", passphrase: "" }),
+      },
+      { key: "sber.tokens", value: JSON.stringify({ accessToken: "", refreshToken: "", expiresAt: now }) },
+      { key: "sber.account", value: DEMO_SBER_ACCOUNT },
+      { key: "sber.accounts", value: JSON.stringify([{ number: DEMO_SBER_ACCOUNT, name: "Расчётный счёт" }]) },
+      { key: "sber.historyLoaded", value: new Date(now).toISOString() },
     ],
   });
 }

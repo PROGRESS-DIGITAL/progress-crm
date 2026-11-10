@@ -46,7 +46,7 @@ export { tool, type Tool } from "@/lib/agents/tool";
 const revenueSummary = tool({
   name: "revenue_summary",
   description:
-    "Выручка за период двумя способами: поступления на расчётный счёт по выписке Точки и выручка по CRM (оплаченные сделки по дате закрытия). " +
+    "Выручка за период двумя способами: поступления на расчётный счёт по выписке банка (Точка, Сбер) и выручка по CRM (оплаченные сделки по дате закрытия). " +
     "Плюс счета, выставленные за период, и неоплаченные счета. По умолчанию — текущий месяц до сегодня.",
   schema: z.object(period),
   async run(input) {
@@ -72,7 +72,7 @@ const revenueSummary = tool({
         without_invoice: payments.filter((p) => !p.documentId).reduce((a, p) => a + p.amount, 0),
         top_payers: topPayers(payments, 5),
         last_payment_in_statement: day(lastPayment?.date),
-        note: lastPayment ? undefined : "Выписка Точки ещё не загружена: банк не подключён или поступлений не было",
+        note: lastPayment ? undefined : "Выписка банка ещё не загружена: банк не подключён или поступлений не было",
       },
       crm: {
         revenue: deals.reduce((a, d) => a + d.amount, 0),
@@ -130,7 +130,7 @@ const monthlyReport = tool({
 
 const bankPayments = tool({
   name: "bank_payments",
-  description: "Список поступлений на расчётный счёт из выписки Точки за период: дата, сумма, плательщик, назначение, к какому счёту CRM привязан.",
+  description: "Список поступлений на расчётный счёт из выписки банка (Точка, Сбер) за период: дата, сумма, плательщик, назначение, к какому счёту CRM привязан.",
   schema: z.object({
     ...period,
     query: z.string().max(100).optional().describe("Поиск по плательщику, ИНН или назначению платежа"),
