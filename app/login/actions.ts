@@ -8,6 +8,7 @@ import { setupKey, setupNeeded } from "@/lib/auth/setup";
 import { sha256, sixDigits } from "@/lib/auth/tokens";
 import { ipBlocked, ipFailed, LOCK_MS, MAX_FAILED_LOGINS } from "@/lib/auth/limits";
 import { notifyOwner, ownerTelegramReady } from "@/lib/auth/notify";
+import { isDemo } from "@/lib/demo";
 import {
   clientMeta,
   currentSession,
@@ -68,6 +69,15 @@ export async function setupOwner(_prev: LoginState, formData: FormData): Promise
   await journal(owner.id, login, true, "Пароль директора задан");
   await startSession(owner.id, false);
   redirect("/login/code");
+}
+
+// Демо-версия: вход гостем без пароля и кода. На рабочей CRM действие ничего не делает
+export async function enterDemo(formData: FormData) {
+  if (!isDemo()) return;
+  const guest = await db.employee.findFirst({ where: { isOwner: true, blocked: false } });
+  if (!guest) throw new Error("Демо-данные ещё не созданы");
+  await startSession(guest.id, true);
+  redirect(safeNext(formData.get("next")) || "/");
 }
 
 export async function signIn(_prev: LoginState, formData: FormData): Promise<LoginState> {
