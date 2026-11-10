@@ -26,6 +26,7 @@ if [ "${1:-}" = "off" ]; then
   # Рабочая CRM возвращается к обычному имени образа: берём уже собранный, чтобы не собирать заново
   docker image inspect progress-crm-app:latest >/dev/null 2>&1 && docker tag progress-crm-app:latest deploy-app:latest
   docker compose up -d --remove-orphans
+  docker volume rm -f progress-crm-demo-db >/dev/null
   rm -f "$CRON_FILE"
   echo "Готово: демо-версия остановлена, её база удалена."
   exit 0
@@ -58,15 +59,15 @@ docker compose build app
 echo "==> Запуск"
 docker compose up -d
 
-# Каждую ночь демо-база пересоздаётся: всё, что гости поменяли, возвращается к исходным данным
+# Раз в неделю, в ночь на понедельник, демо-база создаётся заново: всё, что гости поменяли, возвращается к исходным данным
 cat > "$CRON_FILE" <<CRON
-0 0 * * * root cd $DEPLOY_DIR && docker compose up -d --force-recreate demo-db demo-app >> /var/log/progress-crm-demo.log 2>&1
+0 0 * * 1 root cd $DEPLOY_DIR && (docker compose rm -sf demo-app demo-db && docker volume rm -f progress-crm-demo-db && docker compose up -d demo-db demo-app) >> /var/log/progress-crm-demo.log 2>&1
 CRON
 
 cat <<DONE
 
 Готово.
   Демо-версия: https://$DEMO_DOMAIN
-  Вход — кнопкой «Войти в демо-версию», без пароля. Данные вымышленные и сбрасываются каждую ночь.
+  Вход — кнопкой «Войти в демо-версию», без пароля. Данные вымышленные и сбрасываются раз в неделю, в ночь на понедельник.
   Рабочая CRM и её база не затронуты: демо работает в отдельной сети со своей базой.
 DONE

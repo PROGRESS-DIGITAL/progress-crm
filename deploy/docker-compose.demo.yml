@@ -13,9 +13,10 @@ services:
       POSTGRES_USER: crm
       POSTGRES_PASSWORD: demo
       POSTGRES_DB: progress_crm
-    # База в памяти: при перезапуске контейнера пустеет, и CRM заново наполняет её демо-данными
-    tmpfs:
-      - /var/lib/postgresql/data
+    # База на диске, чтобы перезагрузка сервера её не стирала. Раз в неделю demo.sh по cron удаляет том,
+    # и CRM заново наполняет пустую базу демо-данными
+    volumes:
+      - demo-db-data:/var/lib/postgresql/data
     networks: [demo]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U crm -d progress_crm"]
@@ -44,3 +45,8 @@ services:
 
 networks:
   demo:
+
+volumes:
+  demo-db-data:
+    # Постоянное имя тома: по нему cron раз в неделю сбрасывает демо
+    name: progress-crm-demo-db
