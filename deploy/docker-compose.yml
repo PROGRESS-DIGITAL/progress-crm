@@ -43,7 +43,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
 
-  # Ежедневная копия базы в deploy/backups, хранится 14 дней
+  # Ежедневная копия базы в deploy/backups, хранятся последние 4 дня: одна копия весит сотни мегабайт,
+  # и за 14 дней они занимали весь диск сервера
   backup:
     image: postgres:16
     restart: unless-stopped
@@ -57,7 +58,7 @@ services:
     entrypoint: >
       sh -c 'while true; do
         pg_dump -h db -U crm progress_crm | gzip > /backups/crm-$$(date +%F).sql.gz;
-        find /backups -name "crm-*.sql.gz" -mtime +14 -delete;
+        find /backups -name "crm-*.sql.gz" -mtime +3 -delete;
         sleep 86400;
       done'
 

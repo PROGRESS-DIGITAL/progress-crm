@@ -107,7 +107,7 @@ docker builder prune -af && docker image prune -af
 sudo bash /opt/progress-crm/deploy/update.sh
 ```
 
-Копии базы складываются каждый день в `deploy/backups`. Восстановление:
+Копии базы складываются каждый день в `deploy/backups` и хранятся 4 дня. Нужна копия надолго — скачайте её с сервера. Восстановление:
 
 ```bash
 cd /opt/progress-crm/deploy
