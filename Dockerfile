@@ -12,16 +12,17 @@ RUN for f in russian_trusted_root_ca_pem.crt russian_trusted_sub_ca_pem.crt; do 
 ENV NODE_EXTRA_CA_CERTS=/etc/ssl/certs/ca-certificates.crt
 WORKDIR /app
 
-FROM base AS build
-COPY package.json package-lock.json ./
-RUN npm ci
-COPY . .
-RUN npx prisma generate && npm run build
-
+# Одна стадия: раньше готовая CRM копировалась в отдельный образ целиком, и node_modules (около 1 ГБ)
+# лежали на диске дважды. На сервере с 14 ГБ сборка из-за этого упиралась в место
 FROM base AS run
+COPY package.json package-lock.json ./
+# На этом образе glibc: musl-сборки компилятора Next.js и lightningcss не нужны (~100 МБ)
+RUN npm ci && rm -rf node_modules/@next/swc-linux-x64-musl node_modules/lightningcss-linux-x64-musl && npm cache clean --force
+COPY . .
+# Кэш сборки Next.js (~150 МБ) удаляем в том же слое, чтобы он не попал в образ
+RUN npx prisma generate && npm run build && rm -rf .next/cache
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-COPY --from=build /app ./
 EXPOSE 3000
 # Миграции и начальные этапы воронки применяются при каждом старте; оба шага идемпотентны
 CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && npx next start -p 3000"]
