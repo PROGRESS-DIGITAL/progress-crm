@@ -2,6 +2,15 @@
 export const RU_SERVICE_HINT =
   "если включён VPN, выключите его или добавьте этот адрес в исключения: российские сервисы часто не пускают зарубежные подключения";
 
+// На сервере (deploy/docker-compose.yml ставит CRM_SERVER=1) подключается сам сервер, а не браузер:
+// VPN на компьютере сотрудника тут ни при чём, и совет его выключить только сбивает с толку
+export const onServer = () => process.env.CRM_SERVER === "1";
+
+export const SERVER_HINT =
+  "подключение идёт с сервера CRM, VPN на вашем компьютере тут ни при чём: проверьте, что хостинг сервера не закрывает исходящие подключения";
+
+export const serviceHint = () => (onServer() ? SERVER_HINT : RU_SERVICE_HINT);
+
 const CERT_CODES = new Set([
   "CERT_HAS_EXPIRED",
   "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
@@ -18,7 +27,7 @@ export function errorCode(e: unknown): string | undefined {
   return cause?.code ?? cause?.errors?.[0]?.code ?? (e as { code?: string })?.code;
 }
 
-export function networkError(e: unknown, host: string, hint = RU_SERVICE_HINT) {
+export function networkError(e: unknown, host: string, hint = serviceHint()) {
   const code = errorCode(e);
   // Российские сервисы всё чаще работают на сертификатах Минцифры, которых нет в Node.js
   if (code && CERT_CODES.has(code))

@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import type { MailProvider } from "@prisma/client";
-import { RU_SERVICE_HINT, networkError } from "@/lib/net";
+import { networkError, onServer, serviceHint } from "@/lib/net";
 import { PROVIDERS } from "./core";
 
 type Login = { provider: MailProvider; email: string; password: string; name?: string | null };
@@ -22,10 +22,12 @@ export function stageTracker() {
   return { state, logger: { trace: skip, debug, info: debug, warn: skip, error: skip, fatal: skip } };
 }
 
+const SMTP_PORT = 465;
+
 function transport(a: Login, logger?: ReturnType<typeof stageTracker>["logger"]) {
   return nodemailer.createTransport({
     host: PROVIDERS[a.provider].smtp,
-    port: 465,
+    port: SMTP_PORT,
     secure: true,
     auth: { user: a.email, pass: a.password },
     // Без этих ограничений nodemailer ждёт зависший сервер до 10 минут, и кнопка «Отправить» висит.
@@ -48,8 +50,12 @@ export function smtpError(e: unknown, provider: MailProvider) {
     return `${host} принял письмо целиком, но не ответил за 3 минуты. Оно могло уйти: проверьте «Отправленные» в самом ящике, прежде чем отправлять ещё раз`;
   if (err.code === "ETIMEDOUT" && err.timeoutType === "SOCKET_TIMEOUT" && err.stage && err.stage !== "connect")
     return `${host} перестал отвечать посреди отправки и не ответил за 3 минуты. Попробуйте ещё раз чуть позже`;
-  if (err.code === "ETIMEDOUT") return `${host} не отвечает, ${RU_SERVICE_HINT}`;
-  if (err.code === "ECONNECTION" || err.code === "ESOCKET") return `соединение с ${host} оборвалось, ${RU_SERVICE_HINT}`;
+  // До сервера почты не достучались вовсе. На облачных серверах это почти всегда закрытые хостингом
+  // порты почты: Timeweb Cloud и многие другие по умолчанию режут исходящие 25, 465, 587 и 2525 против спама
+  if (onServer() && (err.code === "ETIMEDOUT" || err.code === "ECONNECTION") && (!err.stage || err.stage === "connect"))
+    return `сервер CRM не может подключиться к ${host}:${SMTP_PORT}. Письмо отправляет сервер, а не ваш браузер, поэтому VPN на компьютере тут ни при чём. Скорее всего, хостинг закрыл на сервере исходящие порты почты: напишите в поддержку хостинга и попросите открыть исходящие порты 465 и 587`;
+  if (err.code === "ETIMEDOUT") return `${host} не отвечает, ${serviceHint()}`;
+  if (err.code === "ECONNECTION" || err.code === "ESOCKET") return `соединение с ${host} оборвалось, ${serviceHint()}`;
   return networkError(e, PROVIDERS[provider].smtp);
 }
 

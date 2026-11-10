@@ -2,7 +2,7 @@ import { ImapFlow } from "imapflow";
 import { simpleParser, type AddressObject, type ParsedMail } from "mailparser";
 import type { MailAccount, MailFolder, MailProvider } from "@prisma/client";
 import { db } from "@/lib/db";
-import { RU_SERVICE_HINT, networkError } from "@/lib/net";
+import { networkError, serviceHint } from "@/lib/net";
 import { PROVIDERS, emailsOf, formatAddresses, htmlToText, makeSnippet, type Address } from "./core";
 
 // При первом подключении забираем последние письма папки, а не весь архив за годы
@@ -58,7 +58,7 @@ export async function withImap<T>(a: Login, fn: (c: ImapFlow) => Promise<T>, lim
   let timer: ReturnType<typeof setTimeout> | undefined;
   const limit = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
-      reject(new Error(`${PROVIDERS[a.provider].imap} слишком долго не отвечает, ${RU_SERVICE_HINT}`));
+      reject(new Error(`${PROVIDERS[a.provider].imap} слишком долго не отвечает, ${serviceHint()}`));
       c.close();
     }, limitMs);
   });

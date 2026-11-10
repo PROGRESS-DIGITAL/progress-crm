@@ -13,3 +13,14 @@ test("сетевые ошибки российских сервисов сове
   );
   assert.equal(networkError(new Error("Точка ответила 401"), "enter.tochka.com"), "Точка ответила 401");
 });
+
+test("на сервере сетевые ошибки не советуют выключить VPN", () => {
+  process.env.CRM_SERVER = "1";
+  try {
+    const msg = networkError(failed("UND_ERR_CONNECT_TIMEOUT"), "imap.yandex.ru");
+    assert.match(msg, /с сервера CRM/);
+    assert.doesNotMatch(msg, /выключите/);
+  } finally {
+    delete process.env.CRM_SERVER;
+  }
+});

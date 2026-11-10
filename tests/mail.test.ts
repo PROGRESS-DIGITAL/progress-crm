@@ -68,3 +68,20 @@ test("ошибка входа Яндекса не сваливается на в
   assert.match(mailError(yandex, "YANDEX"), /и на неподходящий пароль, и на выключенный IMAP/);
   assert.match(mailError({ authenticationFailed: true, responseText: "[AUTHENTICATIONFAILED] Invalid credentials (Failure)" }, "GMAIL"), /не приняла пароль/);
 });
+
+test("SMTP не отвечает: на сервере — про закрытые порты хостинга, на Маке — про VPN", async () => {
+  const { smtpError } = await import("../lib/mail/send");
+  const timeout = Object.assign(new Error("Connection timeout"), { code: "ETIMEDOUT", stage: "connect" });
+  assert.match(smtpError(timeout, "YANDEX"), /smtp\.yandex\.ru не отвечает, если включён VPN/);
+  process.env.CRM_SERVER = "1";
+  try {
+    const msg = smtpError(timeout, "YANDEX");
+    assert.match(msg, /сервер CRM не может подключиться к smtp\.yandex\.ru:465/);
+    assert.match(msg, /465 и 587/);
+    // Сервер замолчал после подключения — это не порты
+    const mid = Object.assign(new Error("Timeout"), { code: "ETIMEDOUT", timeoutType: "SOCKET_TIMEOUT", stage: "data" });
+    assert.match(smtpError(mid, "YANDEX"), /посреди отправки/);
+  } finally {
+    delete process.env.CRM_SERVER;
+  }
+});
