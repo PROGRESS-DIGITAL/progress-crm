@@ -118,6 +118,12 @@ export function startPolling() {
     await syncPayments(14);
     await loadPaymentHistory();
   });
+  every("Сбер", 15 * 60_000, async () => {
+    const { getSber, loadSberHistory, syncSber } = await import("@/lib/finance/sber-service");
+    if (!(await getSber())) return;
+    await syncSber(3);
+    await loadSberHistory();
+  });
   every("LTV-платежи", 15 * 60_000, async () => {
     const { runSubscriptions } = await import("@/lib/subscriptions");
     await runSubscriptions();

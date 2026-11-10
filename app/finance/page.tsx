@@ -6,7 +6,9 @@ import { docTitle, getTochka } from "@/lib/finance/documents";
 import { formatDateTime, formatRub } from "@/lib/format";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { BankView } from "@/app/dashboard/bank-view";
+import { getSber } from "@/lib/finance/sber-service";
 import { Subscriptions } from "./subscriptions";
+import { StatementUpload } from "./statement-upload";
 import { deleteDocumentAction, syncPaymentsAction } from "./actions";
 
 export const dynamic = "force-dynamic";
@@ -25,8 +27,9 @@ const day = (d: Date) => d.toLocaleDateString("ru-RU", { timeZone: "Europe/Mosco
 export default async function FinancePage({ searchParams }: { searchParams: Promise<{ view?: string; edit?: string }> }) {
   const { view: requested, edit } = await searchParams;
   const view = TABS.find((t) => t.view === requested)?.view ?? TABS[0].view;
-  const [tochka, waiting] = await Promise.all([
+  const [tochka, sber, waiting] = await Promise.all([
     getTochka(),
+    getSber(),
     db.document.aggregate({ where: { kind: "INVOICE", status: { not: "PAID" } }, _sum: { amount: true }, _count: true }),
   ]);
 
@@ -40,14 +43,14 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          {tochka ? (
+          {tochka || sber ? (
             <ActionButton action={syncPaymentsAction} label="Обновить оплаты" pendingLabel="Запрашиваю выписку…" />
           ) : (
             <Link
-              href="/integrations/tochka"
+              href="/integrations"
               className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm shadow-blue-600/25 hover:bg-blue-700"
             >
-              Подключить Точку
+              Подключить банк
             </Link>
           )}
           <nav className="grid w-full grid-cols-3 rounded-xl bg-white p-1 text-sm shadow-card sm:flex sm:w-auto" aria-label="Раздел финансов">
@@ -65,7 +68,12 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         </div>
       </div>
       {view === "payments" ? (
-        <Payments />
+        <>
+          <div className="mb-3 flex justify-end">
+            <StatementUpload />
+          </div>
+          <Payments />
+        </>
       ) : view === "bank" ? (
         <BankView />
       ) : view === "subscriptions" ? (
@@ -161,7 +169,7 @@ async function Payments() {
   if (!payments.length) {
     return (
       <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
-        Поступлений пока нет. Они подтягиваются из выписки Точки каждые 15 минут.
+        Поступлений пока нет. Они подтягиваются из выписки Точки или Сбера каждые 15 минут, а выписку любого банка можно загрузить файлом 1С.
       </p>
     );
   }

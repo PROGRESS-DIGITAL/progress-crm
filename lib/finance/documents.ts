@@ -133,23 +133,18 @@ export async function loadPaymentHistory() {
 
 const PAYMENT_LOG_DAYS = 3;
 
-// Подтянуть поступления за последние дни и разнести их по счетам
-export async function syncPayments(days = 30) {
-  const tochka = await getTochka();
-  if (!tochka) return { added: 0, paid: 0 };
-  const to = new Date();
-  const from = new Date(to.getTime() - days * 86_400_000);
-  const transactions = await getStatement(tochka.token, tochka.account.accountId, moscowDate(from), moscowDate(to));
+// Новые поступления из выписки любого банка: сохраняем и разносим по неоплаченным счетам
+export async function savePayments(payments: { transactionId: string; date: Date; amount: number; payerName: string | null; payerInn: string | null; purpose: string | null }[]) {
   let added = 0;
   let paid = 0;
-  for (const p of incomingPayments(transactions)) {
+  for (const p of payments) {
     const exists = await db.bankPayment.findUnique({ where: { transactionId: p.transactionId } });
     if (exists) continue;
     const invoices = await openInvoices();
     const invoiceId = matchInvoice(p, invoices);
     await db.bankPayment.create({ data: { ...p, documentId: invoiceId } });
     added++;
-    // История за год при подключении Точки в журнал не идёт: только свежие поступления
+    // История за год при подключении банка в журнал не идёт: только свежие поступления
     if (p.date.getTime() > Date.now() - PAYMENT_LOG_DAYS * 86_400_000) {
       const inv = invoiceId ? await db.document.findUnique({ where: { id: invoiceId }, select: { seq: true, dealId: true } }) : null;
       await logActivity(paymentActivity(p, inv), null);
@@ -159,6 +154,18 @@ export async function syncPayments(days = 30) {
       paid++;
     }
   }
+  return { added, paid };
+}
+
+// Подтянуть поступления за последние дни и разнести их по счетам
+export async function syncPayments(days = 30) {
+  const tochka = await getTochka();
+  if (!tochka) return { added: 0, paid: 0 };
+  const to = new Date();
+  const from = new Date(to.getTime() - days * 86_400_000);
+  const transactions = await getStatement(tochka.token, tochka.account.accountId, moscowDate(from), moscowDate(to));
+  const { added, paid: matched } = await savePayments(incomingPayments(transactions));
+  let paid = matched;
 
   // Счёт могли оплатить по ссылке или QR: спрашиваем статус у самой Точки
   for (const inv of await openInvoices()) {
