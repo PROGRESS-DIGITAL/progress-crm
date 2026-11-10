@@ -8,13 +8,14 @@ import { MAX_BOT_SETTING } from "@/lib/chat/max";
 import { VK_GROUP_SETTING, type VkGroup } from "@/lib/chat/vk";
 import { DIADOC_ORG_SETTING, DIADOC_REFRESH_SETTING, type DiadocOrg } from "@/lib/finance/diadoc";
 import { getTochka } from "@/lib/finance/documents";
+import { getSber } from "@/lib/finance/sber-service";
 import { CLAUDE_KEY_SETTING } from "@/lib/agents/agent";
 import { YANDEX_KEY_SETTING } from "@/lib/agents/yandex";
 
 export const dynamic = "force-dynamic";
 
 export default async function IntegrationsPage() {
-  const [tilda, lastTilda, dadataKey, telegramBot, maxBot, vkGroup, tochka, diadocRefresh, diadocOrg, mailboxes, claudeKey, yandexKey] = await Promise.all([
+  const [tilda, lastTilda, dadataKey, telegramBot, maxBot, vkGroup, tochka, diadocRefresh, diadocOrg, mailboxes, claudeKey, yandexKey, sber] = await Promise.all([
     getTildaSettings(),
     db.webhookLog.findFirst({ where: { source: "tilda", status: "ok" }, orderBy: { createdAt: "desc" } }),
     getDadataKey(),
@@ -27,6 +28,7 @@ export default async function IntegrationsPage() {
     db.mailAccount.findMany({ select: { email: true }, orderBy: { createdAt: "asc" } }),
     getSetting(CLAUDE_KEY_SETTING),
     getSetting(YANDEX_KEY_SETTING),
+    getSber(),
   ]);
   const yandex = {
     href: "/integrations/yandex",
@@ -52,6 +54,12 @@ export default async function IntegrationsPage() {
       title: "Точка",
       status: tochka && `счёт ${tochka.account.name}`,
       text: "Счета и акты из сделки, оплаты из выписки.",
+    },
+    {
+      href: "/integrations/sber",
+      title: "Сбербанк",
+      status: sber && `счёт ${sber.account}`,
+      text: "Поступления из выписки СберБизнеса закрывают счета из CRM.",
     },
     {
       href: "/integrations/diadoc",

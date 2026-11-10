@@ -423,7 +423,7 @@ model Document {
   @@index([dealId])
 }
 
-// Поступление на расчётный счёт из выписки Точки
+// Поступление на расчётный счёт из выписки банка: Точка, Сбер или файл 1С
 model BankPayment {
   id            String    @id @default(cuid())
   transactionId String    @unique
