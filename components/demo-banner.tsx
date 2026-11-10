@@ -4,7 +4,7 @@ import { DEMO_READ_ONLY_MESSAGE } from "@/lib/demo";
 export function DemoBanner() {
   return (
     <div className="rounded-2xl bg-amber-50 px-4 py-2 text-sm text-amber-800">
-      <span className="font-medium">Демо-версия.</span> Клиенты и сделки вымышленные, можно всё пробовать: каждую ночь данные
+      <span className="font-medium">Демо-версия.</span> Клиенты и сделки вымышленные, можно всё пробовать: раз в неделю данные
       возвращаются к исходным.
     </div>
   );

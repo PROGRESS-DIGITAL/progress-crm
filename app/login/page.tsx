@@ -13,7 +13,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <>
         <h1 className="text-xl font-semibold tracking-tight">Демо-версия CRM</h1>
         <p className="mt-1 mb-5 text-sm text-slate-600">
-          Все клиенты, сделки и переписки здесь вымышленные. Можно смело нажимать, переносить и удалять: каждую ночь
+          Все клиенты, сделки и переписки здесь вымышленные. Можно смело нажимать, переносить и удалять: раз в неделю
           данные возвращаются к исходным.
         </p>
         <DemoForm next={next ?? ""} />
