@@ -18,6 +18,14 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+# Пока идёт автоматическое обновление CRM (deploy/update.sh), ждём его: две сборки и два docker compose up
+# одновременно забивают диск и сталкиваются контейнерами
+exec 9>/tmp/progress-crm-update.lock
+if ! flock -n 9; then
+  echo "==> Идёт обновление CRM, жду его окончания…"
+  flock 9
+fi
+
 # Убираем из .env прежние настройки демо, остальное не трогаем
 sed -i '/^DEMO_DOMAIN=/d;/^COMPOSE_FILE=/d' "$ENV_FILE"
 
