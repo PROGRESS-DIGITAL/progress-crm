@@ -1,3 +1,4 @@
+import { isDemo } from "@/lib/demo";
 import { getSetting, setSetting } from "@/lib/settings";
 import { getTochka, savePayments } from "./documents";
 import {
@@ -57,7 +58,8 @@ async function accessToken(sber: NonNullable<Awaited<ReturnType<typeof getSber>>
 // Поступления за последние дни: выписка Сбера запрашивается по одному дню
 export async function syncSber(days = 3) {
   const sber = await getSber();
-  if (!sber) return { added: 0, paid: 0 };
+  // В демо-версии Сбер показан подключённым, но ключей нет: поступления уже лежат в базе
+  if (!sber || isDemo()) return { added: 0, paid: 0 };
   let added = 0;
   let paid = 0;
   for (let i = days - 1; i >= 0; i--) {

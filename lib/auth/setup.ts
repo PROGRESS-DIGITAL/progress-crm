@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { newTotpSecret } from "@/lib/auth/totp";
+import { isDemo } from "@/lib/demo";
 
 // Обычные функции для страниц входа. В app/login/actions.ts их держать нельзя:
 // всё, что экспортирует файл "use server", можно вызвать из браузера без входа
@@ -11,6 +12,8 @@ export function setupKey() {
 }
 
 export async function setupNeeded() {
+  // В демо-версии пароль директора не задаётся: гость входит кнопкой, а форма настройки отдала бы вход первому встречному
+  if (isDemo()) return false;
   const owner = await db.employee.findFirst({ where: { isOwner: true }, select: { passwordHash: true } });
   return !owner?.passwordHash;
 }

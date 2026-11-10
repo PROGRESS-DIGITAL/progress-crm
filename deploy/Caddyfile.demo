@@ -1,0 +1,11 @@
+# Caddyfile сервера с демо-версией: рабочая CRM и демо на своём поддомене.
+# Подключается из docker-compose.demo.yml вместо обычного Caddyfile
+{$DOMAIN} {
+	encode gzip
+	reverse_proxy app:3000
+}
+
+{$DEMO_DOMAIN} {
+	encode gzip
+	reverse_proxy demo-app:3000
+}

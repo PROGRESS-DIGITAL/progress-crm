@@ -1,12 +1,25 @@
 import { redirect } from "next/navigation";
 import { currentSession } from "@/lib/auth/session";
 import { setupKey, setupNeeded } from "@/lib/auth/setup";
-import { LoginForm, SetupForm } from "./forms";
+import { isDemo } from "@/lib/demo";
+import { DemoForm, LoginForm, SetupForm } from "./forms";
 
 export const metadata = { title: "Вход — PROGRESS CRM" };
 
 export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string; error?: string }> }) {
   const { next, error } = await searchParams;
+  if (isDemo()) {
+    return (
+      <>
+        <h1 className="text-xl font-semibold tracking-tight">Демо-версия CRM</h1>
+        <p className="mt-1 mb-5 text-sm text-slate-600">
+          Все клиенты, сделки и переписки здесь вымышленные. Можно смело нажимать, переносить и удалять: каждую ночь
+          данные возвращаются к исходным.
+        </p>
+        <DemoForm next={next ?? ""} />
+      </>
+    );
+  }
   if (await setupNeeded()) {
     return (
       <>

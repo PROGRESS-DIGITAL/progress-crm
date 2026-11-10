@@ -9,7 +9,7 @@ const MONTHS_SHOWN = 12;
 
 const dayFmt = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", year: "numeric", timeZone: "Europe/Moscow" });
 
-// Вкладка «По банку»: деньги, которые реально пришли на счёт в Точке, по дате зачисления
+// Вкладка «По банку»: деньги, которые реально пришли на расчётный счёт (Точка, Сбер или выписка 1С), по дате зачисления
 export async function BankView() {
   const payments = await db.bankPayment.findMany({
     select: { date: true, amount: true, payerName: true, payerInn: true, documentId: true },
@@ -20,11 +20,11 @@ export async function BankView() {
     return (
       <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center">
         <p className="max-w-md text-sm text-slate-600">
-          Поступлений пока нет. Они приходят из выписки Точки: после подключения CRM загрузит историю за год и дальше будет
+          Поступлений пока нет. Они приходят из выписки банка (Точка или Сбер): после подключения CRM загрузит историю за год и дальше будет
           обновлять её каждые 15 минут.
         </p>
-        <Link href="/integrations/tochka" className="text-sm font-medium text-blue-600 hover:underline">
-          Подключить Точку
+        <Link href="/integrations" className="text-sm font-medium text-blue-600 hover:underline">
+          Подключить банк
         </Link>
       </div>
     );
@@ -50,7 +50,7 @@ export async function BankView() {
   return (
     <div>
       <p className="mb-6 text-sm text-slate-600">
-        Поступления на расчётный счёт в Точке по дате зачисления, включая оплаты без счёта в CRM. Выписка загружена с{" "}
+        Поступления на расчётный счёт по дате зачисления, включая оплаты без счёта в CRM. Выписка загружена с{" "}
         {dayFmt.format(payments[0].date)}
       </p>
 

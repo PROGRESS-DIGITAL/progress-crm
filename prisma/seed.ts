@@ -1,4 +1,5 @@
 import { PrismaClient, StageKind, Service } from "@prisma/client";
+import { seedDemo } from "./demo-seed";
 
 const prisma = new PrismaClient();
 
@@ -38,7 +39,10 @@ async function main() {
   for (const [i, s] of stages.entries()) {
     created.push(await prisma.stage.create({ data: { ...s, order: i } }));
   }
-  if (process.env.SEED_DEMO !== "0") {
+  // Демо-версия для клиентов: полный набор вымышленных данных вместо четырёх сделок
+  if (process.env.DEMO_MODE === "1") {
+    await seedDemo(prisma, created);
+  } else if (process.env.SEED_DEMO !== "0") {
     for (const [i, d] of demoDeals.entries()) {
       const { stage, clientName, ...rest } = d;
       const company = await prisma.company.create({ data: { name: clientName } });

@@ -2,7 +2,7 @@
 
 import { useActionState, useState } from "react";
 import { Field, inputClass, primaryButton } from "@/components/field";
-import { cancelLogin, confirmTotp, sendTelegramCode, setNewPassword, setupOwner, signIn, verifyCode, type LoginState } from "./actions";
+import { cancelLogin, confirmTotp, enterDemo, sendTelegramCode, setNewPassword, setupOwner, signIn, verifyCode, type LoginState } from "./actions";
 
 function Message({ state }: { state: LoginState }) {
   if (state?.error) return <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{state.error}</p>;
@@ -78,6 +78,17 @@ function Cancel() {
     <form action={cancelLogin} className="mt-4 text-center">
       <button type="submit" className="text-sm text-slate-500 hover:text-slate-800">
         Войти под другим логином
+      </button>
+    </form>
+  );
+}
+
+export function DemoForm({ next }: { next: string }) {
+  return (
+    <form action={enterDemo}>
+      <input type="hidden" name="next" value={next} />
+      <button type="submit" className={`${primaryButton} h-11 w-full`}>
+        Войти в демо-версию
       </button>
     </form>
   );
