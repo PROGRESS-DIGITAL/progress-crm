@@ -54,8 +54,17 @@ DEMO_DOMAIN=$DEMO_DOMAIN
 COMPOSE_FILE=docker-compose.yml:docker-compose.demo.yml
 ENV
 
-echo "==> Сборка (если CRM уже собрана, займёт меньше минуты)"
-docker compose build app
+# Демо работает на том же образе, что и рабочая CRM. Если CRM уже собрана из текущей версии кода,
+# берём её образ как есть: новая сборка заняла бы ещё пару гигабайт диска
+APP_CONTAINER="$(docker compose -f docker-compose.yml ps -q app 2>/dev/null || true)"
+APP_IMAGE="$( [ -n "$APP_CONTAINER" ] && docker inspect --format '{{.Image}}' "$APP_CONTAINER" 2>/dev/null || true)"
+if [ -n "$APP_IMAGE" ] && [ "$(cat .built-rev 2>/dev/null || true)" = "$(git -C .. rev-parse HEAD)" ]; then
+  echo "==> Беру уже собранный образ CRM"
+  docker tag "$APP_IMAGE" progress-crm-app:latest
+else
+  echo "==> Сборка CRM (5–10 минут)"
+  docker compose build app
+fi
 echo "==> Запуск"
 docker compose up -d
 
