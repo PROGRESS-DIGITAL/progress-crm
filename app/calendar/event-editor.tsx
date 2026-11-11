@@ -5,6 +5,7 @@ import { useEffect, useState, useTransition } from "react";
 import { remindForAllDay, remindOptions } from "@/lib/calendar";
 import { useConfirm } from "@/components/confirm-dialog";
 import { KindMark } from "@/components/event-kind";
+import { CreateFrom } from "@/components/create-from";
 import { TimeField } from "@/components/time-field";
 import { deleteEvent, saveEvent, type EventInput } from "./actions";
 import type { Options } from "./types";
@@ -98,9 +99,21 @@ export function EventEditor({
               </button>
             ))}
           </div>
-          <button type="button" onClick={onClose} aria-label="Закрыть" className="text-2xl leading-none text-slate-400 hover:text-slate-600">
-            ×
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Новые сделка, задача или встреча с тем же клиентом и сделкой */}
+            {id && (
+              <CreateFrom
+                link={{
+                  companyId: company?.id,
+                  dealId: d.dealId === "new" ? "" : d.dealId,
+                  taskId: d.kind === "TASK" ? id : d.taskId,
+                }}
+              />
+            )}
+            <button type="button" onClick={onClose} aria-label="Закрыть" className="text-2xl leading-none text-slate-400 hover:text-slate-600">
+              ×
+            </button>
+          </div>
         </div>
 
         <input

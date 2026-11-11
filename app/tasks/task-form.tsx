@@ -11,6 +11,8 @@ import { MAX_FILE_SIZE, fileSize } from "@/lib/tasks";
 import { deleteEvent, saveEvent, type EventInput } from "@/app/calendar/actions";
 import type { BoardChoice } from "@/lib/boards";
 import { deleteTaskFile, uploadTaskFiles } from "./actions";
+import { splitLinks } from "@/components/linkify";
+import type { MentionPerson } from "@/lib/mentions";
 import { TaskComments, type CommentRow } from "./comments";
 
 const field =
@@ -35,6 +37,7 @@ export function TaskForm({
   placement,
   comments,
   me,
+  people,
   back,
 }: {
   id: string | null;
@@ -45,6 +48,7 @@ export function TaskForm({
   placement: TaskPlacement;
   comments: CommentRow[];
   me: { id: string; isOwner: boolean };
+  people: MentionPerson[];
   // Куда вернуться после сохранения: к списку или на доску, с которой открыли задачу
   back: string;
 }) {
@@ -143,9 +147,10 @@ export function TaskForm({
               className={`${field} min-h-48 resize-y leading-relaxed`}
             />
           </label>
+          <DescriptionLinks text={d.notes} />
         </section>
 
-        <TaskComments taskId={id} comments={comments} me={me} />
+        <TaskComments taskId={id} comments={comments} me={me} people={people} />
 
         <section className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card sm:p-6">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -370,5 +375,31 @@ export function TaskForm({
         </div>
       </aside>
     </form>
+  );
+}
+
+// В поле описания ссылку не нажать: под ним те же адреса кнопками, открываются в новой вкладке
+function DescriptionLinks({ text }: { text: string }) {
+  const links = [...new Set(splitLinks(text).flatMap((p) => (p.href && !p.href.startsWith("mailto:") ? [p.href] : [])))];
+  if (links.length === 0) return null;
+  return (
+    <div className="mt-3">
+      <p className="text-xs font-medium text-slate-500">Ссылки из описания</p>
+      <ul className="mt-1.5 flex flex-wrap gap-2">
+        {links.map((href) => (
+          <li key={href} className="min-w-0 max-w-full">
+            <a
+              href={href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex min-w-0 items-center gap-1.5 rounded-lg bg-blue-50 px-2.5 py-1 text-sm text-blue-700 hover:bg-blue-100"
+            >
+              <span className="truncate">{href.replace(/^https?:\/\//, "")}</span>
+              <span aria-hidden className="shrink-0">↗</span>
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
   );
 }
