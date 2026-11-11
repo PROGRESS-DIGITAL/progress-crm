@@ -17,12 +17,15 @@ type Search = { deal?: string; client?: string; board?: string };
 export default async function TaskPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Search> }) {
   const { id } = await params;
   const sp = await searchParams;
-  const [{ remindersOn, ...options }, boards, employees, user] = await Promise.all([
+  const [{ remindersOn, ...options }, boards, employees, mentionable, user] = await Promise.all([
     taskOptions(),
     boardChoices(),
     db.employee.findMany({ where: { blocked: false }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
+    // Упомянуть через @ можно любого, кто входит в CRM, в том числе себя
+    db.employee.findMany({ where: { blocked: false, login: { not: null } }, orderBy: { name: "asc" }, select: { id: true, name: true, login: true, avatar: true } }),
     requireUser(),
   ]);
+  const people = mentionable.map((e) => ({ id: e.id, name: e.name, login: e.login!, avatar: e.avatar }));
   const placement = { boards, employees };
   const me = { id: user.id, isOwner: user.isOwner };
   const mainFirst = boards.find((b) => b.main)?.columns[0]?.id ?? "";
@@ -45,7 +48,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
     initial.assigneeId = "";
     return (
       <Shell title="Новая задача" back={back}>
-        <TaskForm id={null} initial={initial} options={options} files={[]} remindersOn={remindersOn} placement={placement} comments={[]} me={me} back={back} />
+        <TaskForm id={null} initial={initial} options={options} files={[]} remindersOn={remindersOn} placement={placement} comments={[]} me={me} people={people} back={back} />
       </Shell>
     );
   }
@@ -101,6 +104,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
         placement={placement}
         comments={comments}
         me={me}
+        people={people}
         back={home}
       />
     </Shell>

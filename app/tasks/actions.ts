@@ -5,6 +5,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth/session";
 import { MAX_FILE_SIZE, cleanFileName, fileSize } from "@/lib/tasks";
+import { logActivity } from "@/lib/activity";
+import { mentionedLogins } from "@/lib/mentions";
 
 // Файлы к задаче: приходят из формы, каждый до 15 МБ
 export async function uploadTaskFiles(eventId: string, form: FormData): Promise<{ error?: string }> {
@@ -45,9 +47,18 @@ export async function addTaskComment(eventId: string, text: string): Promise<{ e
   const parsed = comment.safeParse(text);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
   const user = await requireUser();
-  const event = await db.event.findUnique({ where: { id: eventId }, select: { kind: true } });
+  const event = await db.event.findUnique({ where: { id: eventId }, select: { kind: true, title: true } });
   if (event?.kind !== "TASK") return { error: "Задача не найдена, обновите страницу" };
   await db.eventComment.create({ data: { eventId, text: parsed.data, authorId: user.id, authorName: user.name } });
+  // Упомянули коллег через @логин — строка в журнале событий со ссылкой на задачу
+  if (parsed.data.includes("@")) {
+    const staff = await db.employee.findMany({ where: { blocked: false, login: { not: null } }, select: { name: true, login: true } });
+    const logins = mentionedLogins(parsed.data, staff.map((e) => e.login!));
+    const names = staff.filter((e) => logins.includes(e.login!.toLowerCase())).map((e) => e.name);
+    if (names.length > 0) {
+      await logActivity({ section: "tasks", kind: "create", text: `Упоминание: ${names.join(", ")} в задаче «${event.title}»`, href: `/tasks/${eventId}` }, user.name);
+    }
+  }
   revalidatePath(`/tasks/${eventId}`);
   revalidatePath("/tasks", "layout");
   return {};
