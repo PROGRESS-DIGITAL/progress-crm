@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -23,6 +23,7 @@ import {
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Avatar } from "@/components/avatar";
 import { Icon } from "@/components/icons";
+import { DragHandle, haptic, useCoarsePointer } from "@/components/drag-handle";
 import { useConfirm } from "@/components/confirm-dialog";
 import type { BoardColumnData as Column, BoardTask as Task } from "@/lib/boards";
 import { createColumn, deleteBoard, deleteColumn, moveTask, quickCreateTask, renameBoard, renameColumn } from "./actions";
@@ -61,11 +62,12 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
   // Время сверяется только в браузере: иначе разметка сервера и браузера разойдётся на границе суток
   const [now, setNow] = useState(false);
   useEffect(() => setNow(true), []);
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-    // На телефоне карточку берут долгим нажатием, чтобы доска листалась пальцем
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 6 } }),
-  );
+  // На телефоне карточку тянут за ручку в углу (сразу, без долгого нажатия), а тап открывает задачу
+  const coarse = useCoarsePointer();
+  const mouse = useSensor(PointerSensor, { activationConstraint: { distance: 6 } });
+  const touch = useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 6 } });
+  const finger = useSensor(PointerSensor, { activationConstraint: { distance: 2 } });
+  const sensors = useSensors(coarse ? finger : mouse, touch);
   const [dragged, setDragged] = useState<{ task: Task; from: Column[] } | null>(null);
   const people = new Map(employees.map((e) => [e.id, e]));
 
@@ -78,6 +80,8 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
   const columnOf = (cols: Column[], id: string) => cols.find((c) => c.id === id || c.tasks.some((d) => d.id === id));
 
   function onDragStart(e: DragStartEvent) {
+    // На телефоне карточку взяли за ручку: короткая вибрация
+    if (coarse) haptic();
     for (const c of columns) {
       const task = c.tasks.find((d) => d.id === e.active.id);
       if (task) return setDragged({ task, from: columns });
@@ -104,6 +108,7 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
   }
 
   function onDragEnd(e: DragEndEvent) {
+    if (coarse && e.over) haptic(15);
     const before = dragged?.from ?? columns;
     setDragged(null);
     const taskId = String(e.active.id);
@@ -126,7 +131,7 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
     });
   }
 
-  const card = (t: Task) => ({ task: t, boardId, overdue: now && isOverdue(t), assignee: t.assigneeId ? people.get(t.assigneeId) : undefined });
+  const card = (t: Task) => ({ task: t, boardId, coarse, overdue: now && isOverdue(t), assignee: t.assigneeId ? people.get(t.assigneeId) : undefined });
 
   return (
     <DndContext
@@ -172,7 +177,7 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
       <DragOverlay dropAnimation={DROP_ANIMATION}>
         {dragged && (
           <div className="deal-lift cursor-grabbing">
-            <TaskCardBody {...card(dragged.task)} />
+            <TaskCardBody {...card(dragged.task)} handle={coarse ? <DragHandle label="Перетащить задачу" /> : undefined} />
           </div>
         )}
       </DragOverlay>
@@ -180,7 +185,7 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
   );
 }
 
-type CardProps = { task: Task; boardId: string; overdue: boolean; assignee?: Employee };
+type CardProps = { task: Task; boardId: string; coarse: boolean; overdue: boolean; assignee?: Employee };
 
 function BoardColumnView({
   column,
@@ -322,14 +327,33 @@ function TitleInput({
 }
 
 function TaskItem(props: CardProps) {
-  const { attributes, listeners, setNodeRef, isDragging, transform, transition } = useSortable({ id: props.task.id });
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging, transform, transition } = useSortable({ id: props.task.id });
+  const router = useRouter();
+  const style = { transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, transition };
+
+  // На телефоне тянут только за ручку в углу, а тап по любому месту карточки открывает задачу
+  if (props.coarse)
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        onClick={() => router.push(`/tasks/${props.task.id}?board=${props.boardId}`)}
+        className={`deal-settle rounded-xl ${isDragging ? "opacity-30" : ""}`}
+      >
+        <TaskCardBody
+          {...props}
+          handle={<DragHandle handleRef={setActivatorNodeRef} label="Перетащить задачу" {...listeners} {...attributes} />}
+        />
+      </div>
+    );
+
   // Пока карточку тащат, на её месте остаётся бледный контур, а соседи плавно раздвигаются
   return (
     <div
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      style={{ transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, transition }}
+      style={style}
       className={`deal-settle cursor-grab rounded-xl ${isDragging ? "opacity-30" : ""}`}
     >
       <TaskCardBody {...props} />
@@ -338,14 +362,15 @@ function TaskItem(props: CardProps) {
 }
 
 // Карточка как у сделки: название, клиент, сделка и счётчики, срок, исполнитель
-function TaskCardBody({ task, boardId, overdue, assignee }: CardProps) {
+function TaskCardBody({ task, boardId, overdue, assignee, handle }: CardProps & { handle?: ReactNode }) {
   const counters = [
     task.files > 0 && { icon: "clip" as const, n: task.files, title: "Файлы" },
     task.comments > 0 && { icon: "chat" as const, n: task.comments, title: "Комментарии" },
   ].filter((x) => !!x);
   return (
-    <div className={`rounded-xl border bg-white p-3 shadow-card ${overdue ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200/70"}`}>
-      <div className="flex items-start gap-1.5">
+    <div className={`relative rounded-xl border bg-white p-3 shadow-card ${overdue ? "border-rose-500 ring-1 ring-rose-500" : "border-slate-200/70"}`}>
+      {handle}
+      <div className={`flex items-start gap-1.5 ${handle ? "pr-7" : ""}`}>
         {task.done && <Icon name="check" size={16} className="mt-0.5 text-emerald-600" />}
         <Link
           href={`/tasks/${task.id}?board=${boardId}`}
