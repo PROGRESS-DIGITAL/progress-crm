@@ -8,10 +8,11 @@ import { TaskForm } from "../task-form";
 import { taskOptions } from "../options";
 import { boardChoices } from "@/lib/boards";
 import { requireUser } from "@/lib/auth/session";
+import { CreateFrom, type CreateFromLink } from "@/components/create-from";
 
 export const dynamic = "force-dynamic";
 
-type Search = { deal?: string; client?: string; board?: string };
+type Search = { deal?: string; client?: string; board?: string; task?: string };
 
 // /tasks/new — новая задача (из сделки или клиента приходит с привязкой), /tasks/<id> — карточка задачи
 export default async function TaskPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Search> }) {
@@ -33,12 +34,15 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   if (id === "new") {
     const deal = sp.deal ? options.deals.find((d) => d.id === sp.deal) : undefined;
     const companyId = deal?.companyId ?? sp.client;
+    // Из карточки задачи: новая задача связывается с ней
+    const parent = sp.task ? await db.event.findFirst({ where: { id: sp.task, kind: "TASK" }, select: { id: true } }) : null;
     const today = dayKey(new Date());
     const initial = emptyDraft(today, 9 * 60, {
       kind: "TASK",
       allDay: true,
       remindMinutes: "",
       dealId: deal?.id ?? "",
+      taskId: parent?.id ?? "",
       clientName: options.companies.find((c) => c.id === companyId)?.name ?? "",
     });
     initial.columnId = mainFirst;
@@ -90,7 +94,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
     createdAt: c.createdAt.toISOString(),
   }));
   return (
-    <Shell title="Задача" back={home} calendar={task.column && !task.column.board.main ? undefined : `/calendar?view=day&date=${dayKey(task.start)}`}>
+    <Shell title="Задача" back={home} create={{ companyId: task.companyId, dealId: task.dealId, taskId: task.id }} calendar={task.column && !task.column.board.main ? undefined : `/calendar?view=day&date=${dayKey(task.start)}`}>
       <TaskForm
         key={task.updatedAt.toISOString()}
         id={task.id}
@@ -107,7 +111,19 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   );
 }
 
-function Shell({ title, back, calendar, children }: { title: string; back: string; calendar?: string; children: React.ReactNode }) {
+function Shell({
+  title,
+  back,
+  calendar,
+  create,
+  children,
+}: {
+  title: string;
+  back: string;
+  calendar?: string;
+  create?: CreateFromLink;
+  children: React.ReactNode;
+}) {
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -117,12 +133,15 @@ function Shell({ title, back, calendar, children }: { title: string; back: strin
           </Link>
           <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
         </div>
-        {calendar && (
-          <Link href={calendar} className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
-            <Icon name="calendar" size={16} />
-            В календаре
-          </Link>
-        )}
+        <div className="flex items-center gap-4">
+          {calendar && (
+            <Link href={calendar} className="flex items-center gap-1.5 text-sm text-blue-600 hover:underline">
+              <Icon name="calendar" size={16} />
+              В календаре
+            </Link>
+          )}
+          {create && <CreateFrom link={create} />}
+        </div>
       </div>
       {children}
     </div>

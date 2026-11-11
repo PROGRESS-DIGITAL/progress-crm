@@ -16,7 +16,7 @@ export type CalEvent = {
   remindMinutes: number | null;
 };
 
-export type Prefill = { kind: "MEETING" | "TASK"; dealId: string; clientName: string };
+export type Prefill = { kind: "MEETING" | "TASK"; dealId: string; clientName: string; taskId: string };
 
 export type Options = {
   companies: { id: string; name: string }[];
