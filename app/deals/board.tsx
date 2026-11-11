@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition, type ReactNode } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   DndContext,
   DragOverlay,
@@ -24,6 +25,7 @@ import { SERVICE_LABELS, daysLabel, formatRub } from "@/lib/format";
 import { burstConfetti } from "@/components/confetti";
 import { moveDeal, quickCreateDeal } from "./actions";
 import { Avatar } from "@/components/avatar";
+import { DragHandle, useCoarsePointer } from "@/components/drag-handle";
 
 type DealCard = {
   id: string;
@@ -76,8 +78,13 @@ export function Board({
   // Свежие данные с сервера (после revalidate) заменяют локальное состояние
   useEffect(() => setColumns(stages), [stages]);
   const [, startTransition] = useTransition();
-  // Без порога перемещения клик по карточке сразу начинал бы перетаскивание
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  // На телефоне карточку тянут за ручку, а тап по карточке открывает сделку
+  const coarse = useCoarsePointer();
+  // Без порога перемещения клик по карточке сразу начинал бы перетаскивание.
+  // Ручку на телефоне берут сразу: она не листает страницу и не открывает сделку
+  const mouse = useSensor(PointerSensor, { activationConstraint: { distance: 6 } });
+  const finger = useSensor(PointerSensor, { activationConstraint: { distance: 2 } });
+  const sensors = useSensors(coarse ? finger : mouse);
   // Сделка, которую сейчас тащат: её копия едет под курсором, а на старом месте остаётся контур.
   // from — колонка и порядок до захвата, чтобы понять, изменилось ли что-то, и откатить при ошибке
   const [dragged, setDragged] = useState<{ deal: DealCard; overdue: boolean; from: Column[] } | null>(null);
@@ -170,6 +177,7 @@ export function Board({
             key={c.id}
             column={c}
             avatars={avatars}
+            coarse={coarse}
             // Подсветка колонки, куда переезжает карточка
             target={!!dragged && c.deals.some((d) => d.id === dragged.deal.id) && !dragged.from.find((f) => f.id === c.id)?.deals.some((d) => d.id === dragged.deal.id)}
           />
@@ -182,6 +190,7 @@ export function Board({
               deal={dragged.deal}
               overdue={dragged.overdue}
               avatar={dragged.deal.owner ? avatars[dragged.deal.owner] : null}
+              handle={coarse ? <DragHandle label="Перетащить сделку" /> : undefined}
             />
           </div>
         )}
@@ -195,7 +204,17 @@ export function Board({
   );
 }
 
-function StageColumn({ column, avatars, target }: { column: Column; avatars: Record<string, string>; target: boolean }) {
+function StageColumn({
+  column,
+  avatars,
+  coarse,
+  target,
+}: {
+  column: Column;
+  avatars: Record<string, string>;
+  coarse: boolean;
+  target: boolean;
+}) {
   // Колонка тоже цель: в пустую колонку карточку бросают на неё саму
   const { setNodeRef } = useDroppable({ id: column.id });
   const total = column.deals.reduce((acc, d) => acc + d.amount, 0);
@@ -217,7 +236,13 @@ function StageColumn({ column, avatars, target }: { column: Column; avatars: Rec
         <QuickDeal stageId={column.id} />
         <SortableContext items={column.deals.map((d) => d.id)} strategy={verticalListSortingStrategy}>
           {column.deals.map((d) => (
-            <DealItem key={d.id} deal={d} overdue={isOverdue(d, column.kind)} avatar={d.owner ? avatars[d.owner] : null} />
+            <DealItem
+              key={d.id}
+              deal={d}
+              overdue={isOverdue(d, column.kind)}
+              avatar={d.owner ? avatars[d.owner] : null}
+              coarse={coarse}
+            />
           ))}
         </SortableContext>
       </div>
@@ -225,8 +250,28 @@ function StageColumn({ column, avatars, target }: { column: Column; avatars: Rec
   );
 }
 
-function DealItem({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean; avatar: string | null }) {
-  const { attributes, listeners, setNodeRef, isDragging, transform, transition } = useSortable({ id: deal.id });
+function DealItem({ deal, overdue, avatar, coarse }: { deal: DealCard; overdue: boolean; avatar: string | null; coarse: boolean }) {
+  const { attributes, listeners, setNodeRef, setActivatorNodeRef, isDragging, transform, transition } = useSortable({ id: deal.id });
+  const router = useRouter();
+  const style = { transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, transition };
+
+  // На телефоне тянут только за ручку в углу, а тап по любому месту карточки открывает сделку
+  if (coarse)
+    return (
+      <div
+        ref={setNodeRef}
+        style={style}
+        onClick={() => router.push(`/deals/${deal.id}`)}
+        className={`deal-settle rounded-xl ${isDragging ? "opacity-30" : ""}`}
+      >
+        <DealCardBody
+          deal={deal}
+          overdue={overdue}
+          avatar={avatar}
+          handle={<DragHandle handleRef={setActivatorNodeRef} label="Перетащить сделку" {...listeners} {...attributes} />}
+        />
+      </div>
+    );
 
   // Пока карточку тащат, на её месте остаётся бледный контур, а соседи плавно раздвигаются
   return (
@@ -234,7 +279,7 @@ function DealItem({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean;
       ref={setNodeRef}
       {...listeners}
       {...attributes}
-      style={{ transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined, transition }}
+      style={style}
       className={`deal-settle cursor-grab rounded-xl ${isDragging ? "opacity-30" : ""}`}
     >
       <DealCardBody deal={deal} overdue={overdue} avatar={avatar} />
@@ -242,12 +287,23 @@ function DealItem({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean;
   );
 }
 
-function DealCardBody({ deal, overdue, avatar }: { deal: DealCard; overdue: boolean; avatar: string | null }) {
+function DealCardBody({
+  deal,
+  overdue,
+  avatar,
+  handle,
+}: {
+  deal: DealCard;
+  overdue: boolean;
+  avatar: string | null;
+  handle?: ReactNode;
+}) {
   return (
     <div
-      className={`rounded-xl border bg-white p-3 shadow-card ${overdue ? "border-rose-500 ring-1 ring-rose-500" : deal.staleDays ? "border-amber-400 ring-1 ring-amber-400" : "border-slate-200/70"}`}
+      className={`relative rounded-xl border bg-white p-3 shadow-card ${overdue ? "border-rose-500 ring-1 ring-rose-500" : deal.staleDays ? "border-amber-400 ring-1 ring-amber-400" : "border-slate-200/70"}`}
     >
-      <Link href={`/deals/${deal.id}`} className="block text-sm font-medium hover:text-blue-700">
+      {handle}
+      <Link href={`/deals/${deal.id}`} className={`block text-sm font-medium hover:text-blue-700 ${handle ? "pr-7" : ""}`}>
         {deal.title}
       </Link>
       <p className="mt-0.5 text-xs text-slate-600">{deal.clientName}</p>
