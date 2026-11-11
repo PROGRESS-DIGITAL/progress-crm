@@ -26,7 +26,7 @@ export const metadata: Metadata = {
 // Цвет строки состояния в приложении с экрана «Домой» совпадает с фоном выбранной темы
 export async function generateViewport(): Promise<Viewport> {
   const dark = (await cookies()).get(THEME_COOKIE)?.value === "dark";
-  return { themeColor: dark ? "#171717" : "#f1f3f8" };
+  return { themeColor: dark ? "#1c2637" : "#f1f3f8" };
 }
 
 // cookies() делает шапку динамической: меню и счётчик лидов читаются на каждый запрос, а не при сборке
