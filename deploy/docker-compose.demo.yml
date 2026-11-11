@@ -34,6 +34,7 @@ services:
       DATABASE_URL: postgresql://crm:demo@demo-db:5432/progress_crm
       DEMO_MODE: "1"
       CHAT_POLLING: "off"
+      CRM_SERVER: "1"
     networks: [demo]
 
   caddy:
