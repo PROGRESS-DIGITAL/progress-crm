@@ -121,7 +121,9 @@ export function TaskComments({
         </ul>
       )}
       {taskId ? (
-        <div className="relative mt-3">
+        <div className="mt-3">
+          {/* Список логинов открывается сразу под полем, на одной высоте с кнопкой «Отправить» */}
+          <div className="relative">
           <textarea
             ref={area}
             value={text}
@@ -171,7 +173,7 @@ export function TaskComments({
               id="mention-list"
               role="listbox"
               aria-label="Кого упомянуть"
-              className="absolute top-full left-0 z-30 -mt-1 max-h-72 w-72 max-w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg"
+              className="absolute top-full left-0 z-30 mt-2 max-h-72 w-72 max-w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg"
             >
               {suggestions.map((p, i) => (
                 <li key={p.id} role="option" aria-selected={i === active}>
@@ -196,6 +198,7 @@ export function TaskComments({
               ))}
             </ul>
           )}
+          </div>
           <div className="mt-2 flex items-center justify-between gap-3">
             <span className="text-xs text-rose-600">{error}</span>
             <button
