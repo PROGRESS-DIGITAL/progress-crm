@@ -23,7 +23,7 @@ import {
 import { SortableContext, arrayMove, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { Avatar } from "@/components/avatar";
 import { Icon } from "@/components/icons";
-import { DragHandle, useCoarsePointer } from "@/components/drag-handle";
+import { DragHandle, haptic, useCoarsePointer } from "@/components/drag-handle";
 import { useConfirm } from "@/components/confirm-dialog";
 import type { BoardColumnData as Column, BoardTask as Task } from "@/lib/boards";
 import { createColumn, deleteBoard, deleteColumn, moveTask, quickCreateTask, renameBoard, renameColumn } from "./actions";
@@ -80,6 +80,8 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
   const columnOf = (cols: Column[], id: string) => cols.find((c) => c.id === id || c.tasks.some((d) => d.id === id));
 
   function onDragStart(e: DragStartEvent) {
+    // На телефоне карточку взяли за ручку: короткая вибрация
+    if (coarse) haptic();
     for (const c of columns) {
       const task = c.tasks.find((d) => d.id === e.active.id);
       if (task) return setDragged({ task, from: columns });
@@ -106,6 +108,7 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
   }
 
   function onDragEnd(e: DragEndEvent) {
+    if (coarse && e.over) haptic(15);
     const before = dragged?.from ?? columns;
     setDragged(null);
     const taskId = String(e.active.id);

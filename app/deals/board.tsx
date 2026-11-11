@@ -25,7 +25,7 @@ import { SERVICE_LABELS, daysLabel, formatRub } from "@/lib/format";
 import { burstConfetti } from "@/components/confetti";
 import { moveDeal, quickCreateDeal } from "./actions";
 import { Avatar } from "@/components/avatar";
-import { DragHandle, useCoarsePointer } from "@/components/drag-handle";
+import { DragHandle, haptic, useCoarsePointer } from "@/components/drag-handle";
 
 type DealCard = {
   id: string;
@@ -101,6 +101,8 @@ export function Board({
   const columnOf = (cols: Column[], id: string) => cols.find((c) => c.id === id || c.deals.some((d) => d.id === id));
 
   function onDragStart(e: DragStartEvent) {
+    // На телефоне карточку взяли за ручку: короткая вибрация
+    if (coarse) haptic();
     for (const c of columns) {
       const deal = c.deals.find((d) => d.id === e.active.id);
       if (deal) return setDragged({ deal, overdue: isOverdue(deal, c.kind), from: columns });
@@ -128,6 +130,7 @@ export function Board({
   }
 
   function onDragEnd(e: DragEndEvent) {
+    if (coarse && e.over) haptic(15);
     const before = dragged?.from ?? columns;
     setDragged(null);
     const dealId = String(e.active.id);

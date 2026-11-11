@@ -45,3 +45,28 @@ export function DragHandle({
     </button>
   );
 }
+
+// Короткая вибрация, когда карточку взяли за ручку и когда отпустили.
+// Android: Vibration API. iPhone вибрацию из браузера не даёт, но Safari 18+ щёлкает
+// тактильным откликом при переключении системного свитча — им и пользуемся, свитч скрыт
+let iosSwitch: HTMLLabelElement | null = null;
+export function haptic(ms = 25) {
+  if (typeof window === "undefined") return;
+  try {
+    if (typeof navigator.vibrate === "function" && navigator.vibrate(ms)) return;
+    if (!iosSwitch) {
+      iosSwitch = document.createElement("label");
+      iosSwitch.setAttribute("aria-hidden", "true");
+      iosSwitch.style.cssText = "position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0;pointer-events:none";
+      const input = document.createElement("input");
+      input.type = "checkbox";
+      input.tabIndex = -1;
+      input.setAttribute("switch", "");
+      iosSwitch.appendChild(input);
+      document.body.appendChild(iosSwitch);
+    }
+    iosSwitch.click();
+  } catch {
+    // Нет вибрации — ничего страшного, перетаскивание работает и без неё
+  }
+}
