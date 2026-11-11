@@ -8,6 +8,7 @@ import { DealContracts } from "@/components/deal-contracts";
 import { DealDocuments } from "@/components/deal-documents";
 import { DealProposals } from "@/components/deal-proposals";
 import { LinkedEvents } from "@/components/linked-events";
+import { CreateFrom } from "@/components/create-from";
 import { deleteDeal, updateDeal } from "../actions";
 import { DealForm } from "../deal-form";
 import { getEmployeeNames } from "@/lib/profile";
@@ -37,11 +38,14 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             · создана {deal.createdAt.toLocaleDateString("ru-RU", { timeZone: TIME_ZONE })}
           </p>
         </div>
-        <ConfirmDeleteButton
-          action={deleteDeal.bind(null, deal.id)}
-          what={`сделку «${deal.title}»`}
-          message="Она попадёт в корзину: оттуда её можно восстановить в течение 30 дней."
-        />
+        <div className="flex shrink-0 items-center gap-3">
+          <CreateFrom link={{ companyId: deal.company.id, dealId: deal.id }} />
+          <ConfirmDeleteButton
+            action={deleteDeal.bind(null, deal.id)}
+            what={`сделку «${deal.title}»`}
+            message="Она попадёт в корзину: оттуда её можно восстановить в течение 30 дней."
+          />
+        </div>
       </div>
       <div className="rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
         <DealForm

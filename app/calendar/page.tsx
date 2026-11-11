@@ -7,7 +7,7 @@ import type { CalEvent, Prefill } from "./types";
 
 export const dynamic = "force-dynamic";
 
-type Search = { view?: string; date?: string; new?: string; deal?: string; client?: string; open?: string };
+type Search = { view?: string; date?: string; new?: string; deal?: string; client?: string; open?: string; task?: string };
 
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams;
@@ -65,10 +65,17 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   if (sp.new === "MEETING" || sp.new === "TASK") {
     const deal = sp.deal ? deals.find((d) => d.id === sp.deal) : undefined;
     const companyId = deal?.companyId ?? sp.client;
+    // Из карточки задачи: событие связывается с ней. Задачи досок команды в общий список не попадают — добавляем
+    let task = sp.task ? tasks.find((t) => t.id === sp.task) : undefined;
+    if (sp.task && !task) {
+      const found = await db.event.findFirst({ where: { id: sp.task, kind: "TASK" }, select: { id: true, title: true, done: true } });
+      if (found) tasks.unshift((task = found));
+    }
     prefill = {
       kind: sp.new,
       dealId: deal?.id ?? "",
       clientName: companies.find((c) => c.id === companyId)?.name ?? "",
+      taskId: task?.id ?? "",
     };
   }
   const open = (sp.open && items.find((e) => e.id === sp.open)) || null;
@@ -76,7 +83,8 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <CalendarView
-        key={`${view}-${date}`}
+        // Новое событие из окна другого события ведёт на тот же вид и дату: ключ с параметрами пересоздаёт окно
+        key={`${view}-${date}-${prefill ? [prefill.kind, prefill.dealId, prefill.clientName, prefill.taskId].join("|") : ""}-${open?.id ?? ""}`}
         view={view}
         date={date}
         today={today}
