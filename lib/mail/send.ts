@@ -39,6 +39,11 @@ function transport(a: Login, logger?: ReturnType<typeof stageTracker>["logger"])
   });
 }
 
+// Сбой до рукопожатия SMTP: письмо точно не начинали передавать, поэтому повторить безопасно
+export function isConnectFailure(err: { code?: string; stage?: Stage }) {
+  return ["ETIMEDOUT", "ECONNECTION", "ESOCKET", "ECONNRESET"].includes(err.code ?? "") && (!err.stage || err.stage === "connect");
+}
+
 export function smtpError(e: unknown, provider: MailProvider) {
   const err = e as { code?: string; responseCode?: number; response?: string; timeoutType?: string; stage?: Stage };
   if (err.code === "EAUTH" || err.responseCode === 535)
@@ -50,10 +55,10 @@ export function smtpError(e: unknown, provider: MailProvider) {
     return `${host} принял письмо целиком, но не ответил за 3 минуты. Оно могло уйти: проверьте «Отправленные» в самом ящике, прежде чем отправлять ещё раз`;
   if (err.code === "ETIMEDOUT" && err.timeoutType === "SOCKET_TIMEOUT" && err.stage && err.stage !== "connect")
     return `${host} перестал отвечать посреди отправки и не ответил за 3 минуты. Попробуйте ещё раз чуть позже`;
-  // До сервера почты не достучались вовсе. На облачных серверах это почти всегда закрытые хостингом
-  // порты почты: Timeweb Cloud и многие другие по умолчанию режут исходящие 25, 465, 587 и 2525 против спама
-  if (onServer() && (err.code === "ETIMEDOUT" || err.code === "ECONNECTION") && (!err.stage || err.stage === "connect"))
-    return `сервер CRM не может подключиться к ${host}:${SMTP_PORT}. Письмо отправляет сервер, а не ваш браузер, поэтому VPN на компьютере тут ни при чём. Скорее всего, хостинг закрыл на сервере исходящие порты почты: напишите в поддержку хостинга и попросите открыть исходящие порты 465 и 587`;
+  // До сервера почты не достучались (sendViaSmtp уже попробовал дважды). Порты на сервере открыты: другие письма
+  // уходят, так что это сбой связи с почтой, а не настройка. Если не уйдёт ни одно, виноват может быть закрытый порт
+  if (onServer() && isConnectFailure(err))
+    return `сервер CRM дважды не смог связаться с ${host} (порт ${SMTP_PORT}). Письмо отправляет сервер, а не ваш браузер, поэтому VPN на компьютере тут ни при чём. Обычно это временный сбой связи с почтой: письмо не ушло, отправьте его ещё раз через минуту. Если не уходит ни одно письмо, попросите хостинг проверить, открыт ли исходящий порт ${SMTP_PORT}`;
   if (err.code === "ETIMEDOUT") return `${host} не отвечает, ${serviceHint()}`;
   if (err.code === "ECONNECTION" || err.code === "ESOCKET") return `соединение с ${host} оборвалось, ${serviceHint()}`;
   return networkError(e, PROVIDERS[provider].smtp);
@@ -77,37 +82,47 @@ export async function sendViaSmtp(
     attachments: { filename: string; content: Buffer; contentType: string }[];
   },
 ) {
-  const tracker = stageTracker();
   const started = Date.now();
   const size = mail.attachments.reduce((sum, f) => sum + f.content.length, 0);
-  const info = await transport(a, tracker.logger)
-    .sendMail({
-    from: a.name ? { name: a.name, address: a.email } : a.email,
-    to: mail.to,
-    cc: mail.cc.length ? mail.cc : undefined,
-    bcc: mail.bcc?.length ? mail.bcc : undefined,
-    subject: mail.subject,
-    text: mail.text,
-    html: mail.html || undefined,
-    inReplyTo: mail.inReplyTo ? `<${mail.inReplyTo}>` : undefined,
-    references: mail.references || undefined,
-    attachments: mail.attachments,
-    })
-    .catch((e) => {
-      const err = e as { code?: string; timeoutType?: string; responseCode?: number; stage?: Stage };
-      err.stage = tracker.state.stage;
-      // В журнал сервера: где замолчал сервер, сколько ждали и сколько весили файлы. Без адресов и текста
-      console.error("[mail] send failed", {
-        provider: a.provider,
-        code: err.code,
-        timeoutType: err.timeoutType,
-        responseCode: err.responseCode,
-        stage: err.stage,
-        seconds: Math.round((Date.now() - started) / 1000),
-        files: mail.attachments.length,
-        bytes: size,
+  const attempt = async (n: number) => {
+    const tracker = stageTracker();
+    return transport(a, tracker.logger)
+      .sendMail({
+        from: a.name ? { name: a.name, address: a.email } : a.email,
+        to: mail.to,
+        cc: mail.cc.length ? mail.cc : undefined,
+        bcc: mail.bcc?.length ? mail.bcc : undefined,
+        subject: mail.subject,
+        text: mail.text,
+        html: mail.html || undefined,
+        inReplyTo: mail.inReplyTo ? `<${mail.inReplyTo}>` : undefined,
+        references: mail.references || undefined,
+        attachments: mail.attachments,
+      })
+      .catch((e) => {
+        const err = e as { code?: string; timeoutType?: string; responseCode?: number; stage?: Stage };
+        err.stage = tracker.state.stage;
+        // В журнал сервера: где замолчал сервер, сколько ждали и сколько весили файлы. Без адресов и текста
+        console.error("[mail] send failed", {
+          provider: a.provider,
+          attempt: n,
+          code: err.code,
+          timeoutType: err.timeoutType,
+          responseCode: err.responseCode,
+          stage: err.stage,
+          seconds: Math.round((Date.now() - started) / 1000),
+          files: mail.attachments.length,
+          bytes: size,
+        });
+        throw e;
       });
-      throw e;
-    });
+  };
+  // Связь с почтой иногда не устанавливается с первого раза, хотя через минуту письмо уходит.
+  // Если оборвалось ещё до рукопожатия, письмо точно не ушло, и вторая попытка не создаст дубль
+  const info = await attempt(1).catch(async (e) => {
+    if (!isConnectFailure(e)) throw e;
+    await new Promise((r) => setTimeout(r, 2_000));
+    return attempt(2);
+  });
   return info.messageId;
 }

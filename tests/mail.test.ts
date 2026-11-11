@@ -69,19 +69,28 @@ test("ошибка входа Яндекса не сваливается на в
   assert.match(mailError({ authenticationFailed: true, responseText: "[AUTHENTICATIONFAILED] Invalid credentials (Failure)" }, "GMAIL"), /не приняла пароль/);
 });
 
-test("SMTP не отвечает: на сервере — про закрытые порты хостинга, на Маке — про VPN", async () => {
+test("SMTP не отвечает: на сервере — про сбой связи без VPN, на Маке — про VPN", async () => {
   const { smtpError } = await import("../lib/mail/send");
   const timeout = Object.assign(new Error("Connection timeout"), { code: "ETIMEDOUT", stage: "connect" });
   assert.match(smtpError(timeout, "YANDEX"), /smtp\.yandex\.ru не отвечает, если включён VPN/);
   process.env.CRM_SERVER = "1";
   try {
     const msg = smtpError(timeout, "YANDEX");
-    assert.match(msg, /сервер CRM не может подключиться к smtp\.yandex\.ru:465/);
-    assert.match(msg, /465 и 587/);
+    assert.match(msg, /сервер CRM дважды не смог связаться с smtp\.yandex\.ru \(порт 465\)/);
+    assert.match(msg, /ещё раз через минуту/);
+    assert.doesNotMatch(msg, /выключите/);
     // Сервер замолчал после подключения — это не порты
     const mid = Object.assign(new Error("Timeout"), { code: "ETIMEDOUT", timeoutType: "SOCKET_TIMEOUT", stage: "data" });
     assert.match(smtpError(mid, "YANDEX"), /посреди отправки/);
   } finally {
     delete process.env.CRM_SERVER;
   }
+});
+
+test("повторять отправку можно, только если оборвалось до рукопожатия SMTP", async () => {
+  const { isConnectFailure } = await import("../lib/mail/send");
+  assert.equal(isConnectFailure({ code: "ETIMEDOUT", stage: "connect" }), true);
+  assert.equal(isConnectFailure({ code: "ECONNECTION" }), true);
+  assert.equal(isConnectFailure({ code: "ETIMEDOUT", stage: "data" }), false);
+  assert.equal(isConnectFailure({ code: "EAUTH", stage: "connect" }), false);
 });
