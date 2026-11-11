@@ -5,6 +5,7 @@ import { TIME_ZONE } from "@/lib/format";
 import { getCompanyOptions, getProductOptions, getStageOptions } from "@/lib/queries";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { DealContracts } from "@/components/deal-contracts";
+import { DealMail } from "@/components/deal-mail";
 import { DealDocuments } from "@/components/deal-documents";
 import { DealProposals } from "@/components/deal-proposals";
 import { LinkedEvents } from "@/components/linked-events";
@@ -18,13 +19,28 @@ export const dynamic = "force-dynamic";
 export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [deal, stages, companies, products, employees] = await Promise.all([
-    db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true, email: true } } } }),
+    db.deal.findUnique({
+      where: { id },
+      include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            contacts: { where: { email: { not: null } }, orderBy: { createdAt: "asc" }, select: { email: true }, take: 1 },
+          },
+        },
+        contact: { select: { email: true } },
+      },
+    }),
     getStageOptions(),
     getCompanyOptions(),
     getProductOptions(),
     getEmployeeNames(),
   ]);
   if (!deal) notFound();
+  // Кому писать: контакт сделки, иначе первый контакт клиента с почтой, иначе общая почта компании
+  const mailTo = deal.contact?.email || deal.company.contacts[0]?.email || deal.company.email;
 
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
@@ -67,6 +83,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
       <LinkedEvents dealId={deal.id} />
       <DealProposals dealId={deal.id} />
       <DealContracts dealId={deal.id} />
+      <DealMail to={mailTo} />
       <DealDocuments dealId={deal.id} hasEmail={!!deal.company.email} />
     </div>
   );
