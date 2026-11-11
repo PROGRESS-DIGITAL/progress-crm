@@ -3,12 +3,19 @@
 import { useActionState } from "react";
 import { importStatementAction } from "./actions";
 
-// Загрузка выписки в формате 1С: выбрали файл — он сразу уходит на сервер
-export function StatementUpload() {
+// Загрузка выписки в формате 1С: выбрали файл — он сразу уходит на сервер.
+// link — тихая ссылка рядом с заголовком, как «Дашборд →» в Сделках
+export function StatementUpload({ link = false }: { link?: boolean }) {
   const [state, formAction, pending] = useActionState(importStatementAction, undefined);
   return (
-    <form action={formAction} className="flex flex-wrap items-center gap-3">
-      <label className={`cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50 ${pending ? "opacity-60" : ""}`}>
+    <form action={formAction} className={`flex flex-wrap items-center ${link ? "gap-x-3 gap-y-1" : "gap-3"}`}>
+      <label
+        className={
+          link
+            ? `cursor-pointer text-xs text-slate-500 hover:text-slate-800 hover:underline ${pending ? "opacity-60" : ""}`
+            : `cursor-pointer rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm hover:bg-slate-50 ${pending ? "opacity-60" : ""}`
+        }
+      >
         {pending ? "Загружаю выписку…" : "Загрузить выписку 1С"}
         <input
           name="file"
@@ -19,8 +26,8 @@ export function StatementUpload() {
           onChange={(e) => e.currentTarget.files?.length && e.currentTarget.form?.requestSubmit()}
         />
       </label>
-      {state?.ok && <span className="text-sm text-emerald-700">{state.ok}</span>}
-      {state?.error && <span className="text-sm text-rose-600">{state.error}</span>}
+      {state?.ok && <span className={`${link ? "text-xs" : "text-sm"} text-emerald-700`}>{state.ok}</span>}
+      {state?.error && <span className={`${link ? "text-xs" : "text-sm"} text-rose-600`}>{state.error}</span>}
     </form>
   );
 }

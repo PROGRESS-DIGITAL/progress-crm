@@ -37,7 +37,11 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">Финансы</h1>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+            <h1 className="text-2xl font-semibold tracking-tight">Финансы</h1>
+            {/* Выписка файлом нужна только для Сбера: Точка отдаёт поступления по API сама */}
+            {sber && <StatementUpload link />}
+          </div>
           <p className="mt-1 text-sm text-slate-600">
             Ждут оплаты: {waiting._count} {waiting._count === 1 ? "счёт" : "счетов"} на {formatRub(waiting._sum.amount ?? 0)}
           </p>
@@ -68,12 +72,7 @@ export default async function FinancePage({ searchParams }: { searchParams: Prom
         </div>
       </div>
       {view === "payments" ? (
-        <>
-          <div className="mb-3 flex justify-end">
-            <StatementUpload />
-          </div>
-          <Payments />
-        </>
+        <Payments />
       ) : view === "bank" ? (
         <BankView />
       ) : view === "subscriptions" ? (
@@ -169,7 +168,7 @@ async function Payments() {
   if (!payments.length) {
     return (
       <p className="rounded-2xl border border-dashed border-slate-300 bg-white p-10 text-center text-sm text-slate-500">
-        Поступлений пока нет. Они подтягиваются из выписки Точки или Сбера каждые 15 минут, а выписку любого банка можно загрузить файлом 1С.
+        Поступлений пока нет. Они подтягиваются из выписки Точки или Сбера каждые 15 минут.
       </p>
     );
   }
