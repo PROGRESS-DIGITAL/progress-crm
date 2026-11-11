@@ -122,94 +122,94 @@ export function TaskComments({
       )}
       {taskId ? (
         <div className="mt-3">
-          {/* Поле и «Отправить» в одну строку; список логинов открывается над полем */}
-          <div className="flex items-stretch gap-2">
-            <div className="relative min-w-0 flex-1">
-              <textarea
-                ref={area}
-                value={text}
-                onChange={(e) => {
-                  setText(e.target.value);
-                  track(e.target.value, e.target.selectionStart);
-                }}
-                onSelect={(e) => track(e.currentTarget.value, e.currentTarget.selectionStart)}
-                onBlur={() => setQuery(null)}
-                onKeyDown={(e) => {
-                  // Открыт список логинов: стрелки выбирают, Enter или Tab вставляют, Esc закрывает
-                  if (open) {
-                    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+          {/* Список логинов открывается сразу под полем, на одной высоте с кнопкой «Отправить» */}
+          <div className="relative">
+          <textarea
+            ref={area}
+            value={text}
+            onChange={(e) => {
+              setText(e.target.value);
+              track(e.target.value, e.target.selectionStart);
+            }}
+            onSelect={(e) => track(e.currentTarget.value, e.currentTarget.selectionStart)}
+            onBlur={() => setQuery(null)}
+            onKeyDown={(e) => {
+              // Открыт список логинов: стрелки выбирают, Enter или Tab вставляют, Esc закрывает
+              if (open) {
+                if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+                  e.preventDefault();
+                  const step = e.key === "ArrowDown" ? 1 : -1;
+                  setActive((a) => (a + step + suggestions.length) % suggestions.length);
+                  return;
+                }
+                if (e.key === "Enter" || e.key === "Tab") {
+                  e.preventDefault();
+                  pick(suggestions[Math.min(active, suggestions.length - 1)]);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setQuery(null);
+                  return;
+                }
+              }
+              // Enter отправляет, Shift+Enter — новая строка. Форму задачи при этом не сохраняем
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                send();
+              }
+            }}
+            rows={2}
+            maxLength={5000}
+            placeholder="Написать комментарий команде, @ — упомянуть коллегу"
+            aria-label="Новый комментарий"
+            aria-autocomplete="list"
+            aria-expanded={open}
+            aria-controls="mention-list"
+            className="w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+          />
+          {open && (
+            <ul
+              id="mention-list"
+              role="listbox"
+              aria-label="Кого упомянуть"
+              className="absolute top-full left-0 z-30 mt-2 max-h-72 w-72 max-w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg"
+            >
+              {suggestions.map((p, i) => (
+                <li key={p.id} role="option" aria-selected={i === active}>
+                  <button
+                    type="button"
+                    // mousedown, а не click: иначе textarea теряет фокус и список закрывается раньше
+                    onMouseDown={(e) => {
                       e.preventDefault();
-                      const step = e.key === "ArrowDown" ? 1 : -1;
-                      setActive((a) => (a + step + suggestions.length) % suggestions.length);
-                      return;
-                    }
-                    if (e.key === "Enter" || e.key === "Tab") {
-                      e.preventDefault();
-                      pick(suggestions[Math.min(active, suggestions.length - 1)]);
-                      return;
-                    }
-                    if (e.key === "Escape") {
-                      e.preventDefault();
-                      setQuery(null);
-                      return;
-                    }
-                  }
-                  // Enter отправляет, Shift+Enter — новая строка. Форму задачи при этом не сохраняем
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    send();
-                  }
-                }}
-                rows={2}
-                maxLength={5000}
-                placeholder="Написать комментарий команде, @ — упомянуть коллегу"
-                aria-label="Новый комментарий"
-                aria-autocomplete="list"
-                aria-expanded={open}
-                aria-controls="mention-list"
-                className="block h-full w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
-              />
-              {open && (
-                <ul
-                  id="mention-list"
-                  role="listbox"
-                  aria-label="Кого упомянуть"
-                  className="absolute bottom-full left-0 z-30 mb-1 max-h-72 w-72 max-w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg"
-                >
-                  {suggestions.map((p, i) => (
-                    <li key={p.id} role="option" aria-selected={i === active}>
-                      <button
-                        type="button"
-                        // mousedown, а не click: иначе textarea теряет фокус и список закрывается раньше
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          pick(p);
-                        }}
-                        onMouseEnter={() => setActive(i)}
-                        className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${i === active ? "bg-blue-50" : ""}`}
-                      >
-                        <Avatar name={p.name} src={p.avatar} size={24} />
-                        <span className="min-w-0 flex-1 truncate">
-                          <span className="font-medium">{p.name}</span>
-                          {p.id === me.id && <span className="ml-1 text-slate-500">(вы)</span>}
-                        </span>
-                        <span className="shrink-0 text-xs text-slate-500">@{p.login}</span>
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+                      pick(p);
+                    }}
+                    onMouseEnter={() => setActive(i)}
+                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm ${i === active ? "bg-blue-50" : ""}`}
+                  >
+                    <Avatar name={p.name} src={p.avatar} size={24} />
+                    <span className="min-w-0 flex-1 truncate">
+                      <span className="font-medium">{p.name}</span>
+                      {p.id === me.id && <span className="ml-1 text-slate-500">(вы)</span>}
+                    </span>
+                    <span className="shrink-0 text-xs text-slate-500">@{p.login}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+          </div>
+          <div className="mt-2 flex items-center justify-between gap-3">
+            <span className="text-xs text-rose-600">{error}</span>
             <button
               type="button"
               onClick={send}
               disabled={busy || !text.trim()}
-              className="shrink-0 rounded-xl bg-slate-900 px-4 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
+              className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-700 disabled:opacity-50"
             >
               {busy ? "Отправляю…" : "Отправить"}
             </button>
           </div>
-          {error && <p className="mt-2 text-xs text-rose-600">{error}</p>}
         </div>
       ) : (
         <p className="mt-2 text-sm text-slate-500">Комментарии можно оставить после того, как задача сохранится.</p>
