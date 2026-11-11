@@ -19,7 +19,9 @@ export const dynamic = "force-dynamic";
 export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [deal, stages, companies, products, employees] = await Promise.all([
-    db.deal.findUnique({ where: { id }, include: {
+    db.deal.findUnique({
+      where: { id },
+      include: {
         company: {
           select: {
             id: true,
