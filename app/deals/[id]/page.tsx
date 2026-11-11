@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { TIME_ZONE } from "@/lib/format";
 import { getCompanyOptions, getProductOptions, getStageOptions } from "@/lib/queries";
-import { Icon } from "@/components/icons";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { DealContracts } from "@/components/deal-contracts";
+import { DealMail } from "@/components/deal-mail";
 import { DealDocuments } from "@/components/deal-documents";
 import { DealProposals } from "@/components/deal-proposals";
 import { LinkedEvents } from "@/components/linked-events";
@@ -41,7 +41,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
 
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
-      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
+      <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{deal.title}</h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -51,21 +51,11 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             · создана {deal.createdAt.toLocaleDateString("ru-RU", { timeZone: TIME_ZONE })}
           </p>
         </div>
-        <div className="flex shrink-0 items-center gap-4">
-          <Link
-            href={`/mail/new${mailTo ? `?to=${encodeURIComponent(mailTo)}` : ""}`}
-            title={mailTo ? `Письмо на ${mailTo}` : "У клиента не указана почта: адрес нужно будет ввести вручную"}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50"
-          >
-            <Icon name="mail" size={16} />
-            Написать клиенту
-          </Link>
-          <ConfirmDeleteButton
-            action={deleteDeal.bind(null, deal.id)}
-            what={`сделку «${deal.title}»`}
-            message="Она попадёт в корзину: оттуда её можно восстановить в течение 30 дней."
-          />
-        </div>
+        <ConfirmDeleteButton
+          action={deleteDeal.bind(null, deal.id)}
+          what={`сделку «${deal.title}»`}
+          message="Она попадёт в корзину: оттуда её можно восстановить в течение 30 дней."
+        />
       </div>
       <div className="rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
         <DealForm
@@ -87,6 +77,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
       <LinkedEvents dealId={deal.id} />
       <DealProposals dealId={deal.id} />
       <DealContracts dealId={deal.id} />
+      <DealMail to={mailTo} />
       <DealDocuments dealId={deal.id} hasEmail={!!deal.company.email} />
     </div>
   );
