@@ -26,6 +26,32 @@ select:not([multiple]) {
   background-size: 12px 8px;
 }
 
+/* Поля дат: системный вид в iOS Safari задаёт им свою минимальную ширину, и w-full не работает —
+   поле вылезает за край карточки и наезжает на соседние кнопки. Разрешаем полю сжиматься везде,
+   а системный вид снимаем только в iOS (на десктопе остаётся значок календаря): там же держим
+   высоту как у обычного поля (пустое иначе схлопывается) и прижимаем значение влево */
+input[type="date"],
+input[type="datetime-local"],
+input[type="month"],
+input[type="time"] {
+  min-width: 0;
+  max-width: 100%;
+}
+@supports (-webkit-touch-callout: none) {
+  input[type="date"],
+  input[type="datetime-local"],
+  input[type="month"],
+  input[type="time"] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-height: 2.375rem;
+  }
+  input::-webkit-date-and-time-value {
+    text-align: left;
+    min-height: 1.25rem;
+  }
+}
+
 /* На телефоне таблицы прокручиваются вбок внутри карточки, а не переносят номера и суммы по словам */
 @media (max-width: 640px) {
   th,
