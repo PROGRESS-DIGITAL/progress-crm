@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { TIME_ZONE } from "@/lib/format";
 import { getCompanyOptions, getProductOptions, getStageOptions } from "@/lib/queries";
+import { Icon } from "@/components/icons";
 import { ConfirmDeleteButton } from "@/components/confirm-delete";
 import { DealContracts } from "@/components/deal-contracts";
 import { DealDocuments } from "@/components/deal-documents";
@@ -17,17 +18,30 @@ export const dynamic = "force-dynamic";
 export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [deal, stages, companies, products, employees] = await Promise.all([
-    db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true, email: true } } } }),
+    db.deal.findUnique({ where: { id }, include: {
+        company: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            contacts: { where: { email: { not: null } }, orderBy: { createdAt: "asc" }, select: { email: true }, take: 1 },
+          },
+        },
+        contact: { select: { email: true } },
+      },
+    }),
     getStageOptions(),
     getCompanyOptions(),
     getProductOptions(),
     getEmployeeNames(),
   ]);
   if (!deal) notFound();
+  // Кому писать: контакт сделки, иначе первый контакт клиента с почтой, иначе общая почта компании
+  const mailTo = deal.contact?.email || deal.company.contacts[0]?.email || deal.company.email;
 
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
-      <div className="mb-6 flex items-start justify-between gap-4">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between sm:gap-4">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">{deal.title}</h1>
           <p className="mt-1 text-sm text-slate-500">
@@ -37,11 +51,21 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             · создана {deal.createdAt.toLocaleDateString("ru-RU", { timeZone: TIME_ZONE })}
           </p>
         </div>
-        <ConfirmDeleteButton
-          action={deleteDeal.bind(null, deal.id)}
-          what={`сделку «${deal.title}»`}
-          message="Она попадёт в корзину: оттуда её можно восстановить в течение 30 дней."
-        />
+        <div className="flex shrink-0 items-center gap-4">
+          <Link
+            href={`/mail/new${mailTo ? `?to=${encodeURIComponent(mailTo)}` : ""}`}
+            title={mailTo ? `Письмо на ${mailTo}` : "У клиента не указана почта: адрес нужно будет ввести вручную"}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-sm font-medium text-blue-600 hover:bg-blue-50"
+          >
+            <Icon name="mail" size={16} />
+            Написать клиенту
+          </Link>
+          <ConfirmDeleteButton
+            action={deleteDeal.bind(null, deal.id)}
+            what={`сделку «${deal.title}»`}
+            message="Она попадёт в корзину: оттуда её можно восстановить в течение 30 дней."
+          />
+        </div>
       </div>
       <div className="rounded-2xl border border-slate-200/60 bg-white shadow-card p-6">
         <DealForm
