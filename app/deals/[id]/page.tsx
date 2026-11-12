@@ -9,6 +9,8 @@ import { DealDocuments } from "@/components/deal-documents";
 import { DealProposals } from "@/components/deal-proposals";
 import { LinkedEvents } from "@/components/linked-events";
 import { CreateFrom } from "@/components/create-from";
+import { SourceLink } from "@/components/source-link";
+import { sourceInclude, sourceRef } from "@/lib/source-link";
 import { deleteDeal, updateDeal } from "../actions";
 import { DealForm } from "../deal-form";
 import { getEmployeeNames } from "@/lib/profile";
@@ -18,7 +20,7 @@ export const dynamic = "force-dynamic";
 export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [deal, stages, companies, products, employees] = await Promise.all([
-    db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true, email: true } } } }),
+    db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true, email: true } }, ...sourceInclude } }),
     getStageOptions(),
     getCompanyOptions(),
     getProductOptions(),
@@ -29,7 +31,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <div className="mb-6 flex items-start justify-between gap-4">
-        <div>
+        <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">{deal.title}</h1>
           <p className="mt-1 text-sm text-slate-500">
             <Link href={`/clients/${deal.company.id}`} className="text-blue-600 hover:underline">
@@ -37,9 +39,10 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             </Link>{" "}
             · создана {deal.createdAt.toLocaleDateString("ru-RU", { timeZone: TIME_ZONE })}
           </p>
+          <SourceLink source={sourceRef(deal)} className="mt-2" />
         </div>
         <div className="flex shrink-0 items-center gap-3">
-          <CreateFrom link={{ companyId: deal.company.id, dealId: deal.id }} />
+          <CreateFrom link={{ companyId: deal.company.id, dealId: deal.id, fromDeal: deal.id }} />
           <ConfirmDeleteButton
             action={deleteDeal.bind(null, deal.id)}
             what={`сделку «${deal.title}»`}

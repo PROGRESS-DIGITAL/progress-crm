@@ -14,6 +14,8 @@ import { deleteTaskFile, uploadTaskFiles } from "./actions";
 import { splitLinks } from "@/components/linkify";
 import type { MentionPerson } from "@/lib/mentions";
 import { TaskComments, type CommentRow } from "./comments";
+import { SourceLink } from "@/components/source-link";
+import type { SourceRef } from "@/lib/source-link";
 
 const field =
   "mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
@@ -31,6 +33,7 @@ export type TaskPlacement = { boards: BoardChoice[]; employees: { id: string; na
 export function TaskForm({
   id,
   initial,
+  source,
   options,
   files,
   remindersOn,
@@ -42,6 +45,8 @@ export function TaskForm({
 }: {
   id: string | null;
   initial: EventInput;
+  // С чем задача связана: карточка, из которой её создали
+  source?: SourceRef | null;
   options: TaskOptions;
   files: TaskFileRow[];
   remindersOn: boolean;
@@ -137,6 +142,7 @@ export function TaskForm({
             aria-label="Название задачи"
             className="w-full border-b border-slate-200 pb-2 text-xl font-semibold outline-none placeholder:text-slate-300 focus:border-blue-500"
           />
+          <SourceLink source={source} className="mt-3" />
           <label className={`${label} mt-5`}>
             Описание
             <textarea

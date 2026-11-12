@@ -5,20 +5,31 @@ import { useEffect, useRef, useState } from "react";
 import { Icon } from "@/components/icons";
 import { KindMark } from "@/components/event-kind";
 
-export type CreateFromLink = { companyId?: string | null; dealId?: string | null; taskId?: string | null };
+// fromDeal / fromEvent — карточка, из которой создают: новая запись покажет связь с ней
+export type CreateFromLink = {
+  companyId?: string | null;
+  dealId?: string | null;
+  taskId?: string | null;
+  fromDeal?: string | null;
+  fromEvent?: string | null;
+};
 
 // Ссылки на новые сделку, задачу и встречу с привязкой к карточке, из которой их создают:
 // клиент переходит во всё, сделка — в задачу и встречу, задача — во встречу и подзадачу
-export function createFromHrefs({ companyId, dealId, taskId }: CreateFromLink) {
+export function createFromHrefs({ companyId, dealId, taskId, fromDeal, fromEvent }: CreateFromLink) {
   const q = (pairs: [string, string | null | undefined][]) => {
     const p = new URLSearchParams();
     for (const [k, v] of pairs) if (v) p.set(k, v);
     return p.toString();
   };
+  const from: [string, string | null | undefined][] = [
+    ["fromDeal", fromDeal],
+    ["fromEvent", fromEvent],
+  ];
   return {
-    deal: `/deals/new${companyId ? `?${q([["companyId", companyId]])}` : ""}`,
-    task: `/tasks/new?${q([["deal", dealId], ["client", companyId], ["task", taskId]])}`.replace(/\?$/, ""),
-    meeting: `/calendar?${q([["new", "MEETING"], ["deal", dealId], ["client", companyId], ["task", taskId]])}`,
+    deal: `/deals/new?${q([["companyId", companyId], ...from])}`.replace(/\?$/, ""),
+    task: `/tasks/new?${q([["deal", dealId], ["client", companyId], ["task", taskId], ...from])}`.replace(/\?$/, ""),
+    meeting: `/calendar?${q([["new", "MEETING"], ["deal", dealId], ["client", companyId], ["task", taskId], ...from])}`,
   };
 }
 

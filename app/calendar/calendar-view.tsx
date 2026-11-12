@@ -24,6 +24,7 @@ import { KindMark, Tick } from "@/components/event-kind";
 import { EventEditor } from "./event-editor";
 import type { EventInput } from "./actions";
 import type { CalEvent, Options, Prefill } from "./types";
+import type { SourceRef } from "@/lib/source-link";
 
 const HOUR = 48; // высота часа в сетке, px
 const SNAP = 15; // шаг перетаскивания, минуты
@@ -63,7 +64,7 @@ function useNow() {
   return now;
 }
 
-type Editing = { id: string | null; draft: EventInput };
+type Editing = { id: string | null; draft: EventInput; source?: SourceRef | null };
 // move — перенос карточки целиком, top и bottom — растягивание за верхний или нижний край
 type Drag = { id: string; mode: "move" | "top" | "bottom"; x: number; y: number; width: number; dx: number; dy: number; moved: boolean };
 
@@ -77,6 +78,7 @@ export function CalendarView({
   deals,
   tasks,
   prefill,
+  prefillSource,
   openEvent,
   explicitView,
   remindersOn,
@@ -87,6 +89,7 @@ export function CalendarView({
   days: string[];
   events: CalEvent[];
   prefill: Prefill | null;
+  prefillSource: SourceRef | null;
   openEvent: CalEvent | null;
   explicitView: boolean;
   remindersOn: boolean;
@@ -95,8 +98,8 @@ export function CalendarView({
   const [events, setEvents] = useState(serverEvents);
   useEffect(() => setEvents(serverEvents), [serverEvents]);
   const [editing, setEditing] = useState<Editing | null>(() => {
-    if (openEvent) return { id: openEvent.id, draft: draftFromEvent(openEvent) };
-    if (prefill) return { id: null, draft: emptyDraft(date, 10 * 60, prefill) };
+    if (openEvent) return { id: openEvent.id, draft: draftFromEvent(openEvent), source: openEvent.source };
+    if (prefill) return { id: null, draft: emptyDraft(date, 10 * 60, prefill), source: prefillSource };
     return null;
   });
 
@@ -175,7 +178,7 @@ export function CalendarView({
             days={days}
             events={events}
             onCreate={(d) => create(d)}
-            onOpen={(e) => setEditing({ id: e.id, draft: draftFromEvent(e) })}
+            onOpen={(e) => setEditing({ id: e.id, draft: draftFromEvent(e), source: e.source })}
           />
         ) : (
           <TimeGrid
@@ -184,7 +187,7 @@ export function CalendarView({
             days={days}
             events={events}
             onCreate={create}
-            onOpen={(e) => setEditing({ id: e.id, draft: draftFromEvent(e) })}
+            onOpen={(e) => setEditing({ id: e.id, draft: draftFromEvent(e), source: e.source })}
             onMove={(id, start) => {
               setEvents((list) =>
                 list.map((e) => {
@@ -211,6 +214,7 @@ export function CalendarView({
         <EventEditor
           id={editing.id}
           initial={editing.draft}
+          source={editing.source}
           options={options}
           remindersOn={remindersOn}
           onClose={() => closeEditor(false)}

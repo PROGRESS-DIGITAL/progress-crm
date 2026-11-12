@@ -9,10 +9,11 @@ import { taskOptions } from "../options";
 import { boardChoices } from "@/lib/boards";
 import { requireUser } from "@/lib/auth/session";
 import { CreateFrom, type CreateFromLink } from "@/components/create-from";
+import { loadSource, sourceInclude, sourceRef } from "@/lib/source-link";
 
 export const dynamic = "force-dynamic";
 
-type Search = { deal?: string; client?: string; board?: string; task?: string };
+type Search = { deal?: string; client?: string; board?: string; task?: string; fromDeal?: string; fromEvent?: string };
 
 // /tasks/new — новая задача (из сделки или клиента приходит с привязкой), /tasks/<id> — карточка задачи
 export default async function TaskPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Search> }) {
@@ -38,7 +39,10 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
     const deal = sp.deal ? options.deals.find((d) => d.id === sp.deal) : undefined;
     const companyId = deal?.companyId ?? sp.client;
     // Из карточки задачи: новая задача связывается с ней
-    const parent = sp.task ? await db.event.findFirst({ where: { id: sp.task, kind: "TASK" }, select: { id: true } }) : null;
+    const [parent, source] = await Promise.all([
+      sp.task ? db.event.findFirst({ where: { id: sp.task, kind: "TASK" }, select: { id: true } }) : null,
+      loadSource(sp.fromDeal, sp.fromEvent),
+    ]);
     const today = dayKey(new Date());
     const initial = emptyDraft(today, 9 * 60, {
       kind: "TASK",
@@ -47,12 +51,13 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
       dealId: deal?.id ?? "",
       taskId: parent?.id ?? "",
       clientName: options.companies.find((c) => c.id === companyId)?.name ?? "",
+      ...source.ids,
     });
     initial.columnId = mainFirst;
     initial.assigneeId = "";
     return (
       <Shell title="Новая задача" back={back}>
-        <TaskForm id={null} initial={initial} options={options} files={[]} remindersOn={remindersOn} placement={placement} comments={[]} me={me} people={people} back={back} />
+        <TaskForm id={null} initial={initial} source={source.ref} options={options} files={[]} remindersOn={remindersOn} placement={placement} comments={[]} me={me} people={people} back={back} />
       </Shell>
     );
   }
@@ -64,6 +69,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
       files: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, size: true } },
       comments: { orderBy: { createdAt: "asc" }, include: { author: { select: { avatar: true } } } },
       column: { select: { boardId: true, board: { select: { main: true } } } },
+      ...sourceInclude,
     },
   });
   if (!task || task.kind !== "TASK") notFound();
@@ -83,6 +89,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
     taskId: task.taskId,
     taskTitle: null,
     remindMinutes: task.remindMinutes,
+    source: null,
   });
   initial.columnId = task.columnId ?? mainFirst;
   initial.assigneeId = task.assigneeId ?? "";
@@ -97,11 +104,12 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
     createdAt: c.createdAt.toISOString(),
   }));
   return (
-    <Shell title="Задача" back={home} create={{ companyId: task.companyId, dealId: task.dealId, taskId: task.id }} calendar={task.column && !task.column.board.main ? undefined : `/calendar?view=day&date=${dayKey(task.start)}`}>
+    <Shell title="Задача" back={home} create={{ companyId: task.companyId, dealId: task.dealId, taskId: task.id, fromEvent: task.id }} calendar={task.column && !task.column.board.main ? undefined : `/calendar?view=day&date=${dayKey(task.start)}`}>
       <TaskForm
         key={task.updatedAt.toISOString()}
         id={task.id}
         initial={initial}
+        source={sourceRef(task)}
         options={options}
         files={task.files}
         remindersOn={remindersOn}
