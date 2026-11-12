@@ -41,6 +41,8 @@ type Props = {
   employees: string[];
   initial?: Partial<DealValues>;
   submitLabel: string;
+  // id формы: к ней привязаны поля, стоящие вне её (связи новой сделки)
+  formId?: string;
 };
 
 // Значение, которого нет в списке (старое или удалённого сотрудника), остаётся выбранным отдельной строкой
@@ -48,7 +50,7 @@ function withCurrent(list: readonly string[], current: string) {
   return current && !list.includes(current) ? [...list, current] : list;
 }
 
-export function DealForm({ action, stages, companies, products, employees, initial, submitLabel }: Props) {
+export function DealForm({ action, stages, companies, products, employees, initial, submitLabel, formId }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
   const [companyId, setCompanyId] = useState(initial?.companyId ?? "");
   const err = state?.errors ?? {};
@@ -61,7 +63,7 @@ export function DealForm({ action, stages, companies, products, employees, initi
   }, [state]);
 
   return (
-    <form action={formAction} className="grid gap-4 sm:grid-cols-2">
+    <form id={formId} action={formAction} className="grid gap-4 sm:grid-cols-2">
       <Field label="Название сделки" error={err.title} wide>
         <input name="title" defaultValue={v("title")} required className={inputClass} />
       </Field>

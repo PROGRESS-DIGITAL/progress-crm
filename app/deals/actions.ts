@@ -10,7 +10,7 @@ import { isSalesStep } from "@/lib/sales-map";
 import { actorName } from "@/lib/auth/session";
 import { trashDeal } from "@/lib/trash";
 import { logDealMoved } from "@/lib/activity";
-import { checkedSource, type SourceIds } from "@/lib/source-link";
+import { addLinks, parseTargets } from "@/lib/links";
 
 const dealSchema = z.object({
   title: z.string().trim().min(1, "Укажите название сделки"),
@@ -87,8 +87,7 @@ function revalidateDeal(companyId: string) {
   revalidatePath("/dashboard");
 }
 
-// source — карточка, из которой сделку создали кнопкой «Создать»
-export async function createDeal(source: Partial<SourceIds> | null, _prev: FormState, formData: FormData): Promise<FormState> {
+export async function createDeal(_prev: FormState, formData: FormData): Promise<FormState> {
   const result = await validate(formData);
   if ("errors" in result) return invalid(result.errors, formData);
 
@@ -99,8 +98,9 @@ export async function createDeal(source: Partial<SourceIds> | null, _prev: FormS
     select: { position: true },
   });
   const closedAt = await closedAtFor(result.data.stageId, null, result.data.closedAt);
-  const from = await checkedSource(source ?? undefined);
-  await db.deal.create({ data: { ...result.data, ...from, closedAt, position: (top?.position ?? 1) - 1 } });
+  const deal = await db.deal.create({ data: { ...result.data, closedAt, position: (top?.position ?? 1) - 1 }, select: { id: true } });
+  // Связи, выбранные в форме, и карточка, из которой сделку создали кнопкой «Создать»
+  await addLinks({ type: "deal", id: deal.id }, parseTargets(formData.getAll("link")));
   revalidateDeal(result.data.companyId);
   redirect("/deals");
 }

@@ -185,13 +185,9 @@ model Deal {
   proposals         Proposal[]
   // Сделка месяца по абонементу: создаётся сама в день счёта
   subscriptionPeriod SubscriptionPeriod?
-  // Откуда создана кнопкой «Создать»: из другой сделки, задачи или встречи
-  sourceDeal        Deal?      @relation("DealFromDeal", fields: [sourceDealId], references: [id], onDelete: SetNull)
-  sourceDealId      String?
-  sourceEvent       Event?     @relation("DealFromEvent", fields: [sourceEventId], references: [id], onDelete: SetNull)
-  sourceEventId     String?
-  derivedDeals      Deal[]     @relation("DealFromDeal")
-  derivedEvents     Event[]    @relation("EventFromDeal")
+  // Связи с другими сделками, задачами и встречами: сделка может стоять с любой стороны связи
+  linksFrom         EntityLink[] @relation("LinkFromDeal")
+  linksTo           EntityLink[] @relation("LinkToDeal")
   stage             Stage      @relation(fields: [stageId], references: [id])
   stageId           String
   createdAt         DateTime   @default(now())
@@ -474,13 +470,9 @@ model Event {
   task          Event?         @relation("EventTask", fields: [taskId], references: [id], onDelete: SetNull)
   taskId        String?
   linked        Event[]        @relation("EventTask")
-  // Откуда создано кнопкой «Создать»: из сделки, задачи или встречи
-  sourceDeal    Deal?          @relation("EventFromDeal", fields: [sourceDealId], references: [id], onDelete: SetNull)
-  sourceDealId  String?
-  sourceEvent   Event?         @relation("EventFromEvent", fields: [sourceEventId], references: [id], onDelete: SetNull)
-  sourceEventId String?
-  derivedEvents Event[]        @relation("EventFromEvent")
-  derivedDeals  Deal[]         @relation("DealFromEvent")
+  // Связи с другими сделками, задачами и встречами
+  linksFrom     EntityLink[]   @relation("LinkFromEvent")
+  linksTo       EntityLink[]   @relation("LinkToEvent")
   files         EventFile[]
   comments      EventComment[]
   // Задача на доске: столбец, место в нём и исполнитель
@@ -856,4 +848,25 @@ model ProposalTemplate {
   intro     String   @default("")
   outro     String   @default("")
   updatedAt DateTime @updatedAt
+}
+
+// Связь двух записей: сделки, задачи или встречи. С каждой стороны заполнено ровно одно поле.
+// «Откуда» — запись, из которой связь заведена (или создана кнопкой «Создать»), «куда» — вторая.
+// Связь видна в обеих карточках и удаляется вместе с любой из записей
+model EntityLink {
+  id          String   @id @default(cuid())
+  fromDeal    Deal?    @relation("LinkFromDeal", fields: [fromDealId], references: [id], onDelete: Cascade)
+  fromDealId  String?
+  fromEvent   Event?   @relation("LinkFromEvent", fields: [fromEventId], references: [id], onDelete: Cascade)
+  fromEventId String?
+  toDeal      Deal?    @relation("LinkToDeal", fields: [toDealId], references: [id], onDelete: Cascade)
+  toDealId    String?
+  toEvent     Event?   @relation("LinkToEvent", fields: [toEventId], references: [id], onDelete: Cascade)
+  toEventId   String?
+  createdAt   DateTime @default(now())
+
+  @@index([fromDealId])
+  @@index([fromEventId])
+  @@index([toDealId])
+  @@index([toEventId])
 }

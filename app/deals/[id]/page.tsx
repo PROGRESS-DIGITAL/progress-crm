@@ -9,8 +9,8 @@ import { DealDocuments } from "@/components/deal-documents";
 import { DealProposals } from "@/components/deal-proposals";
 import { LinkedEvents } from "@/components/linked-events";
 import { CreateFrom } from "@/components/create-from";
-import { SourceLink } from "@/components/source-link";
-import { sourceInclude, sourceRef } from "@/lib/source-link";
+import { DealLinkList, DealLinks, DealLinksCard } from "@/components/deal-links";
+import { linkOptions, linksOf } from "@/lib/links";
 import { deleteDeal, updateDeal } from "../actions";
 import { DealForm } from "../deal-form";
 import { getEmployeeNames } from "@/lib/profile";
@@ -19,17 +19,20 @@ export const dynamic = "force-dynamic";
 
 export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const [deal, stages, companies, products, employees] = await Promise.all([
-    db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true, email: true } }, ...sourceInclude } }),
+  const [deal, stages, companies, products, employees, links, options] = await Promise.all([
+    db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true, email: true } } } }),
     getStageOptions(),
     getCompanyOptions(),
     getProductOptions(),
     getEmployeeNames(),
+    linksOf({ type: "deal", id }),
+    linkOptions(),
   ]);
   if (!deal) notFound();
 
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
+      <DealLinks dealId={deal.id} links={links} options={options}>
       <div className="mb-6 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight">{deal.title}</h1>
@@ -39,7 +42,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
             </Link>{" "}
             · создана {deal.createdAt.toLocaleDateString("ru-RU", { timeZone: TIME_ZONE })}
           </p>
-          <SourceLink source={sourceRef(deal)} className="mt-2" />
+          <DealLinkList />
         </div>
         <div className="flex shrink-0 items-center gap-3">
           <CreateFrom link={{ companyId: deal.company.id, dealId: deal.id, fromDeal: deal.id }} />
@@ -67,6 +70,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
           }}
         />
       </div>
+      <DealLinksCard />
+      </DealLinks>
       <LinkedEvents dealId={deal.id} />
       <DealProposals dealId={deal.id} />
       <DealContracts dealId={deal.id} />

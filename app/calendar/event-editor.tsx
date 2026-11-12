@@ -6,8 +6,9 @@ import { remindForAllDay, remindOptions } from "@/lib/calendar";
 import { useConfirm } from "@/components/confirm-dialog";
 import { KindMark } from "@/components/event-kind";
 import { CreateFrom } from "@/components/create-from";
-import { SourceLink } from "@/components/source-link";
-import type { SourceRef } from "@/lib/source-link";
+import { LinkList, LinkPicker, useLinks } from "@/components/links";
+import type { LinkRow } from "@/lib/link-types";
+import { targetKey } from "@/lib/link-types";
 import { TimeField } from "@/components/time-field";
 import { deleteEvent, saveEvent, type EventInput } from "./actions";
 import type { Options } from "./types";
@@ -20,7 +21,7 @@ const label = "block text-sm font-medium text-slate-700";
 export function EventEditor({
   id,
   initial,
-  source,
+  links: initialLinks,
   options,
   remindersOn,
   onClose,
@@ -28,8 +29,8 @@ export function EventEditor({
 }: {
   id: string | null;
   initial: EventInput;
-  // С чем событие связано: карточка, из которой его создали
-  source?: SourceRef | null;
+  // Связи с другими сделками, задачами и встречами
+  links: LinkRow[];
   options: Options;
   remindersOn: boolean;
   onClose: () => void;
@@ -55,13 +56,13 @@ export function EventEditor({
     company ? x.companyId === company.id : !d.clientName.trim() && (x.open || x.id === d.dealId),
   );
   const currentDeal = options.deals.find((x) => x.id === d.dealId);
-  const tasks = options.tasks.filter((t) => t.id !== id && (!t.done || t.id === d.taskId));
+  const links = useLinks(id ? { type: "event", id } : null, initialLinks);
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     start(async () => {
-      const res = await saveEvent(id, d);
+      const res = await saveEvent(id, id ? d : { ...d, links: links.targets.map(targetKey) });
       if (res.error) setError(res.error);
       else onSaved();
     });
@@ -111,7 +112,6 @@ export function EventEditor({
                 link={{
                   companyId: company?.id,
                   dealId: d.dealId === "new" ? "" : d.dealId,
-                  taskId: d.kind === "TASK" ? id : d.taskId,
                   fromEvent: id,
                 }}
               />
@@ -130,7 +130,7 @@ export function EventEditor({
           aria-label="Название"
           className="mt-4 w-full border-b border-slate-200 pb-2 text-xl font-medium outline-none placeholder:text-slate-300 focus:border-blue-500"
         />
-        <SourceLink source={source} className="mt-3" />
+        <LinkList links={links.links} onRemove={links.remove} className="mt-3" />
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <label className={`${label} col-span-2 sm:col-span-1`}>
@@ -245,18 +245,10 @@ export function EventEditor({
           </label>
         )}
 
-        <label className={`${label} mt-3`}>
-          Связать с задачей
-          <select value={d.taskId} onChange={(e) => set("taskId", e.target.value)} className={field}>
-            <option value="">Без задачи</option>
-            {tasks.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.title}
-                {t.done ? " (выполнена)" : ""}
-              </option>
-            ))}
-          </select>
-        </label>
+        <div className="mt-4 border-t border-slate-100 pt-3">
+          <p className="mb-2 text-sm font-semibold">Связи</p>
+          <LinkPicker state={links} options={options.links} selfId={id} fieldClass={field} labelClass={label} />
+        </div>
 
         <label className={`${label} mt-3`}>
           Заметки

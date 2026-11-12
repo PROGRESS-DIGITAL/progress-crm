@@ -70,31 +70,29 @@ export async function trashDeal(id: string) {
       events: { select: { id: true } },
       contracts: { select: { id: true } },
       proposals: true,
-      derivedDeals: { select: { id: true } },
-      derivedEvents: { select: { id: true } },
     },
   });
   if (!deal) return null;
+  const entityLinks = await linkRows({ type: "deal", id });
   const payments = Object.fromEntries(deal.documents.map((d) => [d.id, ids(d.payments)]));
   await put(
     "deal",
     deal.title,
     {
-      row: pick(deal, ["documents", "lead", "events", "contracts", "proposals", "derivedDeals", "derivedEvents"]),
+      row: pick(deal, ["documents", "lead", "events", "contracts", "proposals"]),
       children: {
         // Счета раньше актов: акт ссылается на свой счёт
         documents: [...deal.documents].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "INVOICE" ? -1 : 1)).map((d) => pick(d, ["payments"])),
         // КП удаляются вместе со сделкой; логотип клиента хранится в корзине строкой base64
         proposals: deal.proposals.map((p) => ({ ...p, logo: p.logo ? Buffer.from(p.logo).toString("base64") : null })),
+        // Связи с другими сделками, задачами и встречами удаляются вместе со сделкой
+        entityLinks,
       },
       links: {
         lead: deal.lead ? [deal.lead.id] : [],
         events: ids(deal.events),
         contracts: ids(deal.contracts),
         ...prefixed("payments:", payments),
-        // Созданные из этой сделки: после восстановления снова покажут связь с ней
-        derivedDeals: ids(deal.derivedDeals),
-        derivedEvents: ids(deal.derivedEvents),
       },
     },
     (tx) => tx.deal.delete({ where: { id } }),
@@ -149,8 +147,6 @@ export async function trashEvent(id: string) {
       files: true,
       comments: true,
       linked: { select: { id: true } },
-      derivedDeals: { select: { id: true } },
-      derivedEvents: { select: { id: true } },
     },
   });
   if (!event) return null;
@@ -158,9 +154,13 @@ export async function trashEvent(id: string) {
     "event",
     event.title,
     {
-      row: pick(event, ["files", "comments", "linked", "derivedDeals", "derivedEvents"]),
-      children: { files: event.files.map((f) => ({ ...f, data: Buffer.from(f.data).toString("base64") })), comments: event.comments },
-      links: { linked: ids(event.linked), derivedDeals: ids(event.derivedDeals), derivedEvents: ids(event.derivedEvents) },
+      row: pick(event, ["files", "comments", "linked"]),
+      children: {
+        files: event.files.map((f) => ({ ...f, data: Buffer.from(f.data).toString("base64") })),
+        comments: event.comments,
+        entityLinks: await linkRows({ type: "event", id }),
+      },
+      links: { linked: ids(event.linked) },
     },
     (tx) => tx.event.delete({ where: { id } }),
     event.kind === "TASK" ? "tasks" : "calendar",
@@ -241,11 +241,23 @@ async function restoreDocument(tx: Tx, row: Row, payments: string[], acts: strin
   if (acts.length) await tx.document.updateMany({ where: { id: { in: acts }, invoiceId: null }, data: { invoiceId: id } });
 }
 
-// Сделки и события, созданные из восстановленной записи, снова ссылаются на неё, если связь не заняли другой
-async function relinkDerived(tx: Tx, links: Record<string, string[]>, source: { sourceDealId: string } | { sourceEventId: string }) {
-  const free = { sourceDealId: null, sourceEventId: null };
-  if (links.derivedDeals?.length) await tx.deal.updateMany({ where: { id: { in: links.derivedDeals }, ...free }, data: source });
-  if (links.derivedEvents?.length) await tx.event.updateMany({ where: { id: { in: links.derivedEvents }, ...free }, data: source });
+// Связи записи с другими сделками, задачами и встречами: в корзину целиком
+async function linkRows(t: { type: "deal" | "event"; id: string }) {
+  const where = t.type === "deal" ? [{ fromDealId: t.id }, { toDealId: t.id }] : [{ fromEventId: t.id }, { toEventId: t.id }];
+  return db.entityLink.findMany({ where: { OR: where } });
+}
+
+// Связи возвращаются, если вторая запись ещё есть и связь не завели заново
+async function restoreEntityLinks(tx: Tx, rows: Row[] | undefined) {
+  for (const r of rows ?? []) {
+    const ok = async (deal: unknown, event: unknown) =>
+      deal
+        ? !!(await tx.deal.findUnique({ where: { id: deal as string }, select: { id: true } }))
+        : !!(event && (await tx.event.findUnique({ where: { id: event as string }, select: { id: true } })));
+    if (!(await ok(r.fromDealId, r.fromEventId)) || !(await ok(r.toDealId, r.toEventId))) continue;
+    if (await tx.entityLink.findUnique({ where: { id: r.id as string }, select: { id: true } })) continue;
+    await tx.entityLink.create({ data: r as Prisma.EntityLinkUncheckedCreateInput });
+  }
 }
 
 async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
@@ -268,8 +280,6 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
           stageId: stage,
           contactId: await keep(row.contactId, (v) => tx.contact.findUnique({ where: { id: v }, select: { id: true } })),
           productId: await keep(row.productId, (v) => tx.product.findUnique({ where: { id: v }, select: { id: true } })),
-          sourceDealId: await keep(row.sourceDealId, (v) => tx.deal.findUnique({ where: { id: v }, select: { id: true } })),
-          sourceEventId: await keep(row.sourceEventId, (v) => tx.event.findUnique({ where: { id: v }, select: { id: true } })),
         },
       });
       for (const d of s.children?.documents ?? []) await restoreDocument(tx, d, links[`payments:${d.id}`] ?? [], []);
@@ -280,7 +290,7 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
       await relink(links.lead, (v) => tx.lead.updateMany({ where: { id: { in: v }, dealId: null }, data: { dealId: id } }));
       await relink(links.events, (v) => tx.event.updateMany({ where: { id: { in: v }, dealId: null }, data: { dealId: id } }));
       await relink(links.contracts, (v) => tx.contract.updateMany({ where: { id: { in: v }, dealId: null }, data: { dealId: id } }));
-      await relinkDerived(tx, links, { sourceDealId: id });
+      await restoreEntityLinks(tx, s.children?.entityLinks);
       return `/deals/${id}`;
     }
     case "company": {
@@ -309,8 +319,6 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
           companyId: await keep(row.companyId, (v) => tx.company.findUnique({ where: { id: v }, select: { id: true } })),
           dealId: await keep(row.dealId, (v) => tx.deal.findUnique({ where: { id: v }, select: { id: true } })),
           taskId: await keep(row.taskId, (v) => tx.event.findUnique({ where: { id: v }, select: { id: true } })),
-          sourceDealId: await keep(row.sourceDealId, (v) => tx.deal.findUnique({ where: { id: v }, select: { id: true } })),
-          sourceEventId: await keep(row.sourceEventId, (v) => tx.event.findUnique({ where: { id: v }, select: { id: true } })),
           // Столбец могли удалить: тогда задача встаёт на основную доску
           columnId: await keep(row.columnId, (v) => tx.boardColumn.findUnique({ where: { id: v }, select: { id: true } })),
           assigneeId: await keep(row.assigneeId, (v) => tx.employee.findUnique({ where: { id: v }, select: { id: true } })),
@@ -326,7 +334,7 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
           },
         });
       await relink(links.linked, (v) => tx.event.updateMany({ where: { id: { in: v }, taskId: null }, data: { taskId: id } }));
-      await relinkDerived(tx, links, { sourceEventId: id });
+      await restoreEntityLinks(tx, s.children?.entityLinks);
       return row.kind === "TASK" ? `/tasks/${id}` : `/calendar?open=${id}&date=${String(row.start).slice(0, 10)}`;
     }
     case "document": {

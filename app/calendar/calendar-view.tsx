@@ -24,7 +24,7 @@ import { KindMark, Tick } from "@/components/event-kind";
 import { EventEditor } from "./event-editor";
 import type { EventInput } from "./actions";
 import type { CalEvent, Options, Prefill } from "./types";
-import type { SourceRef } from "@/lib/source-link";
+import type { LinkRow } from "@/lib/link-types";
 
 const HOUR = 48; // высота часа в сетке, px
 const SNAP = 15; // шаг перетаскивания, минуты
@@ -64,7 +64,7 @@ function useNow() {
   return now;
 }
 
-type Editing = { id: string | null; draft: EventInput; source?: SourceRef | null };
+type Editing = { id: string | null; draft: EventInput; links: LinkRow[] };
 // move — перенос карточки целиком, top и bottom — растягивание за верхний или нижний край
 type Drag = { id: string; mode: "move" | "top" | "bottom"; x: number; y: number; width: number; dx: number; dy: number; moved: boolean };
 
@@ -76,9 +76,9 @@ export function CalendarView({
   events: serverEvents,
   companies,
   deals,
-  tasks,
+  links,
   prefill,
-  prefillSource,
+  prefillLinks,
   openEvent,
   explicitView,
   remindersOn,
@@ -89,7 +89,7 @@ export function CalendarView({
   days: string[];
   events: CalEvent[];
   prefill: Prefill | null;
-  prefillSource: SourceRef | null;
+  prefillLinks: LinkRow[];
   openEvent: CalEvent | null;
   explicitView: boolean;
   remindersOn: boolean;
@@ -98,8 +98,8 @@ export function CalendarView({
   const [events, setEvents] = useState(serverEvents);
   useEffect(() => setEvents(serverEvents), [serverEvents]);
   const [editing, setEditing] = useState<Editing | null>(() => {
-    if (openEvent) return { id: openEvent.id, draft: draftFromEvent(openEvent), source: openEvent.source };
-    if (prefill) return { id: null, draft: emptyDraft(date, 10 * 60, prefill), source: prefillSource };
+    if (openEvent) return { id: openEvent.id, draft: draftFromEvent(openEvent), links: openEvent.links };
+    if (prefill) return { id: null, draft: emptyDraft(date, 10 * 60, prefill), links: prefillLinks };
     return null;
   });
 
@@ -115,10 +115,10 @@ export function CalendarView({
   }
 
   function create(day: string, minutes = 9 * 60, allDay = false) {
-    setEditing({ id: null, draft: emptyDraft(day, minutes, { allDay }) });
+    setEditing({ id: null, draft: emptyDraft(day, minutes, { allDay }), links: [] });
   }
 
-  const options: Options = { companies, deals, tasks };
+  const options: Options = { companies, deals, links };
 
   return (
     <>
@@ -178,7 +178,7 @@ export function CalendarView({
             days={days}
             events={events}
             onCreate={(d) => create(d)}
-            onOpen={(e) => setEditing({ id: e.id, draft: draftFromEvent(e), source: e.source })}
+            onOpen={(e) => setEditing({ id: e.id, draft: draftFromEvent(e), links: e.links })}
           />
         ) : (
           <TimeGrid
@@ -187,7 +187,7 @@ export function CalendarView({
             days={days}
             events={events}
             onCreate={create}
-            onOpen={(e) => setEditing({ id: e.id, draft: draftFromEvent(e), source: e.source })}
+            onOpen={(e) => setEditing({ id: e.id, draft: draftFromEvent(e), links: e.links })}
             onMove={(id, start) => {
               setEvents((list) =>
                 list.map((e) => {
@@ -214,7 +214,7 @@ export function CalendarView({
         <EventEditor
           id={editing.id}
           initial={editing.draft}
-          source={editing.source}
+          links={editing.links}
           options={options}
           remindersOn={remindersOn}
           onClose={() => closeEditor(false)}

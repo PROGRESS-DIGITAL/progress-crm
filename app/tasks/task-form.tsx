@@ -14,8 +14,8 @@ import { deleteTaskFile, uploadTaskFiles } from "./actions";
 import { splitLinks } from "@/components/linkify";
 import type { MentionPerson } from "@/lib/mentions";
 import { TaskComments, type CommentRow } from "./comments";
-import { SourceLink } from "@/components/source-link";
-import type { SourceRef } from "@/lib/source-link";
+import { LinkList, LinkPicker, useLinks } from "@/components/links";
+import { targetKey, type LinkOptions, type LinkRow } from "@/lib/link-types";
 
 const field =
   "mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100";
@@ -33,7 +33,8 @@ export type TaskPlacement = { boards: BoardChoice[]; employees: { id: string; na
 export function TaskForm({
   id,
   initial,
-  source,
+  links: initialLinks,
+  linkOptions,
   options,
   files,
   remindersOn,
@@ -45,8 +46,9 @@ export function TaskForm({
 }: {
   id: string | null;
   initial: EventInput;
-  // С чем задача связана: карточка, из которой её создали
-  source?: SourceRef | null;
+  // Связи с другими сделками, задачами и встречами и что можно выбрать в блоке «Связи»
+  links: LinkRow[];
+  linkOptions: LinkOptions;
   options: TaskOptions;
   files: TaskFileRow[];
   remindersOn: boolean;
@@ -61,6 +63,7 @@ export function TaskForm({
   const confirm = useConfirm();
   // Старые события на весь день могли хранить «за 15 минут»: показываем ближайший вариант из короткого списка
   const [d, setD] = useState(() => ({ ...initial, remindMinutes: remindForAllDay(initial.remindMinutes, initial.allDay) }));
+  const links = useLinks(id ? { type: "event", id } : null, initialLinks);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busy, start] = useTransition();
@@ -100,7 +103,7 @@ export function TaskForm({
     e.preventDefault();
     setError(null);
     start(async () => {
-      const res = await saveEvent(id, d);
+      const res = await saveEvent(id, id ? d : { ...d, links: links.targets.map(targetKey) });
       if (res.error || !res.id) return setError(res.error ?? "Не удалось сохранить");
       const err = await upload(res.id, pendingFiles);
       if (err) {
@@ -142,7 +145,7 @@ export function TaskForm({
             aria-label="Название задачи"
             className="w-full border-b border-slate-200 pb-2 text-xl font-semibold outline-none placeholder:text-slate-300 focus:border-blue-500"
           />
-          <SourceLink source={source} className="mt-3" />
+          <LinkList links={links.links} onRemove={links.remove} className="mt-3" />
           <label className={`${label} mt-5`}>
             Описание
             <textarea
@@ -358,6 +361,11 @@ export function TaskForm({
               )}
             </p>
           )}
+        </section>
+
+        <section className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card">
+          <h2 className="mb-3 font-semibold">Связи</h2>
+          <LinkPicker state={links} options={linkOptions} selfId={id} fieldClass={field} labelClass={label} />
         </section>
 
         {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
