@@ -9,23 +9,24 @@ import { taskOptions } from "../options";
 import { boardChoices } from "@/lib/boards";
 import { requireUser } from "@/lib/auth/session";
 import { CreateFrom, type CreateFromLink } from "@/components/create-from";
-import { loadSource, sourceInclude, sourceRef } from "@/lib/source-link";
+import { linkOptions, linksOf, sourceLinks } from "@/lib/links";
 
 export const dynamic = "force-dynamic";
 
-type Search = { deal?: string; client?: string; board?: string; task?: string; fromDeal?: string; fromEvent?: string };
+type Search = { deal?: string; client?: string; board?: string; fromDeal?: string; fromEvent?: string };
 
 // /tasks/new — новая задача (из сделки или клиента приходит с привязкой), /tasks/<id> — карточка задачи
 export default async function TaskPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<Search> }) {
   const { id } = await params;
   const sp = await searchParams;
-  const [{ remindersOn, ...options }, boards, employees, mentionable, user] = await Promise.all([
+  const [{ remindersOn, ...options }, boards, employees, mentionable, user, links] = await Promise.all([
     taskOptions(),
     boardChoices(),
     db.employee.findMany({ where: { blocked: false }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
     // Упомянуть через @ можно любого, кто входит в CRM, в том числе себя
     db.employee.findMany({ where: { blocked: false, login: { not: null } }, orderBy: { name: "asc" }, select: { id: true, name: true, login: true, avatar: true } }),
     requireUser(),
+    linkOptions(),
   ]);
   const people = mentionable.map((e) => ({ id: e.id, name: e.name, login: e.login!, avatar: e.avatar }));
   const placement = { boards, employees };
@@ -38,26 +39,21 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
   if (id === "new") {
     const deal = sp.deal ? options.deals.find((d) => d.id === sp.deal) : undefined;
     const companyId = deal?.companyId ?? sp.client;
-    // Из карточки задачи: новая задача связывается с ней
-    const [parent, source] = await Promise.all([
-      sp.task ? db.event.findFirst({ where: { id: sp.task, kind: "TASK" }, select: { id: true } }) : null,
-      loadSource(sp.fromDeal, sp.fromEvent),
-    ]);
+    // Из карточки сделки, задачи или встречи: новая задача сразу связана с ней
+    const fromLinks = await sourceLinks(sp.fromDeal, sp.fromEvent);
     const today = dayKey(new Date());
     const initial = emptyDraft(today, 9 * 60, {
       kind: "TASK",
       allDay: true,
       remindMinutes: "",
       dealId: deal?.id ?? "",
-      taskId: parent?.id ?? "",
       clientName: options.companies.find((c) => c.id === companyId)?.name ?? "",
-      ...source.ids,
     });
     initial.columnId = mainFirst;
     initial.assigneeId = "";
     return (
       <Shell title="Новая задача" back={back}>
-        <TaskForm id={null} initial={initial} source={source.ref} options={options} files={[]} remindersOn={remindersOn} placement={placement} comments={[]} me={me} people={people} back={back} />
+        <TaskForm id={null} initial={initial} links={fromLinks} linkOptions={links} options={options} files={[]} remindersOn={remindersOn} placement={placement} comments={[]} me={me} people={people} back={back} />
       </Shell>
     );
   }
@@ -69,7 +65,6 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
       files: { orderBy: { createdAt: "asc" }, select: { id: true, name: true, size: true } },
       comments: { orderBy: { createdAt: "asc" }, include: { author: { select: { avatar: true } } } },
       column: { select: { boardId: true, board: { select: { main: true } } } },
-      ...sourceInclude,
     },
   });
   if (!task || task.kind !== "TASK") notFound();
@@ -89,7 +84,7 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
     taskId: task.taskId,
     taskTitle: null,
     remindMinutes: task.remindMinutes,
-    source: null,
+    links: [],
   });
   initial.columnId = task.columnId ?? mainFirst;
   initial.assigneeId = task.assigneeId ?? "";
@@ -104,12 +99,13 @@ export default async function TaskPage({ params, searchParams }: { params: Promi
     createdAt: c.createdAt.toISOString(),
   }));
   return (
-    <Shell title="Задача" back={home} create={{ companyId: task.companyId, dealId: task.dealId, taskId: task.id, fromEvent: task.id }} calendar={task.column && !task.column.board.main ? undefined : `/calendar?view=day&date=${dayKey(task.start)}`}>
+    <Shell title="Задача" back={home} create={{ companyId: task.companyId, dealId: task.dealId, fromEvent: task.id }} calendar={task.column && !task.column.board.main ? undefined : `/calendar?view=day&date=${dayKey(task.start)}`}>
       <TaskForm
         key={task.updatedAt.toISOString()}
         id={task.id}
         initial={initial}
-        source={sourceRef(task)}
+        links={await linksOf({ type: "event", id: task.id })}
+        linkOptions={links}
         options={options}
         files={task.files}
         remindersOn={remindersOn}

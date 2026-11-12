@@ -23,8 +23,8 @@ const KEYS = new Set<string>(SECTIONS.map((s) => s.key));
 // Только для директора, в роль не выдаются
 const OWNER_ONLY = new Set(["employees"]);
 // Открыты всем, кто вошёл: свой профиль, корень сайта, отчёт об ошибке в браузере,
-// журнал событий и корзина (строки в них отбираются по разделам роли)
-const ANY_USER = new Set(["", "profile", "logout", "api/client-error", "activity", "trash"]);
+// журнал событий и корзина (строки в них отбираются по разделам роли), связи записей (право проверяет само действие)
+const ANY_USER = new Set(["", "profile", "logout", "api/client-error", "activity", "trash", "links"]);
 
 export const isSection = (key: string): key is SectionKey => KEYS.has(key);
 

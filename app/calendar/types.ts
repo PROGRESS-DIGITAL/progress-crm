@@ -1,4 +1,4 @@
-import type { SourceIds, SourceRef } from "@/lib/source-link";
+import type { LinkOptions, LinkRow } from "@/lib/link-types";
 
 export type CalEvent = {
   id: string;
@@ -16,14 +16,15 @@ export type CalEvent = {
   taskId: string | null;
   taskTitle: string | null;
   remindMinutes: number | null;
-  // С чем связано: карточка, из которой событие создали кнопкой «Создать»
-  source: SourceRef | null;
+  // Связи с другими сделками, задачами и встречами
+  links: LinkRow[];
 };
 
-export type Prefill = { kind: "MEETING" | "TASK"; dealId: string; clientName: string; taskId: string } & SourceIds;
+export type Prefill = { kind: "MEETING" | "TASK"; dealId: string; clientName: string };
 
 export type Options = {
   companies: { id: string; name: string }[];
   deals: { id: string; title: string; companyId: string; open: boolean }[];
-  tasks: { id: string; title: string; done: boolean }[];
+  // Что можно выбрать в «Связях»
+  links: LinkOptions;
 };
