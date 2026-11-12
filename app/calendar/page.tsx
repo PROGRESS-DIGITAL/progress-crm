@@ -4,10 +4,21 @@ import { addDays, dayKey, fromKey, isDayKey, isView, viewDays } from "@/lib/cale
 import { mainTasks } from "@/lib/tasks";
 import { CalendarView } from "./calendar-view";
 import type { CalEvent, Prefill } from "./types";
+import { loadSource, sourceInclude, sourceRef, type SourceRef } from "@/lib/source-link";
 
 export const dynamic = "force-dynamic";
 
-type Search = { view?: string; date?: string; new?: string; deal?: string; client?: string; open?: string; task?: string };
+type Search = {
+  view?: string;
+  date?: string;
+  new?: string;
+  deal?: string;
+  client?: string;
+  open?: string;
+  task?: string;
+  fromDeal?: string;
+  fromEvent?: string;
+};
 
 export default async function CalendarPage({ searchParams }: { searchParams: Promise<Search> }) {
   const sp = await searchParams;
@@ -26,6 +37,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         company: { select: { name: true } },
         deal: { select: { title: true } },
         task: { select: { title: true } },
+        ...sourceInclude,
       },
     }),
     db.company.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true } }),
@@ -58,10 +70,12 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     taskId: e.taskId,
     taskTitle: e.task?.title ?? null,
     remindMinutes: e.remindMinutes,
+    source: sourceRef(e),
   }));
 
   // Ссылки «Встреча» и «Задача» из сделки или клиента сразу открывают окно с привязкой
   let prefill: Prefill | null = null;
+  let prefillSource: SourceRef | null = null;
   if (sp.new === "MEETING" || sp.new === "TASK") {
     const deal = sp.deal ? deals.find((d) => d.id === sp.deal) : undefined;
     const companyId = deal?.companyId ?? sp.client;
@@ -71,7 +85,11 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
       const found = await db.event.findFirst({ where: { id: sp.task, kind: "TASK" }, select: { id: true, title: true, done: true } });
       if (found) tasks.unshift((task = found));
     }
+    // Из карточки сделки, задачи или встречи: новое событие запомнит, откуда его создали
+    const source = await loadSource(sp.fromDeal, sp.fromEvent);
+    prefillSource = source.ref;
     prefill = {
+      ...source.ids,
       kind: sp.new,
       dealId: deal?.id ?? "",
       clientName: companies.find((c) => c.id === companyId)?.name ?? "",
@@ -84,7 +102,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
       <CalendarView
         // Новое событие из окна другого события ведёт на тот же вид и дату: ключ с параметрами пересоздаёт окно
-        key={`${view}-${date}-${prefill ? [prefill.kind, prefill.dealId, prefill.clientName, prefill.taskId].join("|") : ""}-${open?.id ?? ""}`}
+        key={`${view}-${date}-${prefill ? [prefill.kind, prefill.dealId, prefill.clientName, prefill.taskId, prefill.sourceDealId, prefill.sourceEventId].join("|") : ""}-${open?.id ?? ""}`}
         view={view}
         date={date}
         today={today}
@@ -94,6 +112,7 @@ export default async function CalendarPage({ searchParams }: { searchParams: Pro
         deals={deals.map((d) => ({ id: d.id, title: d.title, companyId: d.companyId, open: d.stage.kind === "OPEN" }))}
         tasks={tasks}
         prefill={prefill}
+        prefillSource={prefillSource}
         openEvent={open}
         explicitView={isView(sp.view)}
         remindersOn={!!remindChat}

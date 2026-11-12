@@ -70,6 +70,8 @@ export async function trashDeal(id: string) {
       events: { select: { id: true } },
       contracts: { select: { id: true } },
       proposals: true,
+      derivedDeals: { select: { id: true } },
+      derivedEvents: { select: { id: true } },
     },
   });
   if (!deal) return null;
@@ -78,14 +80,22 @@ export async function trashDeal(id: string) {
     "deal",
     deal.title,
     {
-      row: pick(deal, ["documents", "lead", "events", "contracts", "proposals"]),
+      row: pick(deal, ["documents", "lead", "events", "contracts", "proposals", "derivedDeals", "derivedEvents"]),
       children: {
         // Счета раньше актов: акт ссылается на свой счёт
         documents: [...deal.documents].sort((a, b) => (a.kind === b.kind ? 0 : a.kind === "INVOICE" ? -1 : 1)).map((d) => pick(d, ["payments"])),
         // КП удаляются вместе со сделкой; логотип клиента хранится в корзине строкой base64
         proposals: deal.proposals.map((p) => ({ ...p, logo: p.logo ? Buffer.from(p.logo).toString("base64") : null })),
       },
-      links: { lead: deal.lead ? [deal.lead.id] : [], events: ids(deal.events), contracts: ids(deal.contracts), ...prefixed("payments:", payments) },
+      links: {
+        lead: deal.lead ? [deal.lead.id] : [],
+        events: ids(deal.events),
+        contracts: ids(deal.contracts),
+        ...prefixed("payments:", payments),
+        // Созданные из этой сделки: после восстановления снова покажут связь с ней
+        derivedDeals: ids(deal.derivedDeals),
+        derivedEvents: ids(deal.derivedEvents),
+      },
     },
     (tx) => tx.deal.delete({ where: { id } }),
   );
@@ -133,15 +143,24 @@ export async function trashContact(id: string) {
 }
 
 export async function trashEvent(id: string) {
-  const event = await db.event.findUnique({ where: { id }, include: { files: true, comments: true, linked: { select: { id: true } } } });
+  const event = await db.event.findUnique({
+    where: { id },
+    include: {
+      files: true,
+      comments: true,
+      linked: { select: { id: true } },
+      derivedDeals: { select: { id: true } },
+      derivedEvents: { select: { id: true } },
+    },
+  });
   if (!event) return null;
   await put(
     "event",
     event.title,
     {
-      row: pick(event, ["files", "comments", "linked"]),
+      row: pick(event, ["files", "comments", "linked", "derivedDeals", "derivedEvents"]),
       children: { files: event.files.map((f) => ({ ...f, data: Buffer.from(f.data).toString("base64") })), comments: event.comments },
-      links: { linked: ids(event.linked) },
+      links: { linked: ids(event.linked), derivedDeals: ids(event.derivedDeals), derivedEvents: ids(event.derivedEvents) },
     },
     (tx) => tx.event.delete({ where: { id } }),
     event.kind === "TASK" ? "tasks" : "calendar",
@@ -222,6 +241,13 @@ async function restoreDocument(tx: Tx, row: Row, payments: string[], acts: strin
   if (acts.length) await tx.document.updateMany({ where: { id: { in: acts }, invoiceId: null }, data: { invoiceId: id } });
 }
 
+// Сделки и события, созданные из восстановленной записи, снова ссылаются на неё, если связь не заняли другой
+async function relinkDerived(tx: Tx, links: Record<string, string[]>, source: { sourceDealId: string } | { sourceEventId: string }) {
+  const free = { sourceDealId: null, sourceEventId: null };
+  if (links.derivedDeals?.length) await tx.deal.updateMany({ where: { id: { in: links.derivedDeals }, ...free }, data: source });
+  if (links.derivedEvents?.length) await tx.event.updateMany({ where: { id: { in: links.derivedEvents }, ...free }, data: source });
+}
+
 async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
   const { row } = s;
   const links = s.links ?? {};
@@ -242,6 +268,8 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
           stageId: stage,
           contactId: await keep(row.contactId, (v) => tx.contact.findUnique({ where: { id: v }, select: { id: true } })),
           productId: await keep(row.productId, (v) => tx.product.findUnique({ where: { id: v }, select: { id: true } })),
+          sourceDealId: await keep(row.sourceDealId, (v) => tx.deal.findUnique({ where: { id: v }, select: { id: true } })),
+          sourceEventId: await keep(row.sourceEventId, (v) => tx.event.findUnique({ where: { id: v }, select: { id: true } })),
         },
       });
       for (const d of s.children?.documents ?? []) await restoreDocument(tx, d, links[`payments:${d.id}`] ?? [], []);
@@ -252,6 +280,7 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
       await relink(links.lead, (v) => tx.lead.updateMany({ where: { id: { in: v }, dealId: null }, data: { dealId: id } }));
       await relink(links.events, (v) => tx.event.updateMany({ where: { id: { in: v }, dealId: null }, data: { dealId: id } }));
       await relink(links.contracts, (v) => tx.contract.updateMany({ where: { id: { in: v }, dealId: null }, data: { dealId: id } }));
+      await relinkDerived(tx, links, { sourceDealId: id });
       return `/deals/${id}`;
     }
     case "company": {
@@ -280,6 +309,8 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
           companyId: await keep(row.companyId, (v) => tx.company.findUnique({ where: { id: v }, select: { id: true } })),
           dealId: await keep(row.dealId, (v) => tx.deal.findUnique({ where: { id: v }, select: { id: true } })),
           taskId: await keep(row.taskId, (v) => tx.event.findUnique({ where: { id: v }, select: { id: true } })),
+          sourceDealId: await keep(row.sourceDealId, (v) => tx.deal.findUnique({ where: { id: v }, select: { id: true } })),
+          sourceEventId: await keep(row.sourceEventId, (v) => tx.event.findUnique({ where: { id: v }, select: { id: true } })),
           // Столбец могли удалить: тогда задача встаёт на основную доску
           columnId: await keep(row.columnId, (v) => tx.boardColumn.findUnique({ where: { id: v }, select: { id: true } })),
           assigneeId: await keep(row.assigneeId, (v) => tx.employee.findUnique({ where: { id: v }, select: { id: true } })),
@@ -295,6 +326,7 @@ async function restoreSnapshot(tx: Tx, kind: TrashKind, s: Snapshot) {
           },
         });
       await relink(links.linked, (v) => tx.event.updateMany({ where: { id: { in: v }, taskId: null }, data: { taskId: id } }));
+      await relinkDerived(tx, links, { sourceEventId: id });
       return row.kind === "TASK" ? `/tasks/${id}` : `/calendar?open=${id}&date=${String(row.start).slice(0, 10)}`;
     }
     case "document": {

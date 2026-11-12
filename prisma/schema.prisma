@@ -185,6 +185,13 @@ model Deal {
   proposals         Proposal[]
   // Сделка месяца по абонементу: создаётся сама в день счёта
   subscriptionPeriod SubscriptionPeriod?
+  // Откуда создана кнопкой «Создать»: из другой сделки, задачи или встречи
+  sourceDeal        Deal?      @relation("DealFromDeal", fields: [sourceDealId], references: [id], onDelete: SetNull)
+  sourceDealId      String?
+  sourceEvent       Event?     @relation("DealFromEvent", fields: [sourceEventId], references: [id], onDelete: SetNull)
+  sourceEventId     String?
+  derivedDeals      Deal[]     @relation("DealFromDeal")
+  derivedEvents     Event[]    @relation("EventFromDeal")
   stage             Stage      @relation(fields: [stageId], references: [id])
   stageId           String
   createdAt         DateTime   @default(now())
@@ -467,6 +474,13 @@ model Event {
   task          Event?         @relation("EventTask", fields: [taskId], references: [id], onDelete: SetNull)
   taskId        String?
   linked        Event[]        @relation("EventTask")
+  // Откуда создано кнопкой «Создать»: из сделки, задачи или встречи
+  sourceDeal    Deal?          @relation("EventFromDeal", fields: [sourceDealId], references: [id], onDelete: SetNull)
+  sourceDealId  String?
+  sourceEvent   Event?         @relation("EventFromEvent", fields: [sourceEventId], references: [id], onDelete: SetNull)
+  sourceEventId String?
+  derivedEvents Event[]        @relation("EventFromEvent")
+  derivedDeals  Deal[]         @relation("DealFromEvent")
   files         EventFile[]
   comments      EventComment[]
   // Задача на доске: столбец, место в нём и исполнитель

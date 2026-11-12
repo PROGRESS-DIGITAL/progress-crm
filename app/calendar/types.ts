@@ -1,3 +1,5 @@
+import type { SourceIds, SourceRef } from "@/lib/source-link";
+
 export type CalEvent = {
   id: string;
   kind: "MEETING" | "TASK";
@@ -14,9 +16,11 @@ export type CalEvent = {
   taskId: string | null;
   taskTitle: string | null;
   remindMinutes: number | null;
+  // С чем связано: карточка, из которой событие создали кнопкой «Создать»
+  source: SourceRef | null;
 };
 
-export type Prefill = { kind: "MEETING" | "TASK"; dealId: string; clientName: string; taskId: string };
+export type Prefill = { kind: "MEETING" | "TASK"; dealId: string; clientName: string; taskId: string } & SourceIds;
 
 export type Options = {
   companies: { id: string; name: string }[];

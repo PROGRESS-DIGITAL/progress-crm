@@ -6,6 +6,8 @@ import { remindForAllDay, remindOptions } from "@/lib/calendar";
 import { useConfirm } from "@/components/confirm-dialog";
 import { KindMark } from "@/components/event-kind";
 import { CreateFrom } from "@/components/create-from";
+import { SourceLink } from "@/components/source-link";
+import type { SourceRef } from "@/lib/source-link";
 import { TimeField } from "@/components/time-field";
 import { deleteEvent, saveEvent, type EventInput } from "./actions";
 import type { Options } from "./types";
@@ -18,6 +20,7 @@ const label = "block text-sm font-medium text-slate-700";
 export function EventEditor({
   id,
   initial,
+  source,
   options,
   remindersOn,
   onClose,
@@ -25,6 +28,8 @@ export function EventEditor({
 }: {
   id: string | null;
   initial: EventInput;
+  // С чем событие связано: карточка, из которой его создали
+  source?: SourceRef | null;
   options: Options;
   remindersOn: boolean;
   onClose: () => void;
@@ -107,6 +112,7 @@ export function EventEditor({
                   companyId: company?.id,
                   dealId: d.dealId === "new" ? "" : d.dealId,
                   taskId: d.kind === "TASK" ? id : d.taskId,
+                  fromEvent: id,
                 }}
               />
             )}
@@ -124,6 +130,7 @@ export function EventEditor({
           aria-label="Название"
           className="mt-4 w-full border-b border-slate-200 pb-2 text-xl font-medium outline-none placeholder:text-slate-300 focus:border-blue-500"
         />
+        <SourceLink source={source} className="mt-3" />
 
         <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
           <label className={`${label} col-span-2 sm:col-span-1`}>

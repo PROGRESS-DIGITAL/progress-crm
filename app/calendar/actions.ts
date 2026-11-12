@@ -9,6 +9,7 @@ import { REMIND_OPTIONS, remindAt } from "@/lib/reminders";
 import { trashEvent } from "@/lib/trash";
 import { logActivity } from "@/lib/activity";
 import { taskMoveActivity } from "@/lib/activity-text";
+import { checkedSource } from "@/lib/source-link";
 
 export type EventInput = {
   kind: "MEETING" | "TASK";
@@ -31,6 +32,9 @@ export type EventInput = {
   // Календарь их не передаёт и не меняет
   columnId?: string;
   assigneeId?: string;
+  // Только у нового события, созданного кнопкой «Создать» из сделки, задачи или встречи
+  sourceDealId?: string;
+  sourceEventId?: string;
 };
 
 const time = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Время в формате ЧЧ:ММ");
@@ -54,6 +58,8 @@ const schema = z.object({
     .refine((v) => v === "" || REMIND_OPTIONS.some((o) => String(o.value) === v), "Неизвестное время напоминания"),
   columnId: z.string().optional(),
   assigneeId: z.string().optional(),
+  sourceDealId: z.string().optional(),
+  sourceEventId: z.string().optional(),
 });
 
 const minutes = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3));
@@ -167,7 +173,7 @@ export async function saveEvent(id: string | null, input: EventInput): Promise<{
   const remindAgain = !before || remindAt(before)?.getTime() !== remindAt({ start, allDay: v.allDay, remindMinutes: data.remindMinutes })?.getTime();
   const saved = id
     ? await db.event.update({ where: { id }, data: { ...data, ...placement, ...(remindAgain && { remindedAt: null }) }, select: { id: true } })
-    : await db.event.create({ data: { ...data, ...placement }, select: { id: true } });
+    : await db.event.create({ data: { ...data, ...placement, ...(await checkedSource(v)) }, select: { id: true } });
   if (moved && id && placement.columnId) {
     const column = await db.boardColumn.findUnique({ where: { id: placement.columnId }, select: { name: true, board: { select: { name: true } } } });
     if (column) await logActivity(taskMoveActivity({ id, title: v.title }, column.name, column.board.name));
