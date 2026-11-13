@@ -6,6 +6,7 @@ import { db } from "@/lib/db";
 import { logActivity } from "@/lib/activity";
 import { taskMoveActivity } from "@/lib/activity-text";
 import { addDays, dayKey, fromKey } from "@/lib/calendar";
+import { isFinalColumn } from "@/lib/board-columns";
 
 // Доски видны и в меню слева, а задачи основной доски — в списке и календаре
 const refresh = () => {
@@ -94,13 +95,16 @@ const title = z.string().trim().min(1, "Введите название зада
 export async function quickCreateTask(columnId: string, value: string): Promise<{ error?: string }> {
   const parsed = title.safeParse(value);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
-  if (!(await db.boardColumn.findUnique({ where: { id: columnId }, select: { id: true } }))) return { error: "Столбец удалён, обновите страницу" };
+  const column = await db.boardColumn.findUnique({ where: { id: columnId }, select: { name: true } });
+  if (!column) return { error: "Столбец удалён, обновите страницу" };
   const top = await db.event.findFirst({ where: { columnId }, orderBy: { position: "asc" }, select: { position: true } });
   const today = dayKey(new Date());
   await db.event.create({
     data: {
       kind: "TASK",
       title: parsed.data,
+      // Задача, добавленная сразу в «Выполнено», уже выполнена
+      done: isFinalColumn(column.name),
       start: fromKey(today),
       end: fromKey(addDays(today, 1)),
       allDay: true,
@@ -114,15 +118,19 @@ export async function quickCreateTask(columnId: string, value: string): Promise<
 
 // order — id задач столбца сверху вниз уже с перенесённой: позиции пересчитываются по нему
 export async function moveTask(id: string, columnId: string, order: string[]) {
-  const task = await db.event.findUnique({ where: { id }, select: { id: true, title: true, kind: true, columnId: true } });
+  const task = await db.event.findUnique({ where: { id }, select: { id: true, title: true, kind: true, columnId: true, column: { select: { name: true } } } });
   if (task?.kind !== "TASK") return;
   const column = await db.boardColumn.findUnique({ where: { id: columnId }, select: { name: true, board: { select: { name: true, main: true, columns: { orderBy: { order: "asc" }, take: 1, select: { id: true } } } } } });
   if (!column) return;
-  await db.event.update({ where: { id }, data: { columnId } });
-  // Задачи без столбца из первого столбца основной доски при этом получают его явно
-  await db.$transaction(order.map((taskId, position) => db.event.updateMany({ where: { id: taskId, kind: "TASK" }, data: { columnId, position } })));
   // Без столбца задача стоит в первом столбце основной доски: перенос туда — не перенос
   const from = task.columnId ?? (column.board.main ? column.board.columns[0]?.id : null);
+  // В завершающий столбец — задача выполнена, обратно из него — снова открыта
+  const toFinal = isFinalColumn(column.name);
+  const fromFinal = !!task.column && isFinalColumn(task.column.name);
+  const done = from === columnId || toFinal === fromFinal ? undefined : toFinal;
+  await db.event.update({ where: { id }, data: { columnId, ...(done === undefined ? {} : { done }) } });
+  // Задачи без столбца из первого столбца основной доски при этом получают его явно
+  await db.$transaction(order.map((taskId, position) => db.event.updateMany({ where: { id: taskId, kind: "TASK" }, data: { columnId, position } })));
   if (from !== columnId) await logActivity(taskMoveActivity(task, column.name, column.board.name));
   refresh();
 }

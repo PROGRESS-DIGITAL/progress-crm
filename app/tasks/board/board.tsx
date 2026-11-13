@@ -25,7 +25,9 @@ import { Avatar } from "@/components/avatar";
 import { Icon } from "@/components/icons";
 import { DragHandle, haptic, useCoarsePointer } from "@/components/drag-handle";
 import { useConfirm } from "@/components/confirm-dialog";
+import { burstConfetti } from "@/components/confetti";
 import type { BoardColumnData as Column, BoardTask as Task } from "@/lib/boards";
+import { isFinalColumn } from "@/lib/board-columns";
 import { createColumn, deleteBoard, deleteColumn, moveTask, quickCreateTask, renameBoard, renameColumn } from "./actions";
 
 type Employee = { id: string; name: string; avatar: string | null };
@@ -116,11 +118,19 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
     if (!e.over || !column) return setColumns(before);
     const oldIndex = column.tasks.findIndex((d) => d.id === taskId);
     const overIndex = column.tasks.findIndex((d) => d.id === e.over!.id);
-    const tasks = overIndex === -1 || overIndex === oldIndex ? column.tasks : arrayMove(column.tasks, oldIndex, overIndex);
-    const order = tasks.map((d) => d.id);
+    const moved = overIndex === -1 || overIndex === oldIndex ? column.tasks : arrayMove(column.tasks, oldIndex, overIndex);
+    const order = moved.map((d) => d.id);
     const was = columnOf(before, taskId)!;
     if (was.id === column.id && was.tasks.map((d) => d.id).join() === order.join()) return;
+    // В завершающий столбец — задача выполнена (с конфетти, как оплаченная сделка), обратно из него — снова открыта
+    const toFinal = isFinalColumn(column.name);
+    const done = was.id === column.id || toFinal === isFinalColumn(was.name) ? undefined : toFinal;
+    const tasks = done === undefined ? moved : moved.map((d) => (d.id === taskId ? { ...d, done } : d));
     setColumns((cols) => cols.map((c) => (c.id === column.id ? { ...c, tasks } : c)));
+    if (done) {
+      const r = e.active.rect.current.translated;
+      if (r) burstConfetti(r.left + r.width / 2, r.top + r.height / 2);
+    }
     startTransition(async () => {
       try {
         await moveTask(taskId, column.id, order);
@@ -150,6 +160,7 @@ export function TaskBoard({ boardId, columns: initial, employees }: { boardId: s
           <BoardColumnView
             key={c.id}
             column={c}
+            final={isFinalColumn(c.name)}
             card={card}
             canDelete={columns.length > 1}
             firstOther={columns.find((x) => x.id !== c.id)?.name ?? ""}
@@ -189,6 +200,7 @@ type CardProps = { task: Task; boardId: string; coarse: boolean; overdue: boolea
 
 function BoardColumnView({
   column,
+  final,
   card,
   canDelete,
   firstOther,
@@ -197,6 +209,7 @@ function BoardColumnView({
   target,
 }: {
   column: Column;
+  final: boolean;
   card: (t: Task) => CardProps;
   canDelete: boolean;
   firstOther: string;
@@ -225,7 +238,7 @@ function BoardColumnView({
     <section
       ref={setNodeRef}
       data-testid={`column-${column.name}`}
-      className={`flex w-64 shrink-0 flex-col rounded-2xl border border-t-4 border-slate-200/60 border-t-blue-500 bg-white/60 transition-[box-shadow,background-color] duration-200 ${target ? "bg-blue-50/60 ring-2 ring-blue-400" : "ring-0 ring-transparent"} ${pending ? "opacity-60" : ""}`}
+      className={`flex w-64 shrink-0 flex-col rounded-2xl border border-t-4 border-slate-200/60 ${final ? "border-t-emerald-500" : "border-t-blue-500"} bg-white/60 transition-[box-shadow,background-color] duration-200 ${target ? "bg-blue-50/60 ring-2 ring-blue-400" : "ring-0 ring-transparent"} ${pending ? "opacity-60" : ""}`}
     >
       <header className="flex items-center gap-1 px-3 pt-3 pb-2">
         {editing ? (
