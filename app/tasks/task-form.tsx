@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useRef, useState, useTransition } from "react";
 import { Icon } from "@/components/icons";
+import { FileDrop } from "@/components/file-drop";
 import { useConfirm } from "@/components/confirm-dialog";
 import { TimeField } from "@/components/time-field";
 import { remindForAllDay, remindOptions } from "@/lib/calendar";
@@ -84,7 +85,7 @@ export function TaskForm({
     return (await uploadTaskFiles(taskId, form)).error ?? null;
   }
 
-  function pick(list: FileList | null) {
+  function pick(list: FileList | File[] | null) {
     const chosen = Array.from(list ?? []);
     if (input.current) input.current.value = "";
     const big = chosen.find((f) => f.size > MAX_FILE_SIZE);
@@ -161,7 +162,13 @@ export function TaskForm({
 
         <TaskComments taskId={id} comments={comments} me={me} people={people} />
 
-        <section className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card sm:p-6">
+        <FileDrop
+          as="section"
+          onFiles={pick}
+          disabled={busy}
+          note={`До ${fileSize(MAX_FILE_SIZE)} каждый`}
+          className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card sm:p-6"
+        >
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="font-semibold">Файлы</h2>
             <button
@@ -176,7 +183,7 @@ export function TaskForm({
             <input ref={input} type="file" multiple hidden onChange={(e) => pick(e.target.files)} />
           </div>
           {files.length + pendingFiles.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">Файлов нет. До {fileSize(MAX_FILE_SIZE)} каждый.</p>
+            <p className="mt-2 text-sm text-slate-500">Файлов нет. <span className="hidden sm:inline">Перетащите их сюда или нажмите «Прикрепить». </span>До {fileSize(MAX_FILE_SIZE)} каждый.</p>
           ) : (
             <ul className="mt-3 divide-y divide-slate-100">
               {files.map((f) => (
@@ -208,7 +215,7 @@ export function TaskForm({
               ))}
             </ul>
           )}
-        </section>
+        </FileDrop>
       </div>
 
       <aside className="flex flex-col gap-4">

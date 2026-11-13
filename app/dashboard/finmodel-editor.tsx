@@ -1,5 +1,6 @@
 "use client";
 
+import { FileDrop } from "@/components/file-drop";
 import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useConfirm } from "@/components/confirm-dialog";
@@ -303,9 +304,15 @@ export function FinModelEditor({
         {error && <p className="mx-5 mt-4 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p>}
 
         {importOpen && (
-          <div className="mx-5 mt-4 rounded-xl border border-slate-200 p-4">
+          <FileDrop
+            disabled={busy}
+            hint="Отпустите, чтобы загрузить финмодель"
+            note="Файл Excel .xlsx"
+            wrongType="Нужен файл Excel .xlsx"
+            className="mx-5 mt-4 rounded-xl border border-slate-200 p-4"
+          >
             <p className="text-sm text-slate-700">
-              Выберите файл .xlsx или скопируйте ячейки таблицы в Excel либо Google Таблицах и вставьте ниже. Нынешняя модель
+              Выберите или перетащите сюда файл .xlsx или скопируйте ячейки таблицы в Excel либо Google Таблицах и вставьте ниже. Нынешняя модель
               заменится, но сохранится только после «Сохранить».
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -344,7 +351,7 @@ export function FinModelEditor({
                 Закрыть
               </button>
             </div>
-          </div>
+          </FileDrop>
         )}
 
         <div className="mt-2 overflow-x-auto pb-3">

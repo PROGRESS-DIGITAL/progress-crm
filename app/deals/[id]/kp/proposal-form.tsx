@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { FileDrop } from "@/components/file-drop";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { Icon } from "@/components/icons";
 import { useConfirm } from "@/components/confirm-dialog";
@@ -100,19 +101,21 @@ export function ProposalForm({
             <input name="period" defaultValue={initial.period} required maxLength={60} className={inputClass} />
           </Field>
           <div className="sm:col-span-2">
-            <Field label="Логотип клиента, PNG или JPEG">
-              <input
-                name="logo"
-                type="file"
-                accept="image/png,image/jpeg"
-                className="min-w-0 max-w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-slate-200"
-              />
-              <span className="text-xs text-slate-500">
-                {hasLogo
-                  ? "Логотип уже есть. Загрузите новый, чтобы заменить."
-                  : "Необязательно: без логотипа название клиента встанет на его место."}
-              </span>
-            </Field>
+            <FileDrop compact hint="Отпустите, чтобы загрузить логотип" wrongType="Нужна картинка PNG или JPEG" className="-m-2 rounded-xl p-2">
+              <Field label="Логотип клиента, PNG или JPEG">
+                <input
+                  name="logo"
+                  type="file"
+                  accept="image/png,image/jpeg"
+                  className="min-w-0 max-w-full text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-sm file:font-medium hover:file:bg-slate-200"
+                />
+                <span className="text-xs text-slate-500">
+                  {hasLogo
+                    ? "Логотип уже есть. Загрузите новый, чтобы заменить."
+                    : "Необязательно: без логотипа название клиента встанет на его место."}
+                </span>
+              </Field>
+            </FileDrop>
             {hasLogo && (
               <label className="mt-2 flex items-center gap-2 text-sm text-slate-700">
                 <input type="checkbox" name="removeLogo" checked={removeLogo} onChange={(e) => setRemoveLogo(e.target.checked)} />

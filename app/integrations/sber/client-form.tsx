@@ -1,6 +1,7 @@
 "use client";
 
 import { startTransition, useActionState } from "react";
+import { FileDrop } from "@/components/file-drop";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import type { TokenState } from "@/components/token-form";
 
@@ -39,9 +40,11 @@ export function SberClientForm({
           className={inputClass}
         />
       </Field>
-      <Field label={hasCertificate ? "Сертификат (загружен, можно заменить)" : "Сертификат .pfx или .p12"}>
-        <input name="certificate" type="file" accept=".pfx,.p12" className={`${inputClass} file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1`} />
-      </Field>
+      <FileDrop compact hint="Отпустите, чтобы выбрать сертификат" wrongType="Нужен сертификат .pfx или .p12" className="-m-2 rounded-xl p-2">
+        <Field label={hasCertificate ? "Сертификат (загружен, можно заменить)" : "Сертификат .pfx или .p12"}>
+          <input name="certificate" type="file" accept=".pfx,.p12" className={`${inputClass} file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-1`} />
+        </Field>
+      </FileDrop>
       <Field label="Пароль сертификата">
         <input name="passphrase" type="password" autoComplete="off" placeholder={hasCertificate ? "Сохранён" : ""} className={inputClass} />
       </Field>
