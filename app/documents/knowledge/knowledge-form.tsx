@@ -5,6 +5,7 @@ import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import type { KnowledgeKind } from "@prisma/client";
 import { Icon } from "@/components/icons";
+import { FileDrop } from "@/components/file-drop";
 import { useConfirm } from "@/components/confirm-dialog";
 import { RichEditor } from "@/components/rich-editor";
 import { KNOWLEDGE_KINDS } from "@/lib/knowledge";
@@ -36,7 +37,7 @@ export function KnowledgeForm({
   const [busy, start] = useTransition();
   const input = useRef<HTMLInputElement>(null);
 
-  function pick(list: FileList | null) {
+  function pick(list: FileList | File[] | null) {
     const chosen = Array.from(list ?? []);
     if (input.current) input.current.value = "";
     const big = chosen.find((f) => f.size > MAX_FILE_SIZE);
@@ -118,7 +119,13 @@ export function KnowledgeForm({
           {author && <p className="mt-3 text-xs text-slate-500">Добавил: {author}</p>}
         </section>
 
-        <section className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card">
+        <FileDrop
+          as="section"
+          onFiles={pick}
+          disabled={busy}
+          note={`До ${fileSize(MAX_FILE_SIZE)} каждый`}
+          className="rounded-2xl border border-slate-200/60 bg-white p-5 shadow-card"
+        >
           <div className="flex items-center justify-between gap-3">
             <h2 className="font-semibold">Файлы</h2>
             <button
@@ -133,7 +140,7 @@ export function KnowledgeForm({
             <input ref={input} type="file" multiple hidden onChange={(e) => pick(e.target.files)} />
           </div>
           {files.length + pending.length === 0 ? (
-            <p className="mt-2 text-sm text-slate-500">Word, PDF, таблицы, презентации, картинки. До {fileSize(MAX_FILE_SIZE)} каждый.</p>
+            <p className="mt-2 text-sm text-slate-500">Word, PDF, таблицы, презентации, картинки. <span className="hidden sm:inline">Можно перетащить сюда. </span>До {fileSize(MAX_FILE_SIZE)} каждый.</p>
           ) : (
             <ul className="mt-3 divide-y divide-slate-100">
               {files.map((f) => (
@@ -165,7 +172,7 @@ export function KnowledgeForm({
               ))}
             </ul>
           )}
-        </section>
+        </FileDrop>
 
         {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
         {saved && !busy && !error && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-700">Сохранено</p>}
