@@ -8,6 +8,7 @@ import { DealContracts } from "@/components/deal-contracts";
 import { DealDocuments } from "@/components/deal-documents";
 import { DealProposals } from "@/components/deal-proposals";
 import { LinkedEvents } from "@/components/linked-events";
+import { ClientMails } from "@/components/client-mails";
 import { CreateFrom } from "@/components/create-from";
 import { DealLinkList, DealLinks, DealLinksCard } from "@/components/deal-links";
 import { linkOptions, linksOf } from "@/lib/links";
@@ -20,7 +21,11 @@ export const dynamic = "force-dynamic";
 export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const [deal, stages, companies, products, employees, links, options] = await Promise.all([
-    db.deal.findUnique({ where: { id }, include: { company: { select: { id: true, name: true, email: true } } } }),
+    db.deal.findUnique({ where: { id }, include: {
+        company: { select: { id: true, name: true, email: true, contacts: { where: { email: { not: null } }, orderBy: { fullName: "asc" }, take: 1, select: { email: true } } } },
+        contact: { select: { email: true } },
+      },
+    }),
     getStageOptions(),
     getCompanyOptions(),
     getProductOptions(),
@@ -29,6 +34,8 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
     linkOptions(),
   ]);
   if (!deal) notFound();
+  // Кому писать: контакт сделки → первый контакт клиента с почтой → почта компании
+  const mailTo = deal.contact?.email || deal.company.contacts[0]?.email || deal.company.email;
 
   return (
     <div className="w-full px-1 py-4 sm:px-3 sm:py-5">
@@ -76,6 +83,7 @@ export default async function DealPage({ params }: { params: Promise<{ id: strin
       <DealProposals dealId={deal.id} />
       <DealContracts dealId={deal.id} />
       <DealDocuments dealId={deal.id} hasEmail={!!deal.company.email} />
+      <ClientMails companyId={deal.company.id} to={mailTo} />
     </div>
   );
 }
