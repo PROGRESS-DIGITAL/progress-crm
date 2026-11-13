@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { FileDrop } from "@/components/file-drop";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { saveTemplateSlides, uploadTemplate } from "./actions";
 
@@ -14,7 +15,7 @@ export function UploadTemplateForm({ replace }: { replace: boolean }) {
   const [state, action, pending] = useActionState(uploadTemplate, undefined);
   return (
     <form action={action} className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center gap-3">
+      <FileDrop compact hint="Отпустите, чтобы выбрать PDF" wrongType="Нужен файл PDF" className="-m-2 flex flex-wrap items-center gap-3 rounded-xl p-2">
         <input
           name="file"
           type="file"
@@ -26,7 +27,7 @@ export function UploadTemplateForm({ replace }: { replace: boolean }) {
         <button type="submit" disabled={pending} className={primaryButton}>
           {pending ? "Загружаю…" : replace ? "Заменить" : "Загрузить"}
         </button>
-      </div>
+      </FileDrop>
       <Message state={state} />
     </form>
   );

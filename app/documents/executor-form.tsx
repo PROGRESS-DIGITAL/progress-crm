@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useRef, useState, useTransition } from "react";
 import { fieldValue } from "@/lib/forms";
+import { FileDrop } from "@/components/file-drop";
 import { Field, inputClass, primaryButton } from "@/components/field";
 import { BankFields } from "@/components/bank-fields";
 import { lookupInn } from "@/app/clients/actions";
@@ -104,7 +105,7 @@ export function ExecutorForm({ initial }: { initial: Party | null }) {
       <Field label="Email" error={err.email}>
         <input name="email" type="email" defaultValue={v("email")} className={inputClass} />
       </Field>
-      <div className="sm:col-span-2">
+      <FileDrop compact hint="Отпустите, чтобы загрузить логотип" wrongType="Нужна картинка PNG, JPEG или WebP" className="-m-2 rounded-xl p-2 sm:col-span-2">
         <span className="text-sm font-medium text-slate-700">Логотип для шапки договора</span>
         <div className="mt-1 flex flex-wrap items-center gap-3">
           {logo ? (
@@ -133,7 +134,7 @@ export function ExecutorForm({ initial }: { initial: Party | null }) {
         </div>
         <input type="hidden" name="logo" value={logo} />
         {err.logo && <p className="mt-1 text-xs text-rose-600">{err.logo}</p>}
-      </div>
+      </FileDrop>
       <div className="flex items-center gap-3 sm:col-span-2">
         <button type="submit" disabled={pending} className={primaryButton}>
           {pending ? "Сохраняю…" : "Сохранить реквизиты"}
